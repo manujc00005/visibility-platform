@@ -24,6 +24,14 @@ Postgres local opcional para desarrollo y pruebas:
 docker run -d --name visibility-postgres -e POSTGRES_USER=visibility -e POSTGRES_PASSWORD=visibility -e POSTGRES_DB=visibility -p 127.0.0.1:5433:5432 postgres:16
 ```
 
+## Generación de PDF
+
+Los informes se imprimen con Chromium headless. Después de `npm install`, instala el navegador una vez:
+
+```bash
+npx playwright-core install --only-shell chromium
+```
+
 ## Pruebas de integración
 
 Usan una base separada: rama Neon `test`, base `visibility_test`, configurada en `.env.test.local`

@@ -6,8 +6,8 @@ const PHASES = [
   { id: "0", title: "Base del proyecto", state: "Hecha" },
   { id: "1", title: "Empresas y dominios", state: "Hecha" },
   { id: "2", title: "Auditoría SEO técnica", state: "Hecha" },
-  { id: "3", title: "Informe PDF", state: "Siguiente" },
-  { id: "4", title: "Visibilidad GEO / AEO", state: "Pendiente" },
+  { id: "3", title: "Informe PDF", state: "Hecha" },
+  { id: "4", title: "Visibilidad GEO / AEO", state: "Siguiente" },
 ];
 
 export default function HomePage() {

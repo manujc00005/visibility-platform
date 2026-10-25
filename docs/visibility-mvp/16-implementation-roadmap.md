@@ -1,6 +1,6 @@
 # 16 — Roadmap de implementación (referencia operativa)
 
-**Última actualización:** 2026-10-25, cierre de la Fase 2.
+**Última actualización:** 2026-10-25, cierre de la Fase 3.
 **Estado del diseño:** `00`–`12` siguen siendo referencia arquitectónica (versión 1, PROPUESTA). `13-codex-review.md` (REQUEST CHANGES) sigue siendo el registro de riesgos. **Este documento manda sobre el orden de trabajo y sobre las decisiones técnicas de construcción.** Donde contradiga a `00`–`12`, prevalece este y la contradicción se lista en §7.
 
 Nota: `14-architecture-sync.md` no llegó a escribirse; el cambio de estrategia lo sustituyó por este documento antes de redactarlo. Los hallazgos de Codex se gestionan aquí de forma progresiva (§4).
@@ -18,8 +18,8 @@ Ciclo por fase: requisitos → diseño mínimo → blockers aplicables → códi
 | **0 — Project Foundation** | App Next.js conectada a PostgreSQL con migraciones, tests y layout | **HECHA** (verificada contra Neon, rama `dev`) | — |
 | **1 — Website & Project Management** | Registrar empresa/workspace y su dominio | **HECHA** (verificada en navegador y contra la rama `test`) | 0 |
 | **2 — SEO Audit Engine** | Auditar técnicamente una URL real | **HECHA**, salvo la verificación real de PageSpeed Insights (falta clave, ver §6 D-11) | 1 |
-| 3 — SEO Report | Informe HTML/PDF vendible por proceso asistido | Siguiente | 2 |
-| 4 — GEO / AEO Visibility | Medición de presencia en superficies IA | Pendiente | 1, 3 (para el informe) |
+| **3 — SEO Report** | Informe HTML/PDF vendible por proceso asistido | **HECHA** (PDF real generado, revisado visualmente y verificado byte a byte) | 2 |
+| 4 — GEO / AEO Visibility | Medición de presencia en superficies IA | Siguiente | 1, 3 (para el informe) |
 | 5 — Authentication & Paid Audits | Venta directa con Stripe y acceso del cliente | Pendiente | 3 |
 | 6 — Monitoring & Subscription | SaaS recurrente con histórico | Pendiente | 4, 5 |
 | 7 — Commercial Extensions | Agencias, white-label, lead-platform, CRM | Fuera del desarrollo inicial | 6 y validación del MVP |
@@ -99,11 +99,34 @@ Comportamiento degradado comprobado: con la base de datos parada, `/api/health` 
 
 **Render (adelanto de B08b):** la interfaz solo pinta texto; ningún dato de la web auditada se emite como HTML ni como enlace (comprobado: sin `dangerouslySetInnerHTML` en `src`). Las secciones de contenido se ocultan si la portada respondió con error. B08b completo (PDF y Chromium aislado) sigue siendo de la Fase 3.
 
-### Fase 3 — SEO Report (siguiente)
+### Fase 3 — SEO Report (hecha)
 
-- **Bloquea su cierre:** B08b (render seguro del informe y Chromium sin red externa ni interna) y M12 (enlaces de informe con ámbito y caducidad) si el PDF se comparte por enlace.
-- **Entrada:** la auditoría guardada (`audits.facts` y `audit_findings`); el informe no vuelve a consultar la web.
-- **Primera tarea concreta:** plantilla HTML del informe que reciba solo datos estructurados de una auditoría y escape todo, con pruebas de contenido hostil (`<script>`, `javascript:`, recursos remotos).
+**Alcance entregado:** desde una auditoría completada, «Generar informe» produce el diagnóstico para el cliente en HTML y PDF a partir de los datos guardados (no vuelve a consultar la web). El operador lo ve en el navegador y descarga el PDF para entregarlo. No hay enlaces públicos ni pago: la validación comercial es asistida.
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| Auditar una web y generar un informe | Cumplido | Navegador: informe de `olessium.com` generado en la página de la auditoría |
+| Resumen ejecutivo, datos de empresa, resultados técnicos, problemas, recomendaciones priorizadas, evidencias y fuentes, fecha de análisis, limitaciones | Cumplido | 7 secciones numeradas más portada con fecha del análisis y del informe; prueba de presencia en `build-report.test.ts` |
+| Descarga PDF | Cumplido | PDF A4 de 3 páginas (138 KB), revisado visualmente página a página; el SHA-256 descargado coincide con el guardado |
+| Entregable a un cliente | Cumplido | Texto en lenguaje de propietario, tabla coherente con los hallazgos, sin cifras inventadas (velocidad «no medida»), paginación y procedencia en el pie |
+| Plantilla HTML reutilizable | Cumplido | Una sola plantilla para vista previa y PDF |
+| Render seguro sin HTML ni recursos externos arbitrarios (B08b) | Cumplido | Ver abajo |
+
+**Seguridad del render (B08b):**
+
+- **Escape por defecto:** todo valor interpolado en la plantilla `html` se escapa; solo los fragmentos creados por la propia plantilla (`SafeHtml`, comprobado con `instanceof`) se insertan tal cual. Además, el tipo impide en compilación pasar otra cosa.
+- **Documento sin recursos:** estilos en línea, fuentes del sistema, sin imágenes ni enlaces. Una prueba estructural parsea el informe con datos hostiles y verifica que no hay `script`, `img`, `iframe`, `link`, atributos `on*`, `src` ni `href`, ni `url()` o `@import` en el CSS.
+- **Chromium aislado:** JavaScript desactivado, contexto sin conexión, service workers bloqueados y una ruta que aborta toda petición. Prueba: un documento con imagen, hoja de estilos, script, iframe, `@import`, `url()`, `meta refresh`, SVG y la IP de metadatos produce un PDF y el servidor local recibe **0** peticiones.
+- **Vista previa con CSP:** `default-src 'none'; style-src 'unsafe-inline'`, sin formularios, sin incrustación, `nosniff`, `no-referrer`, `no-store`. En el navegador no hubo ninguna infracción de CSP.
+
+**Persistencia:** tabla `reports` con copia de los datos de la empresa (editar la empresa no altera un informe ya emitido), el HTML, el PDF exacto entregado y su SHA-256. Regenerar crea una revisión nueva (Codex N01). Las descargas sirven siempre el archivo guardado.
+
+### Fase 4 — GEO / AEO Visibility (siguiente)
+
+- **Antes de la primera llamada de pago:** B04 (presupuesto exacto, fail-closed) y la cuenta del proveedor elegido.
+- **Antes de guardar métricas históricas:** B05 (configuración inmutable por ejecución).
+- **Antes de entregar sus datos a un cliente:** M01 (licencia escrita de DataForSEO u otro proveedor).
+- **Primera tarea concreta:** configuración de marca (alias) y competidores confirmados en la empresa, que no depende de ningún proveedor.
 
 ### Fases 2–6 — criterios de entrada
 
@@ -140,6 +163,10 @@ Comportamiento degradado comprobado: con la base de datos parada, `/api/health` 
 | **Sin puntuación global; reglas versionadas** (Fase 2) | B06: hallazgos con severidad y evidencia aportan la decisión sin falsa precisión. `RULES_VERSION` se guarda en cada auditoría | Índice 0–100 |
 | **Auditoría síncrona con límites duros, sin cola** (Fase 2) | Operador único; 1–60 s por auditoría. La cola llega cuando haya ejecuciones programadas o pagadas (B07) | Cola de jobs desde ya |
 | **PageSpeed opcional y explícito** (Fase 2) | Sin clave la sección dice «no configurado»; nunca se inventan cifras | Ejecutar Lighthouse local (Chromium en el servidor) |
+| **Plantilla HTML propia con escape por defecto, sin React en servidor** (Fase 3) | Control total del documento y un único punto de escape comprobable; el mismo HTML sirve para vista previa y PDF | `renderToStaticMarkup` (restricciones de `react-dom/server` en App Router) o una librería de plantillas |
+| **PDF con Chromium headless (`playwright-core` + headless shell), aislado de red** (Fase 3) | Fidelidad de la plantilla HTML; JavaScript y red desactivados | PDF programático (segunda plantilla que diverge) o servicio externo (datos fuera de nuestro control) |
+| **PDF entregado guardado en Postgres (`bytea`) con SHA-256** (Fase 3) | Se entrega siempre el mismo archivo; volumen del piloto pequeño | Regenerar al descargar (el archivo cambiaría) u object storage desde ya (P1) |
+| **Sin enlaces públicos al informe en esta fase** (Fase 3) | El operador descarga y entrega; evita abrir capacidades compartibles (M12) antes de tener autenticación | Enlaces firmados desde ya |
 | **Integración obligatoria, sin `skipIf`** (Fase 1) | Una suite verde que omite pruebas da falsa seguridad | Saltar la integración si falta configuración |
 | **Dominio canónico en ASCII (punycode), Unicode solo para mostrar** (Fase 1) | Una sola forma comparable para la clave única; la que usarán DNS y HTTP | Guardar Unicode y normalizar al comparar |
 | **Clave única sin `www.`, host original conservado** (Fase 1) | Evita duplicar la misma empresa sin asumir que `www` y el dominio raíz sirven lo mismo | Usar el host tal cual como clave |
@@ -160,17 +187,17 @@ Estados: `NOT_APPLICABLE_YET`, `NEEDS_DESIGN`, `BLOCKING_CURRENT_PHASE`, `DOCUME
 | **B06** SEO Health Score | Cifra con falsa precisión | 2–3 | **IMPLEMENTED** (sin score en la Fase 2) | Las auditorías muestran hallazgos por severidad, sin índice global. Se reconsidera solo con una fórmula única y casos de prueba exactos |
 | **B07** Jobs y recuperación | Auditoría pagada sin informe; doble compra o doble email | 2 (síncrono), 5–6 | Fase 2: **IMPLEMENTED** (una en curso por empresa, cierre de colgadas a 10 min). Resto: NEEDS_DESIGN | Fase 2–3 ejecutan la auditoría de forma acotada y síncrona con límite de tiempo, sin cola. Antes de entregas pagadas (5) y ejecuciones programadas (6): persistencia transaccional de transiciones, submit/poll, leases con fencing, entrega única por destinatario |
 | **B08a** SSRF y límites del fetch | Peticiones a red interna, agotamiento de recursos | 2 | **VERIFIED** por pruebas automatizadas y contra hosts reales (sin auditoría de seguridad externa) | Validación de destino público en todo fetch (incluidos robots, sitemap, canonical y redirecciones), IP fijada con Host/SNI, puertos 80/443, presupuesto total de bytes/peticiones/tiempo, límites XML/gzip; fixtures de rebinding, IPv6 y sitemap expansivo |
-| **B08b** Render seguro de informe | XSS almacenado, peticiones del renderer | 3 | Pantalla web: **IMPLEMENTED** (solo texto). PDF y Chromium: NOT_APPLICABLE_YET (bloquea la Fase 3) | Contenido estructurado escapado, enlaces solo http/https, Chromium sin red externa ni interna y recursos empaquetados |
+| **B08b** Render seguro de informe | XSS almacenado, peticiones del renderer | 3 | **VERIFIED** por pruebas automatizadas (escape, estructura del documento, Chromium con 0 peticiones salientes) y vista previa con CSP sin infracciones | Contenido estructurado escapado, enlaces solo http/https, Chromium sin red externa ni interna y recursos empaquetados |
 | M01 Licencia DataForSEO | Vender datos sin derecho | 4 | NOT_APPLICABLE_YET | Confirmación escrita (texto propuesto en `13` §9.8) antes de entregar sus datos a un cliente |
 | M02 Latencias | Plazos imposibles | 4 | NOT_APPLICABLE_YET | Medir p90/p95 reales y decidir modo (Standard/Priority) y política de informe parcial |
 | M03 Denominadores y significación | Cifras GEO engañosas | 4 | NOT_APPLICABLE_YET | `capture_status` y `answer_present` separados; fracciones sin lenguaje de significación |
 | M04 Marca y zona antes de medir | Medir el negocio equivocado | 1, 4 | **IMPLEMENTED** en lo que toca a la Fase 1 | Nombre comercial, actividad, país, ciudad y servicios ya se piden y validan. Alias de marca y competidores confirmados quedan para la Fase 4 |
 | M05 Reauditoría y SERP media | Series inventadas | 6 | NOT_APPLICABLE_YET | Salud técnica como foto fechada; top 10/top 20 como KPI principal |
 | M06 Permisos por workspace | Acceso cruzado | 5 | NOT_APPLICABLE_YET | Contexto autorizado por actor antes de RLS; pruebas con dos workspaces de una misma organización |
-| M07 Retención y borrado | Copias que no se purgan | 3–5 | NOT_APPLICABLE_YET | Política por copia (raw, snapshot, PDF, logs, backups) antes de clientes reales |
+| M07 Retención y borrado | Copias que no se purgan | 3–5 | NEEDS_DESIGN: los informes guardan evidencia y PDF mientras exista la empresa; el borrado de la empresa los elimina en cascada | Política por copia (snapshot, PDF, logs, backups) antes de clientes reales |
 | M10 Facturación válida y viabilidad | Cobro sin factura legal | 5 | NOT_APPLICABLE_YET | Procedimiento de factura (manual o herramienta externa) antes del primer cobro real |
 | M11 PSI y Google | Métricas de campo inexistentes; OAuth caduca a 7 días en Testing | 2 (PSI), 6 (OAuth) | PSI: **IMPLEMENTED** solo laboratorio con versión de Lighthouse; **PENDING_VERIFICATION** (cuota anónima agotada, falta clave). OAuth: NOT_APPLICABLE_YET | Crear `PAGESPEED_API_KEY` y repetir una auditoría |
-| M12 Enlaces de informe | Capacidades filtradas | 3–5 | NOT_APPLICABLE_YET | Tokens separados por propósito, caducidad única, revocación |
+| M12 Enlaces de informe | Capacidades filtradas | 3–5 | NOT_APPLICABLE_YET (la Fase 3 no crea enlaces públicos; el operador descarga y entrega) | Tokens separados por propósito, caducidad única, revocación, antes del primer enlace compartible |
 | M13 Operación y backups | Restore incompleto, health revelador | 0 (health), despliegue | Health: **IMPLEMENTED**; resto NOT_APPLICABLE_YET | Health público mínimo ya hecho. Backup coherente BD + artefactos antes del primer despliegue |
 
 ## 5. Neon: estado de la conexión
@@ -212,6 +239,9 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 | D-12 | La auditoría corre síncrona dentro de la Server Action (1–60 s) | Una petición HTTP larga; aceptable para el operador | Pasar a cola cuando lleguen auditorías pagadas o programadas (B07) |
 | D-13 | «Incluye la portada» del sitemap se calcula sobre una muestra de 50 URLs | Con sitemaps grandes puede quedar «—» (desconocido) | Aceptado; no se presenta como hallazgo |
 | D-14 | Solo se analiza un sitemap (el primero declarado o `/sitemap.xml`); los índices no se recorren | Hallazgos de sitemap limitados | Ampliar si un cliente lo necesita |
+| D-15 | **Fuentes del PDF verificadas solo en macOS.** La plantilla usa fuentes del sistema; en un servidor Linux el aspecto cambiará | El PDF de producción puede verse distinto al revisado | Antes de desplegar: instalar fuentes en la imagen (p. ej. Liberation o Inter empaquetada como archivo local) y revisar un PDF generado allí |
+| D-16 | Chromium headless shell instalado en local (`npx playwright-core install --only-shell chromium`); no forma parte de `npm install` | Un entorno nuevo no genera PDF hasta instalarlo | Documentado en README; en el despliegue, incluirlo en la imagen |
+| D-17 | Se lanza un Chromium por informe (1–3 s) | Coste aceptable para el operador | Reutilizar navegador o cola si el volumen crece |
 | D-07 | `neon init -y` instaló el plugin de Neon (skills y MCP) a nivel de usuario en Claude Code, Codex y VS Code | Configuración global del equipo, no del repo | Ninguno; el servidor MCP de Neon en Claude Code necesita autorizar OAuth con `/mcp` |
 | R-01 | Las fases 2–6 dependen de cuentas externas (PSI, DataForSEO, Stripe) aún no abiertas | Retraso de fases | Abrir PSI antes de Fase 2; DataForSEO antes de Fase 4; Stripe test antes de Fase 5 |
 | R-02 | El NORTE del workspace `lead-platform` sigue en mantenimiento | Conflicto de foco del único desarrollador | Decisión del owner; este repo no depende de ello técnicamente |
@@ -266,3 +296,19 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 **Dependencias nuevas:** `parse5` 8.0.1.
 
 **Siguiente tarea:** Fase 3, plantilla HTML del informe con escape total y pruebas de contenido hostil.
+
+### Fase 3 — cerrada el 2026-10-25
+
+**Archivos creados:** `src/modules/reports/{html-template.ts,report-styles.ts,build-report.ts,render-pdf.ts,schema.ts,service.ts}`; `src/app/workspaces/[id]/audits/[auditId]/{actions.ts,reports/[reportId]/route.ts,reports/[reportId]/pdf/route.ts}`; `src/components/reports/generate-report-button.tsx`; `src/db/migrations/0003_reports.sql`; `tests/unit/reports/{html-template,build-report}.test.ts`; `tests/integration/{render-pdf,reports}.test.ts`.
+
+**Archivos modificados:** `src/app/workspaces/[id]/audits/[auditId]/page.tsx` (tarjeta «Informe para el cliente»), `src/db/schema/index.ts`, `src/components/layout/app-header.tsx` (retirado el marcador «Informes»), `src/app/page.tsx`, `package.json` (`playwright-core`), `README.md`.
+
+**Migraciones:** `0003_reports` aplicada en `dev` y `test` (4 migraciones en cada una). `production` sin tablas de la app (consulta de solo lectura).
+
+**Pruebas:** 263 en total: 232 unitarias (15 del informe: escape, secciones, estructura sin contenido activo, determinismo, coherencia tabla-hallazgos, portada inaccesible, informe limpio) y 31 de integración (2 de aislamiento de Chromium y 7 del servicio de informes: PDF real guardado, congelación de datos de empresa, auditoría no completada, pertenencia y nombre de archivo).
+
+**Verificación manual:** informe de `olessium.com` generado, PDF de 3 páginas revisado visualmente, SHA-256 descargado igual al guardado, cabeceras de vista previa y descarga comprobadas, 404 en informes ajenos o inexistentes.
+
+**Dependencias nuevas:** `playwright-core` 1.64.1 y el navegador Chromium headless shell (fuera de npm).
+
+**Siguiente tarea:** Fase 4, alias de marca y competidores confirmados en la ficha de la empresa.

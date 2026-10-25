@@ -18,6 +18,9 @@ import {
 } from "@/modules/audits/presentation";
 import type { Category, Severity } from "@/modules/audits/rules";
 import { getAudit } from "@/modules/audits/service";
+import { GenerateReportButton } from "@/components/reports/generate-report-button";
+import { listReports } from "@/modules/reports/service";
+import { generateReportAction } from "./actions";
 import { displayDate, displayDomain } from "@/modules/workspaces/presentation";
 import { getWorkspace } from "@/modules/workspaces/service";
 
@@ -59,6 +62,8 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
   const result = await getAudit(db, workspace.id, auditId);
   if (!result) notFound();
   const { audit, findings } = result;
+  const reportList = audit.status === "completed" ? await listReports(db, workspace.id, audit.id) : [];
+  const reportBase = `/workspaces/${workspace.id}/audits/${audit.id}/reports`;
   const facts = audit.facts;
   const page = facts?.page.kind === "fetched" ? facts.page.result : null;
   // The content of an error page (404 parking page, 500…) is not the website's content.
@@ -96,6 +101,36 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
             <Badge variant="outline">{audit.warningCount} importantes</Badge>
             <Badge variant="secondary">{audit.infoCount} mejoras</Badge>
           </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Informe para el cliente</CardTitle>
+              <CardDescription>PDF con resumen ejecutivo, resultados, problemas, recomendaciones, evidencias y limitaciones.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <GenerateReportButton action={generateReportAction.bind(null, workspace.id, audit.id)} />
+              {reportList.length > 0 ? (
+                <ul className="flex flex-col divide-y text-sm">
+                  {reportList.map((report) => (
+                    <li key={report.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                      <span>
+                        {displayDate(report.createdAt)}
+                        <span className="text-muted-foreground"> · {formatBytes(report.pdfBytes)} · plantilla {report.templateVersion}</span>
+                      </span>
+                      <span className="flex gap-3">
+                        <a href={`${reportBase}/${report.id}`} target="_blank" rel="noopener noreferrer" className="underline">
+                          Ver
+                        </a>
+                        <a href={`${reportBase}/${report.id}/pdf`} className="underline">
+                          Descargar PDF
+                        </a>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </CardContent>
+          </Card>
 
           <section aria-labelledby="findings-title" className="flex flex-col gap-3">
             <h2 id="findings-title" className="text-lg font-semibold">
