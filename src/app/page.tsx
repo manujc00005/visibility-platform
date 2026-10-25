@@ -5,8 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 const PHASES = [
   { id: "0", title: "Base del proyecto", state: "Hecha" },
   { id: "1", title: "Empresas y dominios", state: "Hecha" },
-  { id: "2", title: "Auditoría SEO técnica", state: "Siguiente" },
-  { id: "3", title: "Informe PDF", state: "Pendiente" },
+  { id: "2", title: "Auditoría SEO técnica", state: "Hecha" },
+  { id: "3", title: "Informe PDF", state: "Siguiente" },
   { id: "4", title: "Visibilidad GEO / AEO", state: "Pendiente" },
 ];
 

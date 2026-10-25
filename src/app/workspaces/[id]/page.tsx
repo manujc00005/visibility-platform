@@ -8,6 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getDb } from "@/db/client";
 import { displayCountry, displayDate, displayDomain } from "@/modules/workspaces/presentation";
 import { getWorkspace } from "@/modules/workspaces/service";
+import { RunAuditButton } from "@/components/audits/run-audit-button";
+import { AUDIT_STATUS_LABELS } from "@/modules/audits/presentation";
+import { listAudits } from "@/modules/audits/service";
+import { runAuditAction } from "./audits/actions";
 
 export const metadata: Metadata = { title: "Empresa" };
 
@@ -20,8 +24,10 @@ export const instant = false;
 export default async function WorkspacePage({ params }: PageProps<"/workspaces/[id]">) {
   await connection();
   const { id } = await params;
-  const workspace = await getWorkspace(getDb(), id);
+  const db = getDb();
+  const workspace = await getWorkspace(db, id);
   if (!workspace) notFound();
+  const audits = await listAudits(db, workspace.id);
 
   const rows: [string, React.ReactNode][] = [
     ["Dominio", <span key="d" className="font-mono">{displayDomain(workspace.domain)}</span>],
@@ -70,6 +76,42 @@ export default async function WorkspacePage({ params }: PageProps<"/workspaces/[
               </div>
             ))}
           </dl>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Auditorías técnicas</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">
+            Analiza la portada de {displayDomain(workspace.domain)}, su robots.txt, el sitemap y la velocidad en móvil.
+          </p>
+          <RunAuditButton workspaceId={workspace.id} action={runAuditAction.bind(null, workspace.id)} />
+          {audits.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Todavía no hay auditorías.</p>
+          ) : (
+            <ul className="flex flex-col divide-y text-sm">
+              {audits.map((audit) => (
+                <li key={audit.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                  <Link href={`/workspaces/${workspace.id}/audits/${audit.id}`} className="font-medium hover:underline">
+                    {displayDate(audit.startedAt)}
+                  </Link>
+                  <span className="flex flex-wrap items-center gap-2">
+                    {audit.status === "completed" ? (
+                      <>
+                        <Badge variant={audit.criticalCount > 0 ? "destructive" : "outline"}>{audit.criticalCount} críticos</Badge>
+                        <Badge variant="outline">{audit.warningCount} importantes</Badge>
+                        <Badge variant="secondary">{audit.infoCount} mejoras</Badge>
+                      </>
+                    ) : (
+                      <Badge variant={audit.status === "failed" ? "destructive" : "outline"}>{AUDIT_STATUS_LABELS[audit.status]}</Badge>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </CardContent>
       </Card>
 

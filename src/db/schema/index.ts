@@ -3,3 +3,4 @@
  * drizzle-kit and the typed client see the whole schema.
  */
 export * from "@/modules/workspaces/schema";
+export * from "@/modules/audits/schema";

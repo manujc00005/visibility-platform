@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 const NAV_ITEMS: { label: string; href?: string; phase?: string }[] = [
   { label: "Inicio", href: "/" },
   { label: "Empresas", href: "/workspaces" },
-  { label: "Auditorías", phase: "Fase 2" },
   { label: "Informes", phase: "Fase 3" },
 ];
 

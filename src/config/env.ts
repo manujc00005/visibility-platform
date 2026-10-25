@@ -27,6 +27,11 @@ const envSchema = z.object({
       "DATABASE_URL_UNPOOLED must be a postgres:// or postgresql:// connection string",
     )
     .optional(),
+  /** Google PageSpeed Insights API key. Optional: without it the performance section is "not configured". */
+  PAGESPEED_API_KEY: z
+    .string()
+    .optional()
+    .transform((value) => value?.trim() || undefined),
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),

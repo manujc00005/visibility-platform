@@ -1,6 +1,6 @@
 # 16 — Roadmap de implementación (referencia operativa)
 
-**Última actualización:** 2026-10-25, cierre de la Fase 1.
+**Última actualización:** 2026-10-25, cierre de la Fase 2.
 **Estado del diseño:** `00`–`12` siguen siendo referencia arquitectónica (versión 1, PROPUESTA). `13-codex-review.md` (REQUEST CHANGES) sigue siendo el registro de riesgos. **Este documento manda sobre el orden de trabajo y sobre las decisiones técnicas de construcción.** Donde contradiga a `00`–`12`, prevalece este y la contradicción se lista en §7.
 
 Nota: `14-architecture-sync.md` no llegó a escribirse; el cambio de estrategia lo sustituyó por este documento antes de redactarlo. Los hallazgos de Codex se gestionan aquí de forma progresiva (§4).
@@ -17,8 +17,8 @@ Ciclo por fase: requisitos → diseño mínimo → blockers aplicables → códi
 |---|---|---|---|
 | **0 — Project Foundation** | App Next.js conectada a PostgreSQL con migraciones, tests y layout | **HECHA** (verificada contra Neon, rama `dev`) | — |
 | **1 — Website & Project Management** | Registrar empresa/workspace y su dominio | **HECHA** (verificada en navegador y contra la rama `test`) | 0 |
-| 2 — SEO Audit Engine | Auditar técnicamente una URL real | Siguiente | 1 |
-| 3 — SEO Report | Informe HTML/PDF vendible por proceso asistido | Pendiente | 2 |
+| **2 — SEO Audit Engine** | Auditar técnicamente una URL real | **HECHA**, salvo la verificación real de PageSpeed Insights (falta clave, ver §6 D-11) | 1 |
+| 3 — SEO Report | Informe HTML/PDF vendible por proceso asistido | Siguiente | 2 |
 | 4 — GEO / AEO Visibility | Medición de presencia en superficies IA | Pendiente | 1, 3 (para el informe) |
 | 5 — Authentication & Paid Audits | Venta directa con Stripe y acceso del cliente | Pendiente | 3 |
 | 6 — Monitoring & Subscription | SaaS recurrente con histórico | Pendiente | 4, 5 |
@@ -69,10 +69,41 @@ Comportamiento degradado comprobado: con la base de datos parada, `/api/health` 
 - Guardia en dos capas (`src/db/test-guard.ts`): el nombre de la base debe terminar en `_test` y el servidor debe confirmar esa base con una marca que solo escribe `npm run db:test:prepare`.
 - La integración es obligatoria: sin configuración, con la base sin marca, con la URL de `dev` o con un nombre `_test` sobre el host de `production`, la ejecución termina con código 1 y el motivo. Las cuatro situaciones se probaron.
 
-### Fase 2 — SEO Audit Engine (siguiente)
+### Fase 2 — SEO Audit Engine (hecha)
 
-- **Bloquea su cierre:** B08a (SSRF y límites del fetch). El filtro de dominio de la Fase 1 no lo sustituye.
-- **Primera tarea concreta:** validador de destino público con pruebas (rangos privados IPv4/IPv6, IPs mapeadas, rebinding con IP fijada, puertos 80/443) antes de descargar ninguna página.
+**Alcance entregado:** desde la ficha de una empresa, «Ejecutar auditoría» analiza la **portada** (una sola página), su `robots.txt`, un sitemap y, si hay clave, la velocidad móvil con PageSpeed Insights. Guarda hechos, hallazgos y registro de peticiones, y los muestra por severidad con evidencia y recomendación. No es un crawler y no hay puntuación global.
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| Introducir un dominio y ejecutar una auditoría | Cumplido | Navegador: `olessium.com` auditado en 1,7 s (robots.txt, redirección 307 `/`→`/es`, página, sitemap) |
+| Se guardan resultados | Cumplido | Tablas `audits` y `audit_findings` en `dev`; integración contra `test` |
+| Ver problemas y recomendaciones con evidencia | Cumplido | Hallazgos ordenados crítico → importante → mejora, con evidencia textual y «Qué hacer» |
+| Lectura segura de URL pública (B08a) | Cumplido | 35 pruebas del fetcher y 47 de política de direcciones; prueba real: TLS con SNI sobre IP fijada, `localtest.me`→127.0.0.1 bloqueado, certificado de otro host rechazado |
+| Title/description, H1–H6, canonical, robots.txt, sitemap, indexabilidad, Open Graph, datos estructurados, enlaces internos | Cumplido | Extracción con `parse5` (13 pruebas) y 40 reglas (14 pruebas) |
+| Integración con PageSpeed Insights | **Implementada, no verificada en real** | Adaptador probado con respuestas simuladas; la llamada anónima real devolvió 429 (cuota diaria de Google agotada). Necesita `PAGESPEED_API_KEY` |
+| Hallazgos priorizados por severidad | Cumplido | Sin puntuación global (B06) |
+
+**Caso real que cambió el diseño:** `clinicagarcia.es` es un dominio aparcado: HTTPS falla en el saludo TLS y por HTTP sirve una página de aparcamiento con 404. La primera versión evaluaba título, H1, canonical y enlaces de esa página de error (8 hallazgos falsos). Corregido: con 4xx/5xx solo se informa del error; el hallazgo de HTTPS explica el fallo en lenguaje de propietario; el registro guarda el motivo técnico. Reglas pasan a `2026-10-25.2`.
+
+**Seguridad del fetch (B08a), `src/modules/audits/fetcher/`:**
+
+- Solo `http`/`https`, puertos por defecto, sin credenciales; se revalida cada redirección (máximo 5).
+- Resolución DNS una vez por petición; se rechaza si **cualquier** IP resuelta no es pública; la conexión va a esa IP validada (sin rebinding) y TLS verifica el certificado contra el nombre real.
+- Bloqueados todos los rangos especiales IPv4/IPv6, IPv4 mapeadas en IPv6, y NAT64, 6to4 y Teredo completos.
+- Límites por respuesta (bytes descomprimidos, tiempo) y por auditoría (12 peticiones, 12 MB, 45 s). Bomba gzip detenida por tamaño descomprimido.
+- Sitemaps: rechazo de DTD y entidades (XXE, «billion laughs»), gzip con límite de salida de 5 MB, solo se extraen `<loc>`.
+- El resolutor y la conexión son inyectables solo para pruebas; producción no tiene ninguna excepción para red privada.
+- Se respeta `robots.txt` para nuestro agente (`VisibilityPlatformBot`); si prohíbe la portada, no se descarga y se informa.
+
+**Ejecución y recuperación (parte de B07 que aplica aquí):** la auditoría se ejecuta de forma síncrona en la Server Action, con límites duros. Un índice único parcial impide dos auditorías en curso por empresa (probado con 3 simultáneas). Una auditoría que quede «en curso» por una caída se cierra como fallida a los 10 minutos. Una web inaccesible es una auditoría **completada** con hallazgo crítico; «fallida» se reserva a errores internos.
+
+**Render (adelanto de B08b):** la interfaz solo pinta texto; ningún dato de la web auditada se emite como HTML ni como enlace (comprobado: sin `dangerouslySetInnerHTML` en `src`). Las secciones de contenido se ocultan si la portada respondió con error. B08b completo (PDF y Chromium aislado) sigue siendo de la Fase 3.
+
+### Fase 3 — SEO Report (siguiente)
+
+- **Bloquea su cierre:** B08b (render seguro del informe y Chromium sin red externa ni interna) y M12 (enlaces de informe con ámbito y caducidad) si el PDF se comparte por enlace.
+- **Entrada:** la auditoría guardada (`audits.facts` y `audit_findings`); el informe no vuelve a consultar la web.
+- **Primera tarea concreta:** plantilla HTML del informe que reciba solo datos estructurados de una auditoría y escape todo, con pruebas de contenido hostil (`<script>`, `javascript:`, recursos remotos).
 
 ### Fases 2–6 — criterios de entrada
 
@@ -103,6 +134,12 @@ Comportamiento degradado comprobado: con la base de datos parada, `/api/health` 
 | **Sin SEO Health Score global en el piloto** (B06) | La fórmula de v1 era contradictoria; los hallazgos por severidad aportan la decisión útil sin falsa precisión | Arreglar pesos sin evidencia |
 | Navegación con secciones futuras desactivadas, no enlazadas | El menú refleja la hoja de ruta sin páginas vacías | Rutas placeholder |
 | **Rama Neon `test` con base `visibility_test` y guardia de dos capas** (Fase 1) | Pruebas de escritura aisladas de `dev` y con imposibilidad técnica de escribir en `production` | Usar la rama `dev` para pruebas; confiar solo en una variable de entorno |
+| **Fetcher propio con IP fijada tras validar DNS** (Fase 2) | Única forma de cerrar el rebinding: validar y conectar a la misma dirección; TLS sigue verificando el nombre real | `fetch` global (no permite fijar la IP) o lista de bloqueo previa a una resolución distinta |
+| **`parse5` como única dependencia nueva** (Fase 2) | Parser HTML conforme al estándar, con una sola dependencia; extraer encabezados, metas y JSON-LD con expresiones regulares no es fiable | `cheerio` (más pesado) o expresiones regulares |
+| **Una sola página por auditoría** (Fase 2) | El roadmap pide empezar por una página y ampliar solo con necesidad; mantiene el coste y el tiempo acotados | Rastrear N páginas del sitemap |
+| **Sin puntuación global; reglas versionadas** (Fase 2) | B06: hallazgos con severidad y evidencia aportan la decisión sin falsa precisión. `RULES_VERSION` se guarda en cada auditoría | Índice 0–100 |
+| **Auditoría síncrona con límites duros, sin cola** (Fase 2) | Operador único; 1–60 s por auditoría. La cola llega cuando haya ejecuciones programadas o pagadas (B07) | Cola de jobs desde ya |
+| **PageSpeed opcional y explícito** (Fase 2) | Sin clave la sección dice «no configurado»; nunca se inventan cifras | Ejecutar Lighthouse local (Chromium en el servidor) |
 | **Integración obligatoria, sin `skipIf`** (Fase 1) | Una suite verde que omite pruebas da falsa seguridad | Saltar la integración si falta configuración |
 | **Dominio canónico en ASCII (punycode), Unicode solo para mostrar** (Fase 1) | Una sola forma comparable para la clave única; la que usarán DNS y HTTP | Guardar Unicode y normalizar al comparar |
 | **Clave única sin `www.`, host original conservado** (Fase 1) | Evita duplicar la misma empresa sin asumir que `www` y el dominio raíz sirven lo mismo | Usar el host tal cual como clave |
@@ -120,10 +157,10 @@ Estados: `NOT_APPLICABLE_YET`, `NEEDS_DESIGN`, `BLOCKING_CURRENT_PHASE`, `DOCUME
 | **B03** Entitlements | Una compra autoriza auditorías repetidas | 5 | NOT_APPLICABLE_YET | Derecho asignado a un workspace y consumido de forma atómica; separado del derecho de monitorización |
 | **B04** Presupuesto exacto | Gasto mal contabilizado o por encima del tope | 4 | NOT_APPLICABLE_YET | Antes de la primera llamada de pago: micro-USD en `bigint`, moneda explícita, reserva bajo bloqueo, fail-closed, sin liberar compras inciertas por TTL. PSI (Fase 2) es gratuito y no lo activa |
 | **B05** Metodología reconstruible | Series GEO mezcladas o no explicables | 4 | NOT_APPLICABLE_YET | Configuración inmutable por ejecución (prompts, marca, alias, panel, mercado, proveedor, modo, versiones) antes de guardar métricas históricas |
-| **B06** SEO Health Score | Cifra con falsa precisión | 2–3 | **DOCUMENTED** (retirado del piloto) | Resuelto quitando el score; se reconsidera solo con una fórmula única y casos de prueba exactos |
-| **B07** Jobs y recuperación | Auditoría pagada sin informe; doble compra o doble email | 2 (síncrono), 5–6 | NEEDS_DESIGN | Fase 2–3 ejecutan la auditoría de forma acotada y síncrona con límite de tiempo, sin cola. Antes de entregas pagadas (5) y ejecuciones programadas (6): persistencia transaccional de transiciones, submit/poll, leases con fencing, entrega única por destinatario |
-| **B08a** SSRF y límites del fetch | Peticiones a red interna, agotamiento de recursos | 2 | NOT_APPLICABLE_YET (bloqueará la Fase 2) | Validación de destino público en todo fetch (incluidos robots, sitemap, canonical y redirecciones), IP fijada con Host/SNI, puertos 80/443, presupuesto total de bytes/peticiones/tiempo, límites XML/gzip; fixtures de rebinding, IPv6 y sitemap expansivo |
-| **B08b** Render seguro de informe | XSS almacenado, peticiones del renderer | 3 | NOT_APPLICABLE_YET (bloqueará la Fase 3) | Contenido estructurado escapado, enlaces solo http/https, Chromium sin red externa ni interna y recursos empaquetados |
+| **B06** SEO Health Score | Cifra con falsa precisión | 2–3 | **IMPLEMENTED** (sin score en la Fase 2) | Las auditorías muestran hallazgos por severidad, sin índice global. Se reconsidera solo con una fórmula única y casos de prueba exactos |
+| **B07** Jobs y recuperación | Auditoría pagada sin informe; doble compra o doble email | 2 (síncrono), 5–6 | Fase 2: **IMPLEMENTED** (una en curso por empresa, cierre de colgadas a 10 min). Resto: NEEDS_DESIGN | Fase 2–3 ejecutan la auditoría de forma acotada y síncrona con límite de tiempo, sin cola. Antes de entregas pagadas (5) y ejecuciones programadas (6): persistencia transaccional de transiciones, submit/poll, leases con fencing, entrega única por destinatario |
+| **B08a** SSRF y límites del fetch | Peticiones a red interna, agotamiento de recursos | 2 | **VERIFIED** por pruebas automatizadas y contra hosts reales (sin auditoría de seguridad externa) | Validación de destino público en todo fetch (incluidos robots, sitemap, canonical y redirecciones), IP fijada con Host/SNI, puertos 80/443, presupuesto total de bytes/peticiones/tiempo, límites XML/gzip; fixtures de rebinding, IPv6 y sitemap expansivo |
+| **B08b** Render seguro de informe | XSS almacenado, peticiones del renderer | 3 | Pantalla web: **IMPLEMENTED** (solo texto). PDF y Chromium: NOT_APPLICABLE_YET (bloquea la Fase 3) | Contenido estructurado escapado, enlaces solo http/https, Chromium sin red externa ni interna y recursos empaquetados |
 | M01 Licencia DataForSEO | Vender datos sin derecho | 4 | NOT_APPLICABLE_YET | Confirmación escrita (texto propuesto en `13` §9.8) antes de entregar sus datos a un cliente |
 | M02 Latencias | Plazos imposibles | 4 | NOT_APPLICABLE_YET | Medir p90/p95 reales y decidir modo (Standard/Priority) y política de informe parcial |
 | M03 Denominadores y significación | Cifras GEO engañosas | 4 | NOT_APPLICABLE_YET | `capture_status` y `answer_present` separados; fracciones sin lenguaje de significación |
@@ -132,7 +169,7 @@ Estados: `NOT_APPLICABLE_YET`, `NEEDS_DESIGN`, `BLOCKING_CURRENT_PHASE`, `DOCUME
 | M06 Permisos por workspace | Acceso cruzado | 5 | NOT_APPLICABLE_YET | Contexto autorizado por actor antes de RLS; pruebas con dos workspaces de una misma organización |
 | M07 Retención y borrado | Copias que no se purgan | 3–5 | NOT_APPLICABLE_YET | Política por copia (raw, snapshot, PDF, logs, backups) antes de clientes reales |
 | M10 Facturación válida y viabilidad | Cobro sin factura legal | 5 | NOT_APPLICABLE_YET | Procedimiento de factura (manual o herramienta externa) antes del primer cobro real |
-| M11 PSI y Google | Métricas de campo inexistentes; OAuth caduca a 7 días en Testing | 2 (PSI), 6 (OAuth) | NOT_APPLICABLE_YET | PSI de laboratorio con versión de Lighthouse; campo opcional; cuota real comprobada |
+| M11 PSI y Google | Métricas de campo inexistentes; OAuth caduca a 7 días en Testing | 2 (PSI), 6 (OAuth) | PSI: **IMPLEMENTED** solo laboratorio con versión de Lighthouse; **PENDING_VERIFICATION** (cuota anónima agotada, falta clave). OAuth: NOT_APPLICABLE_YET | Crear `PAGESPEED_API_KEY` y repetir una auditoría |
 | M12 Enlaces de informe | Capacidades filtradas | 3–5 | NOT_APPLICABLE_YET | Tokens separados por propósito, caducidad única, revocación |
 | M13 Operación y backups | Restore incompleto, health revelador | 0 (health), despliegue | Health: **IMPLEMENTED**; resto NOT_APPLICABLE_YET | Health público mínimo ya hecho. Backup coherente BD + artefactos antes del primer despliegue |
 
@@ -171,6 +208,10 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 | D-08 | Vitest 5 falla al mapear la traza de un error lanzado en `globalSetup` y oculta el mensaje | Solo diagnóstico | El `globalSetup` imprime el motivo antes de fallar; quitar el rodeo al actualizar Vitest |
 | D-09 | La rama `dev` contiene dos empresas creadas en la verificación manual (`clinicagarcia.es`, `bücher.de`) | Datos de prueba en desarrollo | Borrarlas cuando molesten; no afectan a `test` ni a `production` |
 | D-10 | Los selectores de país ofrecen 15 países frecuentes; el servidor acepta cualquier código ISO válido | Un país fuera de la lista no se puede elegir desde el formulario | Ampliar la lista cuando haga falta |
+| D-11 | **PageSpeed Insights sin clave**: la cuota anónima de Google estaba agotada (429) el 2026-10-25 | La sección de rendimiento sale «no configurado» | Crear una clave en Google Cloud (API PageSpeed Insights) y ponerla en `PAGESPEED_API_KEY` |
+| D-12 | La auditoría corre síncrona dentro de la Server Action (1–60 s) | Una petición HTTP larga; aceptable para el operador | Pasar a cola cuando lleguen auditorías pagadas o programadas (B07) |
+| D-13 | «Incluye la portada» del sitemap se calcula sobre una muestra de 50 URLs | Con sitemaps grandes puede quedar «—» (desconocido) | Aceptado; no se presenta como hallazgo |
+| D-14 | Solo se analiza un sitemap (el primero declarado o `/sitemap.xml`); los índices no se recorren | Hallazgos de sitemap limitados | Ampliar si un cliente lo necesita |
 | D-07 | `neon init -y` instaló el plugin de Neon (skills y MCP) a nivel de usuario en Claude Code, Codex y VS Code | Configuración global del equipo, no del repo | Ninguno; el servidor MCP de Neon en Claude Code necesita autorizar OAuth con `/mcp` |
 | R-01 | Las fases 2–6 dependen de cuentas externas (PSI, DataForSEO, Stripe) aún no abiertas | Retraso de fases | Abrir PSI antes de Fase 2; DataForSEO antes de Fase 4; Stripe test antes de Fase 5 |
 | R-02 | El NORTE del workspace `lead-platform` sigue en mantenimiento | Conflicto de foco del único desarrollador | Decisión del owner; este repo no depende de ello técnicamente |
@@ -211,3 +252,17 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 **Dependencias nuevas:** ninguna de npm; cuatro componentes de shadcn/ui copiados al repositorio.
 
 **Siguiente tarea:** Fase 2, validador de destino público para el fetcher (B08a).
+
+### Fase 2 — cerrada el 2026-10-25
+
+**Archivos creados:** `src/modules/audits/{fetcher/address-policy.ts,fetcher/safe-fetch.ts,robots.ts,sitemap.ts,html.ts,pagespeed.ts,rules.ts,collect.ts,schema.ts,service.ts,deps.ts,presentation.ts}`; `src/app/workspaces/[id]/audits/{actions.ts,[auditId]/page.tsx}`; `src/components/audits/run-audit-button.tsx`; `src/db/migrations/0002_audits.sql`; `tests/support/fake-fetcher.ts`; `tests/unit/audits/{address-policy,safe-fetch,robots-sitemap,html,pagespeed,rules,collect}.test.ts`; `tests/integration/audits.test.ts`.
+
+**Archivos modificados:** `src/app/workspaces/[id]/page.tsx` (sección de auditorías), `src/db/schema/index.ts`, `src/config/env.ts` (`PAGESPEED_API_KEY` opcional), `src/components/layout/app-header.tsx` (retirado el marcador «Auditorías»), `src/app/page.tsx`, `.env.example`, `tests/unit/env.test.ts`, `package.json` (`parse5`).
+
+**Migraciones:** `0002_audits` aplicada en `dev` y `test` (3 migraciones en cada una). `production` sin tablas de la app (comprobado con una consulta de solo lectura).
+
+**Pruebas:** 239 en total. Unitarias: 217 (de ellas 135 de auditoría: política de direcciones 47, fetcher 35, robots y sitemap 14, HTML 13, PageSpeed 6, reglas 14, orquestación 6). Integración: 22 (auditorías 9: guardado completo, web inaccesible, empresa inexistente, concurrencia, auditoría colgada, auditoría reciente, error interno, pertenencia y borrado en cascada). `npm audit --omit=dev`: 0 vulnerabilidades.
+
+**Dependencias nuevas:** `parse5` 8.0.1.
+
+**Siguiente tarea:** Fase 3, plantilla HTML del informe con escape total y pruebas de contenido hostil.

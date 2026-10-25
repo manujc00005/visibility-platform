@@ -46,3 +46,13 @@ describe("migrationDatabaseUrl", () => {
     expect(migrationDatabaseUrl(env)).toBe("postgresql://u:p@127.0.0.1:5433/db");
   });
 });
+
+describe("PAGESPEED_API_KEY", () => {
+  it("is optional and an empty value means not configured", () => {
+    const base = { DATABASE_URL: "postgresql://u:p@h/db" };
+    expect(parseEnv(base).PAGESPEED_API_KEY).toBeUndefined();
+    expect(parseEnv({ ...base, PAGESPEED_API_KEY: "" }).PAGESPEED_API_KEY).toBeUndefined();
+    expect(parseEnv({ ...base, PAGESPEED_API_KEY: "  " }).PAGESPEED_API_KEY).toBeUndefined();
+    expect(parseEnv({ ...base, PAGESPEED_API_KEY: "AIza-x" }).PAGESPEED_API_KEY).toBe("AIza-x");
+  });
+});

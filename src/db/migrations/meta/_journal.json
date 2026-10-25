@@ -15,6 +15,13 @@
       "when": 1792957060817,
       "tag": "0001_workspaces",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792959273430,
+      "tag": "0002_audits",
+      "breakpoints": true
     }
   ]
 }
