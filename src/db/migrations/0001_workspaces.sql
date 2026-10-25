@@ -1,0 +1,20 @@
+CREATE TABLE "workspaces" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"name" text NOT NULL,
+	"domain" text NOT NULL,
+	"hostname" text NOT NULL,
+	"original_url" text NOT NULL,
+	"sector" text NOT NULL,
+	"country" text NOT NULL,
+	"city" text,
+	"services" text[] NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "workspaces_domain_key" UNIQUE("domain"),
+	CONSTRAINT "workspaces_domain_normalized" CHECK ("workspaces"."domain" = lower("workspaces"."domain") and "workspaces"."domain" !~ '^www\.[^.]+\.'),
+	CONSTRAINT "workspaces_hostname_lowercase" CHECK ("workspaces"."hostname" = lower("workspaces"."hostname")),
+	CONSTRAINT "workspaces_name_not_blank" CHECK (length(btrim("workspaces"."name")) between 1 and 120),
+	CONSTRAINT "workspaces_sector_not_blank" CHECK (length(btrim("workspaces"."sector")) between 1 and 80),
+	CONSTRAINT "workspaces_country_iso2" CHECK ("workspaces"."country" ~ '^[A-Z]{2}$'),
+	CONSTRAINT "workspaces_services_count" CHECK (cardinality("workspaces"."services") between 1 and 10)
+);

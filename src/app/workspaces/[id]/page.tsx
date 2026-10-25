@@ -1,0 +1,90 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { connection } from "next/server";
+import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getDb } from "@/db/client";
+import { displayCountry, displayDate, displayDomain } from "@/modules/workspaces/presentation";
+import { getWorkspace } from "@/modules/workspaces/service";
+
+export const metadata: Metadata = { title: "Empresa" };
+
+/**
+ * Blocking route: the whole page depends on one record, and rendering it before the
+ * response starts is what lets an unknown id return a real 404 instead of a streamed 200.
+ */
+export const instant = false;
+
+export default async function WorkspacePage({ params }: PageProps<"/workspaces/[id]">) {
+  await connection();
+  const { id } = await params;
+  const workspace = await getWorkspace(getDb(), id);
+  if (!workspace) notFound();
+
+  const rows: [string, React.ReactNode][] = [
+    ["Dominio", <span key="d" className="font-mono">{displayDomain(workspace.domain)}</span>],
+    [
+      "Host introducido",
+      <span key="h" className="font-mono">
+        {displayDomain(workspace.hostname)}
+        {displayDomain(workspace.hostname) !== workspace.hostname ? (
+          <span className="text-muted-foreground"> ({workspace.hostname})</span>
+        ) : null}
+      </span>,
+    ],
+    // Shown as text, not as a link: the address has not been checked by the safe fetcher yet.
+    ["Dirección original", <span key="o" className="font-mono break-all">{workspace.originalUrl}</span>],
+    ["Sector", workspace.sector],
+    ["País", displayCountry(workspace.country)],
+    ["Ciudad", workspace.city ?? <span key="c" className="text-muted-foreground">No indicada</span>],
+    ["Alta", displayDate(workspace.createdAt)],
+    ["Última edición", displayDate(workspace.updatedAt)],
+  ];
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <Link href="/workspaces" className="text-sm text-muted-foreground hover:underline">
+            ← Empresas
+          </Link>
+          <h1 className="text-2xl font-semibold tracking-tight">{workspace.name}</h1>
+        </div>
+        <Link href={`/workspaces/${workspace.id}/edit`} className={buttonVariants({ variant: "outline" })}>
+          Editar
+        </Link>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Ficha</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-[auto_1fr]">
+            {rows.map(([label, value]) => (
+              <div key={label} className="contents">
+                <dt className="text-muted-foreground">{label}</dt>
+                <dd>{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Servicios principales</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          {workspace.services.map((service) => (
+            <Badge key={service} variant="secondary">
+              {service}
+            </Badge>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

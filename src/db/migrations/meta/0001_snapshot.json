@@ -1,0 +1,134 @@
+{
+  "id": "bc71132c-ad14-4900-825a-721d41d491b7",
+  "prevId": "b0b5407d-6041-4380-a4e6-7ccea3c27be9",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.workspaces": {
+      "name": "workspaces",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "domain": {
+          "name": "domain",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hostname": {
+          "name": "hostname",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "original_url": {
+          "name": "original_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sector": {
+          "name": "sector",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "country": {
+          "name": "country",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "services": {
+          "name": "services",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "workspaces_domain_key": {
+          "name": "workspaces_domain_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "domain"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "workspaces_domain_normalized": {
+          "name": "workspaces_domain_normalized",
+          "value": "\"workspaces\".\"domain\" = lower(\"workspaces\".\"domain\") and \"workspaces\".\"domain\" !~ '^www\\.[^.]+\\.'"
+        },
+        "workspaces_hostname_lowercase": {
+          "name": "workspaces_hostname_lowercase",
+          "value": "\"workspaces\".\"hostname\" = lower(\"workspaces\".\"hostname\")"
+        },
+        "workspaces_name_not_blank": {
+          "name": "workspaces_name_not_blank",
+          "value": "length(btrim(\"workspaces\".\"name\")) between 1 and 120"
+        },
+        "workspaces_sector_not_blank": {
+          "name": "workspaces_sector_not_blank",
+          "value": "length(btrim(\"workspaces\".\"sector\")) between 1 and 80"
+        },
+        "workspaces_country_iso2": {
+          "name": "workspaces_country_iso2",
+          "value": "\"workspaces\".\"country\" ~ '^[A-Z]{2}$'"
+        },
+        "workspaces_services_count": {
+          "name": "workspaces_services_count",
+          "value": "cardinality(\"workspaces\".\"services\") between 1 and 10"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

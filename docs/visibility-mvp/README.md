@@ -24,7 +24,8 @@ Consolida los análisis independientes de Claude y de Codex del 2026-10-25 y def
 | [10-implementation-backlog.md](10-implementation-backlog.md) | Épicas, historias P0 con criterios y estimación | |
 | [11-risks-and-open-decisions.md](11-risks-and-open-decisions.md) | Riesgos y decisiones pendientes del owner | |
 | [12-adr.md](12-adr.md) | Architecture Decision Records (todos PROPUESTOS) | |
-| [13-codex-review.md](13-codex-review.md) | Reservado para la revisión independiente de Codex | Vacío a propósito |
+| [13-codex-review.md](13-codex-review.md) | Revisión independiente de Codex (REQUEST CHANGES); registro vivo de riesgos | |
+| [16-implementation-roadmap.md](16-implementation-roadmap.md) | **Referencia operativa**: fases, estado, blockers por fase, decisiones técnicas | Para construir |
 
 ## Convenciones
 
