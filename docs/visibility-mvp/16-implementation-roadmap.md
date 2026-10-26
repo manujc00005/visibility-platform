@@ -17,7 +17,7 @@ Ciclo por fase: requisitos → diseño mínimo → blockers aplicables → códi
 |---|---|---|---|
 | **0 — Project Foundation** | App Next.js conectada a PostgreSQL con migraciones, tests y layout | **HECHA** (verificada contra Neon, rama `dev`) | — |
 | **1 — Website & Project Management** | Registrar empresa/workspace y su dominio | **HECHA** (verificada en navegador y contra la rama `test`) | 0 |
-| **2 — SEO Audit Engine** | Auditar técnicamente una URL real | **HECHA**, salvo la verificación real de PageSpeed Insights (falta clave, ver §6 D-11) | 1 |
+| **2 — SEO Audit Engine** | Auditar técnicamente una URL real | **HECHA** (PageSpeed Insights verificado en real el 2026-10-26) | 1 |
 | **3 — SEO Report** | Informe HTML/PDF vendible por proceso asistido | **HECHA** (PDF real generado, revisado visualmente y verificado byte a byte) | 2 |
 | **4 — GEO / AEO Visibility** | Medición de presencia en superficies IA | **HECHA** con captura asistida verificada; DataForSEO implementado pero **PENDING_VERIFICATION** (sin credenciales) | 1, 3 (para el informe) |
 | 5 — Authentication & Paid Audits | Venta directa con Stripe y acceso del cliente | Siguiente | 3 |
@@ -80,7 +80,7 @@ Comportamiento degradado comprobado: con la base de datos parada, `/api/health` 
 | Ver problemas y recomendaciones con evidencia | Cumplido | Hallazgos ordenados crítico → importante → mejora, con evidencia textual y «Qué hacer» |
 | Lectura segura de URL pública (B08a) | Cumplido | 35 pruebas del fetcher y 47 de política de direcciones; prueba real: TLS con SNI sobre IP fijada, `localtest.me`→127.0.0.1 bloqueado, certificado de otro host rechazado |
 | Title/description, H1–H6, canonical, robots.txt, sitemap, indexabilidad, Open Graph, datos estructurados, enlaces internos | Cumplido | Extracción con `parse5` (13 pruebas) y 40 reglas (14 pruebas) |
-| Integración con PageSpeed Insights | **Implementada, no verificada en real** | Adaptador probado con respuestas simuladas; la llamada anónima real devolvió 429 (cuota diaria de Google agotada). Necesita `PAGESPEED_API_KEY` |
+| Integración con PageSpeed Insights | **Verificada en real (2026-10-26)** | Con clave: `olessium.com/es` puntuación 95/100 en móvil, Lighthouse 13.5.0. Sin clave, la llamada anónima devuelve 429 |
 | Hallazgos priorizados por severidad | Cumplido | Sin puntuación global (B06) |
 
 **Caso real que cambió el diseño:** `clinicagarcia.es` es un dominio aparcado: HTTPS falla en el saludo TLS y por HTTP sirve una página de aparcamiento con 404. La primera versión evaluaba título, H1, canonical y enlaces de esa página de error (8 hallazgos falsos). Corregido: con 4xx/5xx solo se informa del error; el hallazgo de HTTPS explica el fallo en lenguaje de propietario; el registro guarda el motivo técnico. Reglas pasan a `2026-10-25.2`.
@@ -260,7 +260,7 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 | D-08 | Vitest 5 falla al mapear la traza de un error lanzado en `globalSetup` y oculta el mensaje | Solo diagnóstico | El `globalSetup` imprime el motivo antes de fallar; quitar el rodeo al actualizar Vitest |
 | D-09 | La rama `dev` contiene dos empresas creadas en la verificación manual (`clinicagarcia.es`, `bücher.de`) | Datos de prueba en desarrollo | Borrarlas cuando molesten; no afectan a `test` ni a `production` |
 | D-10 | Los selectores de país ofrecen 15 países frecuentes; el servidor acepta cualquier código ISO válido | Un país fuera de la lista no se puede elegir desde el formulario | Ampliar la lista cuando haga falta |
-| D-11 | **Google sin clave**: PageSpeed anónimo sigue en 429 (comprobado de nuevo el 2026-10-26) y CrUX exige clave (403 sin ella) | Las secciones de velocidad y de experiencia real salen «no configurado» | Crear una clave en Google Cloud con las APIs «PageSpeed Insights» y «Chrome UX Report» habilitadas y ponerla en `PAGESPEED_API_KEY` (sirve para las dos; `CRUX_API_KEY` es opcional) |
+| D-11 | ~~Google sin clave~~ | Resuelto el 2026-10-26: clave `visibility-platform` en el proyecto de Google Cloud `sosmanager-174214`, restringida a PageSpeed Insights y Chrome UX Report, en `PAGESPEED_API_KEY` de `.env.local` | Para producción, una clave propia del entorno desplegado |
 | D-12 | La auditoría corre síncrona dentro de la Server Action (1–60 s) | Una petición HTTP larga; aceptable para el operador | Pasar a cola cuando lleguen auditorías pagadas o programadas (B07) |
 | D-13 | «Incluye la portada» del sitemap se calcula sobre una muestra de 50 URLs | Con sitemaps grandes puede quedar «—» (desconocido) | Aceptado; no se presenta como hallazgo |
 | D-14 | Solo se analiza un sitemap (el primero declarado o `/sitemap.xml`); los índices no se recorren | Hallazgos de sitemap limitados | Ampliar si un cliente lo necesita |
@@ -371,7 +371,7 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 
 **Pruebas:** 329 en total (279 unitarias, 50 de integración).
 
-**No verificado en real:** falta la clave de Google (D-11). Sin clave, la API real responde 403 y la sección dice «no configurado», comprobado en el navegador con una auditoría nueva de Olessium en `dev`.
+**Verificado en real (2026-10-26):** `elcorteingles.es` devuelve datos de su propia página (LCP 2,9 s, INP 445 ms, CLS 0,28, periodo 2026-09-27 a 2026-10-24); `olessium.com` devuelve «sin datos», como es de esperar en una web pequeña. Auditoría completa de Olessium en `dev` vista en el navegador con PageSpeed (95/100) y la experiencia real «sin datos». Sin clave, la API responde 403 y la sección dice «no configurado».
 
 ## 9. Backlog (aparcado por decisión del owner, 2026-10-26)
 
