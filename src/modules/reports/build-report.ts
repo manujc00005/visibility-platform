@@ -1,6 +1,7 @@
 import type { FetchLogEntry } from "@/modules/audits/fetcher/safe-fetch";
 import { CATEGORY_LABELS, formatMs, OUTCOME_LABELS, SEVERITY_LABELS } from "@/modules/audits/presentation";
 import type { AuditFacts, Category, Severity } from "@/modules/audits/rules";
+import type { Fraction, GeoMetrics } from "@/modules/geo/metrics";
 import { html, join, type SafeHtml } from "@/modules/reports/html-template";
 import { REPORT_STYLES } from "@/modules/reports/report-styles";
 
@@ -10,7 +11,7 @@ import { REPORT_STYLES } from "@/modules/reports/report-styles";
  * Every value from the audited website goes through the escaping `html` template.
  * Deterministic: the same input always produces the same document.
  */
-export const TEMPLATE_VERSION = "2026-10-25.1";
+export const TEMPLATE_VERSION = "2026-10-25.2";
 
 export interface ReportFinding {
   ruleId: string;
@@ -41,6 +42,18 @@ export interface ReportInput {
     fetchLog: FetchLogEntry[];
   };
   generatedAt: Date;
+  /** Latest eligible AI-visibility measurement (Phase 4), or null. Metrics only, never answer texts. */
+  geo: ReportGeo | null;
+}
+
+export interface ReportGeo {
+  measuredAt: Date;
+  method: string;
+  locationName: string;
+  languageCode: string;
+  repetitions: number;
+  brandName: string;
+  metrics: Pick<GeoMetrics, "capture" | "answers" | "brandPresence" | "citationRate" | "promptCoverage" | "branded" | "shareOfVoice" | "perPrompt">;
 }
 
 const dateTime = new Intl.DateTimeFormat("es-ES", { dateStyle: "long", timeStyle: "short", timeZone: "Europe/Madrid" });
@@ -179,6 +192,48 @@ function evidenceSources(input: ReportInput): SafeHtml {
     </table>`;
 }
 
+function frac(value: Fraction): string {
+  return value.n === 0 ? "sin datos" : `${value.k} de ${value.n} (${Math.round((value.k / value.n) * 100)} %)`;
+}
+
+const INTENT_TEXT: Record<string, string> = {
+  discovery: "Descubrimiento",
+  recommendation: "Recomendación",
+  comparison: "Comparación",
+  branded: "Sobre la marca",
+};
+
+function geoSection(geo: ReportGeo, number: number): SafeHtml {
+  const m = geo.metrics;
+  return html`<section id="visibilidad-ia">
+  <h2>${number}. Visibilidad en asistentes de IA (muestra)</h2>
+  <p>El ${dateOnly.format(geo.measuredAt)} preguntamos a ChatGPT (${geo.method}) por servicios como los suyos, desde ${geo.locationName} y en el idioma «${geo.languageCode}», con ${plural(geo.repetitions, "repetición", "repeticiones")} por pregunta. Es una muestra en un momento concreto: indica tendencias, no cuántas personas ven estas respuestas.</p>
+  <table class="checks">
+    <thead><tr><th>Indicador</th><th>Resultado</th></tr></thead>
+    <tbody>
+      <tr><td>Respuestas que mencionan a ${geo.brandName}</td><td>${frac(m.brandPresence)}</td></tr>
+      <tr><td>Respuestas que citan su web como fuente</td><td>${frac(m.citationRate)}</td></tr>
+      <tr><td>Preguntas en las que aparece al menos una vez</td><td>${frac(m.promptCoverage)}</td></tr>
+      <tr><td>Respuestas obtenidas sobre las previstas</td><td>${frac(m.capture)}</td></tr>
+      ${m.branded.n > 0 ? html`<tr><td>Preguntas que nombran la marca: la menciona</td><td>${frac(m.branded)}</td></tr>` : null}
+    </tbody>
+  </table>
+  ${
+    m.shareOfVoice
+      ? html`<p>Comparación con competidores (menciones en preguntas que no nombran la marca):</p>
+  <table class="issues"><thead><tr><th>Marca</th><th>Menciones</th></tr></thead><tbody>
+    ${m.shareOfVoice.entries.map((e) => html`<tr><td>${e.id === "brand" ? geo.brandName : e.name}</td><td>${e.k}</td></tr>`)}
+  </tbody></table>`
+      : html`<p class="muted">Ninguna marca del panel aparece en las respuestas obtenidas.</p>`
+  }
+  <table class="log"><thead><tr><th>Pregunta</th><th>Tipo</th><th>Le menciona</th><th>Cita su web</th></tr></thead><tbody>
+    ${m.perPrompt.map(
+      (p) => html`<tr><td>${p.text}</td><td>${INTENT_TEXT[p.intent] ?? p.intent}</td><td>${p.answered === 0 ? "sin respuesta" : `${p.brandMentions} de ${p.answered}`}</td><td>${p.answered === 0 ? "—" : `${p.ownCitations} de ${p.answered}`}</td></tr>`,
+    )}
+  </tbody></table>
+</section>`;
+}
+
 const LIMITATIONS = [
   "Se analiza la página principal, su robots.txt y un sitemap. No es un rastreo completo de la web: otras páginas pueden tener problemas distintos.",
   "Los datos son públicos y se observaron en un momento concreto; la web puede cambiar después del análisis.",
@@ -195,6 +250,12 @@ export function buildReportHtml(input: ReportInput): string {
   const checks = technicalChecks(audit.facts, findings);
   const location = join([workspace.city, workspace.country].filter((v): v is string => Boolean(v)), ", ");
   const categoryLabel = (category: string) => CATEGORY_LABELS[category as Category] ?? category;
+  const limitations = input.geo
+    ? [
+        ...LIMITATIONS,
+        "La visibilidad en IA es una muestra de respuestas de ChatGPT en una fecha y ubicación concretas; las respuestas cambian entre consultas y usuarios, y no equivalen a búsquedas reales.",
+      ]
+    : LIMITATIONS;
 
   const document = html`<!doctype html>
 <html lang="es">
@@ -289,9 +350,11 @@ export function buildReportHtml(input: ReportInput): string {
   ${evidenceSources(input)}
 </section>
 
+${input.geo ? geoSection(input.geo, 7) : null}
+
 <section id="limitaciones">
-  <h2>7. Limitaciones de la medición</h2>
-  <ul>${LIMITATIONS.map((text) => html`<li>${text}</li>`)}</ul>
+  <h2>${input.geo ? 8 : 7}. Limitaciones de la medición</h2>
+  <ul>${limitations.map((text) => html`<li>${text}</li>`)}</ul>
 </section>
 
 <footer class="colophon">

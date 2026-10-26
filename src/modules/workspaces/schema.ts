@@ -21,6 +21,8 @@ export const workspaces = pgTable(
     country: text("country").notNull(),
     city: text("city"),
     services: text("services").array().notNull(),
+    /** Other names the brand is known by, for mention detection in AI answers (Phase 4). */
+    brandAliases: text("brand_aliases").array().notNull().default(sql`'{}'::text[]`),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -32,6 +34,7 @@ export const workspaces = pgTable(
     check("workspaces_sector_not_blank", sql`length(btrim(${table.sector})) between 1 and 80`),
     check("workspaces_country_iso2", sql`${table.country} ~ '^[A-Z]{2}$'`),
     check("workspaces_services_count", sql`cardinality(${table.services}) between 1 and 10`),
+    check("workspaces_brand_aliases_count", sql`cardinality(${table.brandAliases}) <= 10`),
   ],
 );
 

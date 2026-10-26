@@ -32,6 +32,16 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((value) => value?.trim() || undefined),
+  /** DataForSEO API credentials (optional). Without both, paid AI measurements are unavailable. */
+  DATAFORSEO_LOGIN: z.string().optional().transform((v) => v?.trim() || undefined),
+  DATAFORSEO_PASSWORD: z.string().optional().transform((v) => v?.trim() || undefined),
+  /** Monthly cap for paid providers, decimal USD (e.g. "5" or "2.50"). Absent = no paid calls. */
+  GEO_MONTHLY_BUDGET_USD: z.string().optional().transform((v) => v?.trim() || undefined),
+  /** "true" only after written confirmation that DataForSEO data may appear in client reports (M01). */
+  DATAFORSEO_REDISTRIBUTION_CONFIRMED: z
+    .string()
+    .optional()
+    .transform((v) => v?.trim().toLowerCase() === "true"),
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),

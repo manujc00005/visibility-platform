@@ -62,6 +62,7 @@ function input(auditFacts: AuditFacts = facts(), name = `Clínica ${HOSTILE}`): 
       fetchLog: [{ url: `${URL_}?q=<script>`, outcome: "ok", status: 200, bytes: 10, ms: 120, ip: "93.184.216.34", error: null }],
     },
     generatedAt: new Date("2026-10-26T09:00:00Z"),
+    geo: null,
   };
 }
 
@@ -157,5 +158,35 @@ describe("buildReportHtml", () => {
     const report = buildReportHtml(input(cleanFacts, "Clínica García"));
     expect(report).toContain("No detectamos problemas");
     expect(report).not.toContain("Lo primero que recomendamos");
+  });
+
+  it("adds an AI-visibility section with fractions only, never answer texts, when a measurement is provided", () => {
+    const withGeo = buildReportHtml({
+      ...input(),
+      geo: {
+        measuredAt: new Date("2026-10-25T20:00:00Z"),
+        method: "captura asistida",
+        locationName: "Spain",
+        languageCode: "es",
+        repetitions: 1,
+        brandName: `García ${HOSTILE}`,
+        metrics: {
+          capture: { k: 2, n: 2 },
+          answers: { k: 2, n: 2 },
+          brandPresence: { k: 1, n: 1 },
+          citationRate: { k: 0, n: 1 },
+          promptCoverage: { k: 1, n: 1 },
+          branded: { k: 1, n: 1 },
+          shareOfVoice: { total: 2, entries: [{ id: "brand", name: "Tu marca", k: 1 }, { id: "c1", name: "Vitaldent", k: 1 }] },
+          perPrompt: [{ promptId: "p1", text: "¿Qué clínica me recomiendas?", intent: "discovery", scheduled: 1, captured: 1, answered: 1, brandMentions: 1, ownCitations: 0, competitorMentions: {} }],
+        },
+      },
+    });
+    expect(withGeo).toContain("<h2>7. Visibilidad en asistentes de IA (muestra)</h2>");
+    expect(withGeo).toContain("<h2>8. Limitaciones de la medición</h2>");
+    expect(withGeo).toContain("1 de 1 (100 %)");
+    expect(withGeo).toContain("0 de 1 (0 %)");
+    expect(withGeo).toContain("no equivalen a búsquedas reales");
+    expect(withGeo).not.toMatch(/<script/i);
   });
 });

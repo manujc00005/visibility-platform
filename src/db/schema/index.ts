@@ -5,3 +5,4 @@
 export * from "@/modules/workspaces/schema";
 export * from "@/modules/audits/schema";
 export * from "@/modules/reports/schema";
+export * from "@/modules/geo/schema";

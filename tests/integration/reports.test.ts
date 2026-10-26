@@ -1,6 +1,8 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { audits, reports, workspaces } from "@/db/schema";
+import { audits, geoRuns, providerSpend, reports, workspaces } from "@/db/schema";
 import { emptyResult } from "@/modules/audits/pagespeed";
+import type { DataForSeoClient } from "@/modules/geo/dataforseo";
+import { addPrompt, createGeoRun, getGeoRun, recordManualObservation, refreshGeoRun } from "@/modules/geo/service";
 import { runAudit } from "@/modules/audits/service";
 import { renderPdf } from "@/modules/reports/render-pdf";
 import { createReport, getReport, listReports, reportFileName } from "@/modules/reports/service";
@@ -12,6 +14,7 @@ const { pool, db } = createTestDb();
 afterAll(() => pool.end());
 beforeEach(async () => {
   await db.delete(reports);
+  await db.delete(providerSpend);
   await db.delete(audits);
   await db.delete(workspaces);
 });
@@ -112,5 +115,61 @@ describe("report queries", () => {
         createdAt: new Date("2026-10-26T10:00:00Z"),
       }),
     ).toBe("diagnostico-seo-bucher.de-2026-10-26.pdf");
+  });
+});
+
+describe("AI visibility in reports (license gate, M01)", () => {
+  async function completedManualRun(workspaceId: string) {
+    await addPrompt(db, workspaceId, { text: "¿Qué clínica dental me recomiendas en Valladolid?", intent: "discovery" });
+    const run = await createGeoRun(db, workspaceId, { provider: "manual" }, { dataforseo: null, budgetCapMicros: null });
+    if (!run.ok) throw new Error(run.error);
+    const [obs] = (await getGeoRun(db, workspaceId, run.value.id))!.observations;
+    await recordManualObservation(db, workspaceId, run.value.id, obs!.id, { answer: "Clínica García es buena opción." });
+    return run.value.id;
+  }
+
+  async function completedPaidRun(workspaceId: string) {
+    await addPrompt(db, workspaceId, { text: "¿Qué clínica dental me recomiendas en Valladolid?", intent: "discovery" });
+    const client: DataForSeoClient = {
+      submit: async (tasks) => ({ kind: "answered", tasks: tasks.map((t) => ({ tag: t.tag, id: "33333333-3333-4333-8333-333333333333", created: true, costUsd: 0.0012, message: "20100" })) }),
+      collect: async () => ({ state: "ready", markdown: "Clínica García.", sources: [] }),
+      readyTags: async () => [],
+    };
+    const run = await createGeoRun(db, workspaceId, { provider: "dataforseo_chatgpt" }, { dataforseo: client, budgetCapMicros: 1_000_000 });
+    if (!run.ok) throw new Error(run.error);
+    await refreshGeoRun(db, workspaceId, run.value.id, { dataforseo: client, budgetCapMicros: 1_000_000 });
+    return run.value.id;
+  }
+
+  it("includes the latest completed assisted measurement and records which one", async () => {
+    const { workspace, audit } = await completedAudit();
+    const runId = await completedManualRun(workspace.id);
+    const report = await createReport(db, workspace.id, audit.id, { renderPdf: fakeRender });
+    if (!report.ok) throw new Error("report");
+    expect(report.report.geoRunId).toBe(runId);
+    const stored = await getReport(db, workspace.id, audit.id, report.report.id);
+    expect(stored!.html).toContain("Visibilidad en asistentes de IA (muestra)");
+    expect(stored!.html).not.toContain("Clínica García es buena opción."); // metrics only, never answer text
+  });
+
+  it("excludes paid DataForSEO data unless redistribution is confirmed", async () => {
+    const { workspace, audit } = await completedAudit();
+    const paidRunId = await completedPaidRun(workspace.id);
+    const blocked = await createReport(db, workspace.id, audit.id, { renderPdf: fakeRender });
+    if (!blocked.ok) throw new Error("report");
+    expect(blocked.report.geoRunId).toBeNull();
+    const allowed = await createReport(db, workspace.id, audit.id, { renderPdf: fakeRender, geoReportableProviders: ["manual", "dataforseo_chatgpt"] });
+    if (!allowed.ok) throw new Error("report");
+    expect(allowed.report.geoRunId).toBe(paidRunId);
+    expect((await db.select().from(geoRuns)).length).toBe(1);
+  });
+
+  it("omits the section when there is no completed measurement", async () => {
+    const { workspace, audit } = await completedAudit();
+    const report = await createReport(db, workspace.id, audit.id, { renderPdf: fakeRender });
+    if (!report.ok) throw new Error("report");
+    const stored = await getReport(db, workspace.id, audit.id, report.report.id);
+    expect(stored!.html).not.toContain("Visibilidad en asistentes de IA");
+    expect(stored!.html).toContain("7. Limitaciones de la medición");
   });
 });

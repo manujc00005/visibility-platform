@@ -56,3 +56,14 @@ describe("PAGESPEED_API_KEY", () => {
     expect(parseEnv({ ...base, PAGESPEED_API_KEY: "AIza-x" }).PAGESPEED_API_KEY).toBe("AIza-x");
   });
 });
+
+describe("GEO provider variables", () => {
+  const base = { DATABASE_URL: "postgresql://u:p@h/db" };
+  it("treats empty credentials as absent and redistribution as false unless explicitly true", () => {
+    const env = parseEnv({ ...base, DATAFORSEO_LOGIN: " ", DATAFORSEO_PASSWORD: "", DATAFORSEO_REDISTRIBUTION_CONFIRMED: "yes" });
+    expect(env.DATAFORSEO_LOGIN).toBeUndefined();
+    expect(env.DATAFORSEO_PASSWORD).toBeUndefined();
+    expect(env.DATAFORSEO_REDISTRIBUTION_CONFIRMED).toBe(false);
+    expect(parseEnv({ ...base, DATAFORSEO_REDISTRIBUTION_CONFIRMED: "TRUE" }).DATAFORSEO_REDISTRIBUTION_CONFIRMED).toBe(true);
+  });
+});

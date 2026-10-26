@@ -1,0 +1,31 @@
+import { env } from "@/config/env";
+import { parseUsdToMicros } from "@/modules/geo/budget";
+import { createDataForSeoClient } from "@/modules/geo/dataforseo";
+import type { GeoDeps } from "@/modules/geo/service";
+
+export interface GeoProviderStatus {
+  dataforseo: { available: boolean; reason: string | null; budgetMicros: number | null; reportable: boolean };
+}
+
+/** What the operator can use right now, and why not when unavailable. */
+export function geoProviderStatus(): GeoProviderStatus {
+  const e = env();
+  const budgetMicros = parseUsdToMicros(e.GEO_MONTHLY_BUDGET_USD);
+  const reason = !e.DATAFORSEO_LOGIN || !e.DATAFORSEO_PASSWORD
+    ? "Faltan las credenciales de DataForSEO (DATAFORSEO_LOGIN y DATAFORSEO_PASSWORD)."
+    : budgetMicros === null
+      ? "Falta el presupuesto mensual (GEO_MONTHLY_BUDGET_USD): sin él no se hacen llamadas de pago."
+      : null;
+  return { dataforseo: { available: reason === null, reason, budgetMicros, reportable: e.DATAFORSEO_REDISTRIBUTION_CONFIRMED } };
+}
+
+export function createGeoDeps(): GeoDeps {
+  const e = env();
+  return {
+    dataforseo:
+      e.DATAFORSEO_LOGIN && e.DATAFORSEO_PASSWORD
+        ? createDataForSeoClient({ login: e.DATAFORSEO_LOGIN, password: e.DATAFORSEO_PASSWORD })
+        : null,
+    budgetCapMicros: parseUsdToMicros(e.GEO_MONTHLY_BUDGET_USD),
+  };
+}

@@ -19,8 +19,8 @@ Ciclo por fase: requisitos → diseño mínimo → blockers aplicables → códi
 | **1 — Website & Project Management** | Registrar empresa/workspace y su dominio | **HECHA** (verificada en navegador y contra la rama `test`) | 0 |
 | **2 — SEO Audit Engine** | Auditar técnicamente una URL real | **HECHA**, salvo la verificación real de PageSpeed Insights (falta clave, ver §6 D-11) | 1 |
 | **3 — SEO Report** | Informe HTML/PDF vendible por proceso asistido | **HECHA** (PDF real generado, revisado visualmente y verificado byte a byte) | 2 |
-| 4 — GEO / AEO Visibility | Medición de presencia en superficies IA | Siguiente | 1, 3 (para el informe) |
-| 5 — Authentication & Paid Audits | Venta directa con Stripe y acceso del cliente | Pendiente | 3 |
+| **4 — GEO / AEO Visibility** | Medición de presencia en superficies IA | **HECHA** con captura asistida verificada; DataForSEO implementado pero **PENDING_VERIFICATION** (sin credenciales) | 1, 3 (para el informe) |
+| 5 — Authentication & Paid Audits | Venta directa con Stripe y acceso del cliente | Siguiente | 3 |
 | 6 — Monitoring & Subscription | SaaS recurrente con histórico | Pendiente | 4, 5 |
 | 7 — Commercial Extensions | Agencias, white-label, lead-platform, CRM | Fuera del desarrollo inicial | 6 y validación del MVP |
 
@@ -121,12 +121,31 @@ Comportamiento degradado comprobado: con la base de datos parada, `/api/health` 
 
 **Persistencia:** tabla `reports` con copia de los datos de la empresa (editar la empresa no altera un informe ya emitido), el HTML, el PDF exacto entregado y su SHA-256. Regenerar crea una revisión nueva (Codex N01). Las descargas sirven siempre el archivo guardado.
 
-### Fase 4 — GEO / AEO Visibility (siguiente)
+### Fase 4 — GEO / AEO Visibility (hecha; DataForSEO sin verificar en real)
 
-- **Antes de la primera llamada de pago:** B04 (presupuesto exacto, fail-closed) y la cuenta del proveedor elegido.
-- **Antes de guardar métricas históricas:** B05 (configuración inmutable por ejecución).
-- **Antes de entregar sus datos a un cliente:** M01 (licencia escrita de DataForSEO u otro proveedor).
-- **Primera tarea concreta:** configuración de marca (alias) y competidores confirmados en la empresa, que no depende de ningún proveedor.
+**Alcance entregado:** en la ficha de cada empresa, «Visibilidad en asistentes de IA» permite configurar alias de marca y hasta 5 competidores confirmados, definir hasta 25 preguntas (con sugerencias generadas a partir de actividad, zona y servicios), lanzar mediciones, guardar las respuestas con su metodología, detectar menciones y citas, comparar con los competidores y ver el histórico. La última medición reportable aparece en el informe PDF.
+
+| Criterio | Resultado | Evidencia |
+|---|---|---|
+| Configurar preguntas | Cumplido | Alta, archivado, límite de 25, duplicados rechazados, sugerencias con tipo (descubrimiento, comparación, sobre la marca) |
+| Ejecutar mediciones autorizadas | Cumplido con captura asistida; **DataForSEO PENDING_VERIFICATION** | El operador lanza cada medición. DataForSEO solo se habilita con credenciales y tope mensual; el adaptador está probado contra las formas documentadas, no contra la API real |
+| Guardar respuestas y metodología | Cumplido | `geo_observations` guarda texto y fuentes; `geo_runs.config` congela marca, alias, panel, preguntas, mercado, proveedor, repeticiones y versiones, con `methodology_key` SHA-256 |
+| Detectar presencia de marca | Cumplido | Detección determinista por palabra completa (sin acentos ni mayúsculas) y por dominio; citas solo desde fuentes estructuradas |
+| Resultados verificables | Cumplido | Cada métrica es una fracción k de n con su denominador; la página de la medición muestra cada respuesta, sus menciones y sus fuentes |
+| GEO en el informe | Cumplido | Sección 7 «Visibilidad en asistentes de IA (muestra)», solo métricas, nunca el texto de las respuestas; nueva limitación en la sección 8 |
+
+**Proveedores:**
+
+- **Captura asistida (`manual`):** el operador hace la pregunta en ChatGPT y pega la respuesta y las fuentes. No se automatiza la interfaz web de ningún asistente. Las fuentes deben ser `http(s)`.
+- **DataForSEO LLM Scraper (ChatGPT), cola Standard:** `task_post` con `tag` propio por observación, `task_get/advanced/{id}` para recoger y `tasks_ready` para reconciliar envíos inciertos. Precio fijado en el código: 1 200 micro-USD por tarea (`dataforseo-llm-scraper-chatgpt-standard@2026-10-25`), consultado en la documentación ese día.
+
+**Gates de la fase:**
+
+- **B04 (presupuesto):** micro-USD enteros en `bigint`, moneda explícita, reserva bajo `pg_advisory_xact_lock`, tope mensual en `GEO_MONTHLY_BUDGET_USD`; sin tope no hay llamadas de pago (fail-closed). Un cargo incierto nunca se libera.
+- **B07 (parte GEO):** envío y recogida en dos pasos persistidos; un envío sin respuesta pasa a `uncertain` y se reconcilia por `tag`; un pendiente de más de 2 minutos se marca incierto. La actualización la lanza el operador; no hay worker.
+- **M01 (licencia):** los datos de DataForSEO solo entran en un informe si `DATAFORSEO_REDISTRIBUTION_CONFIRMED=true`, que debe ponerse solo tras la confirmación escrita. La captura asistida siempre es reportable.
+- **M03 (denominadores):** captura, respuesta presente y mención se separan. Las preguntas que nombran la marca quedan fuera de presencia y cuota de voz y se informan aparte. Sin respuestas, se muestra «Sin datos», nunca 0 %.
+- **Muestra frente a búsquedas reales:** la interfaz y el informe dicen «muestra de respuestas» y la limitación aclara que no equivale a búsquedas reales; no se mezcla con datos de búsqueda.
 
 ### Fases 2–6 — criterios de entrada
 
@@ -167,6 +186,11 @@ Comportamiento degradado comprobado: con la base de datos parada, `/api/health` 
 | **PDF con Chromium headless (`playwright-core` + headless shell), aislado de red** (Fase 3) | Fidelidad de la plantilla HTML; JavaScript y red desactivados | PDF programático (segunda plantilla que diverge) o servicio externo (datos fuera de nuestro control) |
 | **PDF entregado guardado en Postgres (`bytea`) con SHA-256** (Fase 3) | Se entrega siempre el mismo archivo; volumen del piloto pequeño | Regenerar al descargar (el archivo cambiaría) u object storage desde ya (P1) |
 | **Sin enlaces públicos al informe en esta fase** (Fase 3) | El operador descarga y entrega; evita abrir capacidades compartibles (M12) antes de tener autenticación | Enlaces firmados desde ya |
+| **DataForSEO en cola Standard, sin modo Live** (Fase 4) | Un tercio del precio de Live y el envío/recogida en dos pasos es lo que exige B07 | Live ($0,004 por tarea) o Priority |
+| **Actualización lanzada por el operador, sin worker** (Fase 4) | Un solo operador; el worker llega con las mediciones programadas (Fase 6) | Proceso en segundo plano desde ya |
+| **Captura asistida como proveedor de primera clase** (Fase 4) | Permite validar la fase y vender sin cuenta de pago ni licencia de terceros; no automatiza ninguna interfaz web | Esperar a DataForSEO |
+| **El informe muestra solo métricas, no el texto de las respuestas** (Fase 4) | Evita redistribuir contenido generado por terceros y reduce la superficie de inyección en el PDF | Citar respuestas en el informe |
+| **`force_web_search: true` y ubicación por nombre de país en inglés** (Fase 4) | Las preguntas de recomendación local necesitan búsqueda web; el nombre del país es lo que pide `location_name` | Coordenadas o códigos numéricos de ubicación |
 | **Integración obligatoria, sin `skipIf`** (Fase 1) | Una suite verde que omite pruebas da falsa seguridad | Saltar la integración si falta configuración |
 | **Dominio canónico en ASCII (punycode), Unicode solo para mostrar** (Fase 1) | Una sola forma comparable para la clave única; la que usarán DNS y HTTP | Guardar Unicode y normalizar al comparar |
 | **Clave única sin `www.`, host original conservado** (Fase 1) | Evita duplicar la misma empresa sin asumir que `www` y el dominio raíz sirven lo mismo | Usar el host tal cual como clave |
@@ -182,16 +206,16 @@ Estados: `NOT_APPLICABLE_YET`, `NEEDS_DESIGN`, `BLOCKING_CURRENT_PHASE`, `DOCUME
 | **B01** Orden anónima e identidad | Compras imputadas a organizaciones ajenas | 5 | NOT_APPLICABLE_YET | Antes de habilitar compra: orden persistida, vinculación por verificación de buzón, tokens hasheados de un uso; pruebas de §B01 |
 | **B02** Fulfillment de Stripe | Ejecutar sin cobro o cobrar sin entregar | 5 | NOT_APPLICABLE_YET | Fulfillment idempotente por orden, `payment_status`, pagos asíncronos, validación de producto/importe/moneda/`livemode`; ensayo en modo test |
 | **B03** Entitlements | Una compra autoriza auditorías repetidas | 5 | NOT_APPLICABLE_YET | Derecho asignado a un workspace y consumido de forma atómica; separado del derecho de monitorización |
-| **B04** Presupuesto exacto | Gasto mal contabilizado o por encima del tope | 4 | NOT_APPLICABLE_YET | Antes de la primera llamada de pago: micro-USD en `bigint`, moneda explícita, reserva bajo bloqueo, fail-closed, sin liberar compras inciertas por TTL. PSI (Fase 2) es gratuito y no lo activa |
-| **B05** Metodología reconstruible | Series GEO mezcladas o no explicables | 4 | NOT_APPLICABLE_YET | Configuración inmutable por ejecución (prompts, marca, alias, panel, mercado, proveedor, modo, versiones) antes de guardar métricas históricas |
+| **B04** Presupuesto exacto | Gasto mal contabilizado o por encima del tope | 4 | **IMPLEMENTED**, verificado con pruebas (no con una llamada real) | Antes de la primera llamada de pago: micro-USD en `bigint`, moneda explícita, reserva bajo bloqueo, fail-closed, sin liberar compras inciertas por TTL. PSI (Fase 2) es gratuito y no lo activa |
+| **B05** Metodología reconstruible | Series GEO mezcladas o no explicables | 4 | **IMPLEMENTED** (config congelada y `methodology_key`; el histórico marca los cambios de metodología) | Configuración inmutable por ejecución (prompts, marca, alias, panel, mercado, proveedor, modo, versiones) antes de guardar métricas históricas |
 | **B06** SEO Health Score | Cifra con falsa precisión | 2–3 | **IMPLEMENTED** (sin score en la Fase 2) | Las auditorías muestran hallazgos por severidad, sin índice global. Se reconsidera solo con una fórmula única y casos de prueba exactos |
-| **B07** Jobs y recuperación | Auditoría pagada sin informe; doble compra o doble email | 2 (síncrono), 5–6 | Fase 2: **IMPLEMENTED** (una en curso por empresa, cierre de colgadas a 10 min). Resto: NEEDS_DESIGN | Fase 2–3 ejecutan la auditoría de forma acotada y síncrona con límite de tiempo, sin cola. Antes de entregas pagadas (5) y ejecuciones programadas (6): persistencia transaccional de transiciones, submit/poll, leases con fencing, entrega única por destinatario |
+| **B07** Jobs y recuperación | Auditoría pagada sin informe; doble compra o doble email | 2 (síncrono), 4, 5–6 | Fase 2: **IMPLEMENTED** (una en curso por empresa, cierre de colgadas a 10 min). Fase 4: **PARTIAL** (submit/poll persistido, reconciliación de inciertos por `tag`, sin worker). Resto: NEEDS_DESIGN | Fase 2–3 ejecutan la auditoría de forma acotada y síncrona con límite de tiempo, sin cola. Antes de entregas pagadas (5) y ejecuciones programadas (6): persistencia transaccional de transiciones, submit/poll, leases con fencing, entrega única por destinatario |
 | **B08a** SSRF y límites del fetch | Peticiones a red interna, agotamiento de recursos | 2 | **VERIFIED** por pruebas automatizadas y contra hosts reales (sin auditoría de seguridad externa) | Validación de destino público en todo fetch (incluidos robots, sitemap, canonical y redirecciones), IP fijada con Host/SNI, puertos 80/443, presupuesto total de bytes/peticiones/tiempo, límites XML/gzip; fixtures de rebinding, IPv6 y sitemap expansivo |
 | **B08b** Render seguro de informe | XSS almacenado, peticiones del renderer | 3 | **VERIFIED** por pruebas automatizadas (escape, estructura del documento, Chromium con 0 peticiones salientes) y vista previa con CSP sin infracciones | Contenido estructurado escapado, enlaces solo http/https, Chromium sin red externa ni interna y recursos empaquetados |
-| M01 Licencia DataForSEO | Vender datos sin derecho | 4 | NOT_APPLICABLE_YET | Confirmación escrita (texto propuesto en `13` §9.8) antes de entregar sus datos a un cliente |
+| M01 Licencia DataForSEO | Vender datos sin derecho | 4 | **IMPLEMENTED** como control (`DATAFORSEO_REDISTRIBUTION_CONFIRMED`); la confirmación escrita sigue pendiente | Confirmación escrita (texto propuesto en `13` §9.8) antes de entregar sus datos a un cliente |
 | M02 Latencias | Plazos imposibles | 4 | NOT_APPLICABLE_YET | Medir p90/p95 reales y decidir modo (Standard/Priority) y política de informe parcial |
-| M03 Denominadores y significación | Cifras GEO engañosas | 4 | NOT_APPLICABLE_YET | `capture_status` y `answer_present` separados; fracciones sin lenguaje de significación |
-| M04 Marca y zona antes de medir | Medir el negocio equivocado | 1, 4 | **IMPLEMENTED** en lo que toca a la Fase 1 | Nombre comercial, actividad, país, ciudad y servicios ya se piden y validan. Alias de marca y competidores confirmados quedan para la Fase 4 |
+| M03 Denominadores y significación | Cifras GEO engañosas | 4 | **IMPLEMENTED** | `capture_status` y `answer_present` separados; fracciones sin lenguaje de significación |
+| M04 Marca y zona antes de medir | Medir el negocio equivocado | 1, 4 | **IMPLEMENTED** (alias y competidores confirmados en la Fase 4) | Nombre comercial, actividad, país, ciudad y servicios ya se piden y validan. Alias de marca y competidores confirmados quedan para la Fase 4 |
 | M05 Reauditoría y SERP media | Series inventadas | 6 | NOT_APPLICABLE_YET | Salud técnica como foto fechada; top 10/top 20 como KPI principal |
 | M06 Permisos por workspace | Acceso cruzado | 5 | NOT_APPLICABLE_YET | Contexto autorizado por actor antes de RLS; pruebas con dos workspaces de una misma organización |
 | M07 Retención y borrado | Copias que no se purgan | 3–5 | NEEDS_DESIGN: los informes guardan evidencia y PDF mientras exista la empresa; el borrado de la empresa los elimina en cascada | Política por copia (snapshot, PDF, logs, backups) antes de clientes reales |
@@ -242,8 +266,14 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 | D-15 | **Fuentes del PDF verificadas solo en macOS.** La plantilla usa fuentes del sistema; en un servidor Linux el aspecto cambiará | El PDF de producción puede verse distinto al revisado | Antes de desplegar: instalar fuentes en la imagen (p. ej. Liberation o Inter empaquetada como archivo local) y revisar un PDF generado allí |
 | D-16 | Chromium headless shell instalado en local (`npx playwright-core install --only-shell chromium`); no forma parte de `npm install` | Un entorno nuevo no genera PDF hasta instalarlo | Documentado en README; en el despliegue, incluirlo en la imagen |
 | D-17 | Se lanza un Chromium por informe (1–3 s) | Coste aceptable para el operador | Reutilizar navegador o cola si el volumen crece |
+| D-18 | **DataForSEO sin verificar en real**: no hay credenciales | El adaptador puede divergir de la API real en detalles no documentados | Con `DATAFORSEO_LOGIN`, `DATAFORSEO_PASSWORD` y un tope pequeño (p. ej. `GEO_MONTHLY_BUDGET_USD=1`), lanzar 3 preguntas y comprobar envío, cargo, recogida y reconciliación |
+| D-19 | `location_name` se envía como nombre del país en inglés sin contrastarlo con la lista de ubicaciones de DataForSEO | Una ubicación no reconocida haría fallar la tarea | Contrastar con el endpoint de ubicaciones en la verificación real |
+| D-20 | El texto de las respuestas se guarda sin purga (M07 pedía 90 días) | Retención indefinida de contenido de terceros | Antes de clientes reales: purga programada (Fase 6) |
+| D-21 | Tope de gasto global, no por empresa; la captura asistida usa una sola repetición; una sola superficie (ChatGPT); AI Overviews vía SERP no implementado | Alcance reducido de la medición | Ampliar cuando haya demanda o volumen |
+| D-22 | **Desplegar la migración antes del código.** Durante el desarrollo hubo 500 transitorios («column brand_aliases does not exist») por servir código nuevo con la BD sin migrar | Caída breve en un despliegue | El procedimiento de despliegue (M13) migra primero |
+| D-23 | La rama `dev` contiene para Olessium un competidor de ejemplo, 3 preguntas y una medición con respuestas marcadas «[RESPUESTA DE PRUEBA]» | Datos de prueba en desarrollo | Archivarlos o borrarlos cuando molesten; no afectan a `test` ni a `production` |
 | D-07 | `neon init -y` instaló el plugin de Neon (skills y MCP) a nivel de usuario en Claude Code, Codex y VS Code | Configuración global del equipo, no del repo | Ninguno; el servidor MCP de Neon en Claude Code necesita autorizar OAuth con `/mcp` |
-| R-01 | Las fases 2–6 dependen de cuentas externas (PSI, DataForSEO, Stripe) aún no abiertas | Retraso de fases | Abrir PSI antes de Fase 2; DataForSEO antes de Fase 4; Stripe test antes de Fase 5 |
+| R-01 | Las fases 2–6 dependen de cuentas externas (PSI, DataForSEO, Stripe) aún no abiertas; la Fase 4 se cerró sin la de DataForSEO | Retraso de fases | Abrir PSI antes de Fase 2; DataForSEO antes de Fase 4; Stripe test antes de Fase 5 |
 | R-02 | El NORTE del workspace `lead-platform` sigue en mantenimiento | Conflicto de foco del único desarrollador | Decisión del owner; este repo no depende de ello técnicamente |
 
 ## 7. Divergencias con la especificación `00`–`12`
@@ -312,3 +342,21 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 **Dependencias nuevas:** `playwright-core` 1.64.1 y el navegador Chromium headless shell (fuera de npm).
 
 **Siguiente tarea:** Fase 4, alias de marca y competidores confirmados en la ficha de la empresa.
+
+### Fase 4 — cerrada el 2026-10-25 (DataForSEO pendiente de verificación real)
+
+**Archivos creados:** `src/modules/geo/{detection,prompt-suggestions,metrics,budget,dataforseo,schema,service,deps,presentation}.ts`; `src/app/workspaces/[id]/geo/{page.tsx,actions.ts,runs/[runId]/page.tsx}`; `src/components/geo/geo-forms.tsx`; `src/db/migrations/0004_geo.sql`; `tests/unit/geo/{detection,prompt-suggestions,metrics,budget,dataforseo}.test.ts`; `tests/integration/geo.test.ts`.
+
+**Archivos modificados:** `src/modules/workspaces/schema.ts` (`brand_aliases`, máximo 10), `src/modules/reports/{schema,service,build-report}.ts` (`geo_run_id`, sección 7, plantilla `2026-10-25.2`), `src/app/workspaces/[id]/audits/[auditId]/actions.ts` (control M01), `src/app/workspaces/[id]/page.tsx` (tarjeta GEO), `src/app/page.tsx`, `src/config/env.ts`, `.env.example`, `src/db/schema/index.ts`, pruebas de entorno e informe.
+
+**Migraciones:** `0004_geo` aplicada en `dev` y `test` (5 migraciones y 9 tablas en cada una). `production` sin tablas de la app (consulta de solo lectura).
+
+**Pruebas:** 313 en total: 263 unitarias (29 de GEO: detección, sugerencias, métricas, conversión monetaria y adaptador de DataForSEO con respuestas simuladas) y 50 de integración (servicio GEO con presupuesto, reserva concurrente, envío incierto, reconciliación, recogida, y control de licencia en el informe).
+
+**Verificación manual:** en `dev`, para Olessium: alias, un competidor, 3 preguntas y una medición asistida con respuestas de prueba (una con una cadena XSS). Se comprobaron métricas (presencia 1/1, cita 1/1, cuota de voz 50/50, captura 3/3) y el rechazo de una fuente `javascript:`. Informe nuevo con secciones 1–8, PDF revisado visualmente, y sin texto de respuestas ni XSS en el HTML del informe.
+
+**No verificado:** ninguna llamada real a DataForSEO (D-18, D-19).
+
+**Dependencias nuevas:** ninguna.
+
+**Siguiente tarea:** verificar DataForSEO en real cuando haya credenciales y tope; en paralelo, Fase 5 (B01, B02, B03 antes de abrir acceso al cliente).

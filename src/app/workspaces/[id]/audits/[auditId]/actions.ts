@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getDb } from "@/db/client";
+import { geoProviderStatus } from "@/modules/geo/deps";
 import { renderPdf } from "@/modules/reports/render-pdf";
 import { createReport } from "@/modules/reports/service";
 
@@ -13,7 +14,10 @@ export interface GenerateReportState {
 }
 
 export async function generateReportAction(workspaceId: string, auditId: string): Promise<GenerateReportState> {
-  const result = await createReport(getDb(), workspaceId, auditId, { renderPdf });
+  const result = await createReport(getDb(), workspaceId, auditId, {
+    renderPdf,
+    geoReportableProviders: geoProviderStatus().dataforseo.reportable ? ["manual", "dataforseo_chatgpt"] : ["manual"],
+  });
   if (!result.ok) {
     return {
       error: result.error.kind === "audit_not_completed" ? "Solo se pueden generar informes de auditorías completadas." : "La auditoría ya no existe.",

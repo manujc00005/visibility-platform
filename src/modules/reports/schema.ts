@@ -1,5 +1,6 @@
 import { customType, index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { audits } from "@/modules/audits/schema";
+import { geoRuns } from "@/modules/geo/schema";
 import type { ReportInput } from "@/modules/reports/build-report";
 import { workspaces } from "@/modules/workspaces/schema";
 
@@ -22,6 +23,8 @@ export const reports = pgTable(
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
     templateVersion: text("template_version").notNull(),
+    /** AI-visibility measurement included in the report, if any (Phase 4). */
+    geoRunId: uuid("geo_run_id").references(() => geoRuns.id, { onDelete: "set null" }),
     workspaceSnapshot: jsonb("workspace_snapshot").$type<ReportInput["workspace"]>().notNull(),
     html: text("html").notNull(),
     pdf: bytea("pdf").notNull(),

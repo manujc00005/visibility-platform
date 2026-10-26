@@ -3,8 +3,11 @@ import { and, desc, eq } from "drizzle-orm";
 import type { Database } from "@/db/client";
 import { logger } from "@/lib/logger";
 import { getAudit } from "@/modules/audits/service";
+import { PROVIDER_LABELS } from "@/modules/geo/presentation";
+import type { GeoRun } from "@/modules/geo/schema";
+import { listGeoRuns } from "@/modules/geo/service";
 import type { Severity } from "@/modules/audits/rules";
-import { buildReportHtml, TEMPLATE_VERSION, type ReportInput } from "@/modules/reports/build-report";
+import { buildReportHtml, TEMPLATE_VERSION, type ReportGeo, type ReportInput } from "@/modules/reports/build-report";
 import type { RenderedPdf } from "@/modules/reports/render-pdf";
 import { reports, type Report, type ReportSummary } from "@/modules/reports/schema";
 import { displayCountry, displayDomain } from "@/modules/workspaces/presentation";
@@ -13,6 +16,11 @@ import { getWorkspace } from "@/modules/workspaces/service";
 export interface ReportDeps {
   renderPdf: (html: string) => Promise<RenderedPdf>;
   now?: () => Date;
+  /**
+   * Measurement providers whose data may appear in client reports (M01). Assisted capture
+   * is the operator's own observation; DataForSEO only after written confirmation.
+   */
+  geoReportableProviders?: GeoRun["provider"][];
 }
 
 export type CreateReportResult =
@@ -26,6 +34,7 @@ const summaryColumns = {
   auditId: reports.auditId,
   workspaceId: reports.workspaceId,
   templateVersion: reports.templateVersion,
+  geoRunId: reports.geoRunId,
   workspaceSnapshot: reports.workspaceSnapshot,
   pdfSha256: reports.pdfSha256,
   pdfBytes: reports.pdfBytes,
@@ -57,6 +66,22 @@ export async function createReport(
     city: workspace.city,
     services: workspace.services,
   };
+  const reportable = deps.geoReportableProviders ?? ["manual"];
+  const geoView = (await listGeoRuns(db, workspace.id)).find(
+    (v) => v.run.status === "completed" && v.metrics.answers.k > 0 && reportable.includes(v.run.provider),
+  );
+  const geo: ReportGeo | null = geoView
+    ? {
+        measuredAt: geoView.run.createdAt,
+        method: PROVIDER_LABELS[geoView.run.provider],
+        locationName: geoView.run.config.location.locationName,
+        languageCode: geoView.run.config.location.languageCode,
+        repetitions: geoView.run.config.repetitions,
+        brandName: geoView.run.config.panel.brand.name,
+        metrics: geoView.metrics,
+      }
+    : null;
+
   const html = buildReportHtml({
     workspace: snapshot,
     audit: {
@@ -77,6 +102,7 @@ export async function createReport(
       fetchLog: audit.fetchLog,
     },
     generatedAt: (deps.now ?? (() => new Date()))(),
+    geo,
   });
 
   const started = Date.now();
@@ -91,6 +117,7 @@ export async function createReport(
       auditId: audit.id,
       workspaceId: workspace.id,
       templateVersion: TEMPLATE_VERSION,
+      geoRunId: geoView?.run.id ?? null,
       workspaceSnapshot: snapshot,
       html,
       pdf,

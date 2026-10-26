@@ -117,6 +117,18 @@ export default async function WorkspacePage({ params }: PageProps<"/workspaces/[
 
       <Card>
         <CardHeader>
+          <CardTitle>Visibilidad en asistentes de IA</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col items-start gap-2 text-sm">
+          <p className="text-muted-foreground">Marca, competidores, preguntas y mediciones de si ChatGPT menciona y cita esta web.</p>
+          <Link href={`/workspaces/${workspace.id}/geo`} className={buttonVariants({ variant: "outline" })}>
+            Abrir visibilidad en IA
+          </Link>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Servicios principales</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
