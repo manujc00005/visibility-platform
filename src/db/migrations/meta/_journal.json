@@ -36,6 +36,13 @@
       "when": 1792961263582,
       "tag": "0004_geo",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793031734873,
+      "tag": "0005_competitor_suggestions",
+      "breakpoints": true
     }
   ]
 }

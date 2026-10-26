@@ -15,6 +15,7 @@ import { isPublicAddress } from "@/modules/audits/fetcher/address-policy";
  *   connects to exactly that validated address (DNS-rebinding safe). TLS still verifies
  *   the certificate against the real hostname (SNI + Host header are the hostname);
  * - re-validates every redirect hop (max 5);
+ * - honours an optional absolute deadline and AbortSignal that cover DNS waits too;
  * - enforces per-response limits on decompressed bytes (gzip-bomb safe) and time, plus a
  *   per-audit budget of requests, bytes and wall-clock time shared by all fetches.
  *
@@ -37,6 +38,13 @@ export interface FetchLimits {
   /** Per-request timeout (each redirect hop is a request). */
   timeoutMs: number;
   accept?: string;
+  /**
+   * Absolute deadline (epoch ms) for the whole fetch: DNS wait, every hop and the body.
+   * A DNS answer that arrives after it never opens a connection.
+   */
+  deadlineAt?: number;
+  /** Cancels the fetch: pending DNS is ignored, open requests are destroyed. */
+  signal?: AbortSignal;
 }
 
 export type FetchFailureKind =
@@ -136,15 +144,38 @@ function bareHostname(url: URL): string {
   return url.hostname.startsWith("[") ? url.hostname.slice(1, -1) : url.hostname;
 }
 
-async function resolvePublicAddress(hostname: string, resolve: Resolver): Promise<string> {
+/** Rejects when `timeLeftMs` elapses or `signal` aborts; a late resolution is simply ignored. */
+function withDeadline<T>(promise: Promise<T>, timeLeftMs: number, signal: AbortSignal | undefined, onLate: () => FetchError): Promise<T> {
+  return new Promise<T>((resolvePromise, reject) => {
+    let done = false;
+    const finish = (fn: () => void) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+      fn();
+    };
+    const onAbort = () => finish(() => reject(new FetchError("timeout", "Cancelled")));
+    const timer = setTimeout(() => finish(() => reject(onLate())), Math.max(1, timeLeftMs));
+    if (signal?.aborted) onAbort();
+    else signal?.addEventListener("abort", onAbort, { once: true });
+    promise.then(
+      (value) => finish(() => resolvePromise(value)),
+      (error: unknown) => finish(() => reject(error)),
+    );
+  });
+}
+
+async function resolvePublicAddress(hostname: string, resolve: Resolver, timeLeftMs: number, signal: AbortSignal | undefined): Promise<string> {
   if (isIP(hostname)) {
     if (!isPublicAddress(hostname)) throw new FetchError("blocked_destination", "Destination address is not public");
     return hostname;
   }
   let addresses: string[];
   try {
-    addresses = await resolve(hostname);
+    addresses = await withDeadline(resolve(hostname), timeLeftMs, signal, () => new FetchError("timeout", `DNS resolution of ${hostname} exceeded the deadline`));
   } catch (error) {
+    if (error instanceof FetchError) throw error;
     const code = (error as { code?: string }).code ?? "";
     throw new FetchError("dns", `Could not resolve ${hostname}${code ? ` (${code})` : ""}`);
   }
@@ -190,9 +221,13 @@ interface RawResponse {
 export function createSafeFetcher(deps: SafeFetcherDeps) {
   const resolve = deps.resolve ?? systemResolver;
 
+  function timeLeft(limits: FetchLimits, budget: FetchBudget): number {
+    const now = Date.now();
+    return Math.min(limits.timeoutMs, budget.deadline - now, limits.deadlineAt === undefined ? Infinity : limits.deadlineAt - now);
+  }
+
   function requestOnce(url: URL, ip: string, limits: FetchLimits, budget: FetchBudget): Promise<RawResponse> {
-    const remainingTime = budget.deadline - Date.now();
-    const timeoutMs = Math.max(1, Math.min(limits.timeoutMs, remainingTime));
+    const timeoutMs = Math.max(1, timeLeft(limits, budget));
     const byteCap = Math.min(limits.maxBytes, budget.maxTotalBytes - budget.bytes);
     const capIsBudget = budget.maxTotalBytes - budget.bytes < limits.maxBytes;
     const isHttps = url.protocol === "https:";
@@ -201,15 +236,22 @@ export function createSafeFetcher(deps: SafeFetcherDeps) {
     const family = isIP(ip) === 6 ? 6 : 4;
 
     return new Promise<RawResponse>((resolvePromise, reject) => {
+      if (limits.signal?.aborted) {
+        reject(new FetchError("timeout", "Cancelled"));
+        return;
+      }
       let settled = false;
+      const onAbort = () => fail(new FetchError("timeout", "Cancelled"));
       const fail = (error: FetchError) => {
         if (settled) return;
         settled = true;
         clearTimeout(timer);
+        limits.signal?.removeEventListener("abort", onAbort);
         req.destroy();
         reject(error);
       };
       const timer = setTimeout(() => fail(new FetchError("timeout", `No complete response within ${timeoutMs} ms`)), timeoutMs);
+      limits.signal?.addEventListener("abort", onAbort, { once: true });
 
       const send = isHttps ? httpsRequest : httpRequest;
       const req = send(
@@ -243,6 +285,7 @@ export function createSafeFetcher(deps: SafeFetcherDeps) {
             res.destroy();
             settled = true;
             clearTimeout(timer);
+            limits.signal?.removeEventListener("abort", onAbort);
             resolvePromise({ status, headers, body: Buffer.alloc(0) });
             return;
           }
@@ -273,6 +316,7 @@ export function createSafeFetcher(deps: SafeFetcherDeps) {
             if (settled) return;
             settled = true;
             clearTimeout(timer);
+            limits.signal?.removeEventListener("abort", onAbort);
             resolvePromise({ status, headers, body: Buffer.concat(chunks) });
           });
           source.on("error", (error) => fail(new FetchError("network", `Body error: ${error.message}`)));
@@ -303,9 +347,12 @@ export function createSafeFetcher(deps: SafeFetcherDeps) {
         if (budget.requests >= budget.maxRequests) throw new FetchError("budget_exhausted", "Audit request budget exhausted");
         if (Date.now() >= budget.deadline) throw new FetchError("budget_exhausted", "Audit time budget exhausted");
         if (budget.bytes >= budget.maxTotalBytes) throw new FetchError("budget_exhausted", "Audit byte budget exhausted");
+        if (limits.signal?.aborted) throw new FetchError("timeout", "Cancelled");
+        const left = timeLeft(limits, budget);
+        if (left <= 0) throw new FetchError("timeout", "Deadline reached before the request started");
         budget.requests += 1;
 
-        const ip = await resolvePublicAddress(bareHostname(current), resolve);
+        const ip = await resolvePublicAddress(bareHostname(current), resolve, left, limits.signal);
         entry.ip = ip;
         const raw = await requestOnce(current, ip, limits, budget);
         budget.bytes += raw.body.length;

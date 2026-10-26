@@ -18,6 +18,21 @@ function lowerFirst(value: string): string {
   return value.charAt(0).toLocaleLowerCase("es") + value.slice(1);
 }
 
+/** The sector question shared by measurement suggestions and competitor discovery. */
+function sectorQuestion(sector: string, place: string): string {
+  return `¿Qué ${lowerFirst(sector.trim())} me recomiendas en ${place}?`;
+}
+
+/**
+ * Questions the operator can ask ChatGPT to discover competitors. They are context for the
+ * capture, never evidence about any candidate. The second one names the brand on purpose:
+ * it asks for alternatives to it, which is not a measurement question.
+ */
+export function discoveryQuestions(input: { brandName: string; sector: string; city: string | null; countryName: string }): string[] {
+  const place = input.city?.trim() || input.countryName;
+  return [sectorQuestion(input.sector, place), `¿Qué alternativas hay a ${input.brandName.trim()} en ${place}?`];
+}
+
 export function suggestPrompts(input: {
   brandName: string;
   sector: string;
@@ -30,7 +45,7 @@ export function suggestPrompts(input: {
   const sector = lowerFirst(input.sector.trim());
   const services = input.services.slice(0, 3).map(lowerFirst);
   const suggestions: PromptSuggestion[] = [
-    { text: `¿Qué ${sector} me recomiendas en ${place}?`, intent: "discovery" },
+    { text: sectorQuestion(input.sector, place), intent: "discovery" },
     ...services.map((service) => ({ text: `¿Quién ofrece ${service} en ${place}?`, intent: "discovery" as const })),
     { text: `¿Cuáles son las mejores opciones de ${sector} en ${place}?`, intent: "recommendation" },
     ...services.slice(0, 1).map((service) => ({

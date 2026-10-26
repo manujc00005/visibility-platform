@@ -13,7 +13,7 @@ import {
   usdFloatToMicros,
 } from "@/modules/geo/budget";
 import { DATAFORSEO_PRICE, type DataForSeoClient } from "@/modules/geo/dataforseo";
-import { classifySources, detectMentions, type BrandPanel } from "@/modules/geo/detection";
+import { classifySources, detectMentions, nameKey, type BrandPanel } from "@/modules/geo/detection";
 import { computeGeoMetrics, type GeoMetrics } from "@/modules/geo/metrics";
 import type { PromptIntent } from "@/modules/geo/prompt-suggestions";
 import {
@@ -43,9 +43,11 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isUuid = (value: string) => UUID.test(value);
 
 export type FieldErrors = Record<string, string[]>;
-type Result<T, E extends string> = { ok: true; value: T } | { ok: false; error: E; fieldErrors?: FieldErrors };
+export type Result<T, E extends string> = { ok: true; value: T } | { ok: false; error: E; fieldErrors?: FieldErrors };
+/** Drizzle transaction handle, shared with the competitor-discovery service. */
+export type Tx = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
-function fieldErrorsOf(error: z.ZodError): FieldErrors {
+export function fieldErrorsOf(error: z.ZodError): FieldErrors {
   const out: FieldErrors = {};
   for (const issue of error.issues) (out[String(issue.path[0] ?? "form")] ??= []).push(issue.message);
   return out;
@@ -78,11 +80,48 @@ const competitorSchema = z.object({
   aliases: lines(10, 80, "alias"),
 });
 
-export async function addCompetitor(
-  db: Database,
+/**
+ * Row lock on the company: every writer of competitors takes it first, so counts and duplicate
+ * checks are serialized. NO KEY UPDATE keeps that mutual exclusion without blocking FK inserts
+ * into other child tables (runs, prompts, audits), which only take KEY SHARE on this row.
+ */
+export async function lockWorkspace(tx: Tx, workspaceId: string): Promise<boolean> {
+  if (!isUuid(workspaceId)) return false;
+  const result = await tx.execute(sql`select id from ${workspaces} where id = ${workspaceId} for no key update`);
+  return result.rows.length === 1;
+}
+
+export interface CompetitorInsert {
+  name: string;
+  /** Hostname without "www." as produced by normalizeWebsite, or null. */
+  domain: string | null;
+  aliases: string[];
+}
+
+/**
+ * Inserts a competitor under the workspace lock (the caller must hold it): checks the
+ * active limit and duplicates by hostname or normalized name in the same transaction.
+ * `duplicateScope` "all" also rejects archived competitors (suggestion acceptance never
+ * restores one silently); the manual form only looks at active ones.
+ */
+export async function insertCompetitorLocked(
+  tx: Tx,
   workspaceId: string,
-  raw: unknown,
-): Promise<Result<GeoCompetitor, "not_found" | "validation" | "limit">> {
+  input: CompetitorInsert,
+  duplicateScope: "active" | "all",
+): Promise<Result<GeoCompetitor, "limit" | "already_exists">> {
+  const existing = await tx.select().from(geoCompetitors).where(eq(geoCompetitors.workspaceId, workspaceId));
+  const active = existing.filter((c) => c.status === "active");
+  const key = nameKey(input.name);
+  const pool = duplicateScope === "all" ? existing : active;
+  const duplicate = pool.some((c) => (input.domain !== null && c.domain === input.domain) || (key.length > 0 && nameKey(c.name) === key));
+  if (duplicate) return { ok: false, error: "already_exists" };
+  if (active.length >= MAX_ACTIVE_COMPETITORS) return { ok: false, error: "limit" };
+  const [row] = await tx.insert(geoCompetitors).values({ workspaceId, name: input.name, aliases: input.aliases, domain: input.domain }).returning();
+  return { ok: true, value: row! };
+}
+
+export function parseCompetitorInput(raw: unknown): Result<CompetitorInsert, "validation"> {
   const parsed = competitorSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "validation", fieldErrors: fieldErrorsOf(parsed.error) };
   let domain: string | null = null;
@@ -91,24 +130,34 @@ export async function addCompetitor(
     if (!website.ok) return { ok: false, error: "validation", fieldErrors: { website: [WEBSITE_ERROR_MESSAGES[website.error]] } };
     domain = website.value.domain;
   }
-  if (!(await getWorkspace(db, workspaceId))) return { ok: false, error: "not_found" };
-  const active = await listCompetitors(db, workspaceId);
-  if (active.length >= MAX_ACTIVE_COMPETITORS) return { ok: false, error: "limit" };
-  const [row] = await db
-    .insert(geoCompetitors)
-    .values({ workspaceId, name: parsed.data.name, aliases: parsed.data.aliases, domain })
-    .returning();
-  return { ok: true, value: row! };
+  return { ok: true, value: { name: parsed.data.name, domain, aliases: parsed.data.aliases } };
 }
 
+export async function addCompetitor(
+  db: Database,
+  workspaceId: string,
+  raw: unknown,
+): Promise<Result<GeoCompetitor, "not_found" | "validation" | "limit" | "already_exists">> {
+  const input = parseCompetitorInput(raw);
+  if (!input.ok) return input;
+  return db.transaction(async (tx) => {
+    if (!(await lockWorkspace(tx, workspaceId))) return { ok: false, error: "not_found" as const };
+    return insertCompetitorLocked(tx, workspaceId, input.value, "active");
+  });
+}
+
+/** Same lock order as every competitor writer (FR-004b): workspace row first, then the change. */
 export async function archiveCompetitor(db: Database, workspaceId: string, competitorId: string): Promise<boolean> {
   if (!isUuid(workspaceId) || !isUuid(competitorId)) return false;
-  const rows = await db
-    .update(geoCompetitors)
-    .set({ status: "archived" })
-    .where(and(eq(geoCompetitors.id, competitorId), eq(geoCompetitors.workspaceId, workspaceId)))
-    .returning({ id: geoCompetitors.id });
-  return rows.length === 1;
+  return db.transaction(async (tx) => {
+    if (!(await lockWorkspace(tx, workspaceId))) return false;
+    const rows = await tx
+      .update(geoCompetitors)
+      .set({ status: "archived" })
+      .where(and(eq(geoCompetitors.id, competitorId), eq(geoCompetitors.workspaceId, workspaceId)))
+      .returning({ id: geoCompetitors.id });
+    return rows.length === 1;
+  });
 }
 
 export async function listCompetitors(db: Database, workspaceId: string): Promise<GeoCompetitor[]> {

@@ -29,7 +29,7 @@ export interface ClassifiedSource {
 }
 
 /** Lowercase, strip accents, punctuation to spaces, padded so " term " means whole words. */
-function normalizeText(value: string): string {
+export function normalizeText(value: string): string {
   const flat = value
     .toLowerCase()
     .normalize("NFKD")
@@ -37,6 +37,14 @@ function normalizeText(value: string): string {
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim();
   return ` ${flat} `;
+}
+
+/**
+ * Persisted identity of a name: the normalized text without the padding spaces that
+ * `normalizeText` adds for whole-word detection. Internal runs of spaces are already one.
+ */
+export function nameKey(value: string): string {
+  return normalizeText(value).trim();
 }
 
 function escapeRegex(value: string): string {

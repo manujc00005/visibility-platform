@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
-import { createGeoDeps } from "@/modules/geo/deps";
+import { acceptSuggestion, dismissSuggestion, extractCompetitors } from "@/modules/geo/competitors/service";
+import { createCompetitorDeps, createGeoDeps } from "@/modules/geo/deps";
 import {
   addCompetitor,
   addPrompt,
@@ -35,6 +36,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   budget_exceeded: "El presupuesto mensual no alcanza para esta medición.",
   not_pending: "Esta respuesta ya estaba registrada.",
   validation: "Revisa los datos.",
+  already_exists: "Ese competidor ya está registrado (activo o archivado).",
+  conflict: "Otra acción se adelantó: recarga la página para ver el estado actual.",
+  stale: "Esta sugerencia pertenece a una extracción anterior; vuelve a extraer.",
 };
 
 function values(formData: FormData): Record<string, string> {
@@ -119,4 +123,36 @@ export async function refreshRunAction(workspaceId: string, runId: string, previ
   revalidatePath(`${geoPath(workspaceId)}/runs/${runId}`);
   const { collected, reconciled } = result.value;
   return success(previous, `${collected} respuestas recogidas${reconciled ? `, ${reconciled} envíos reconciliados` : ""}.`);
+}
+
+// --- Competitor discovery (assisted capture) --------------------------------------------
+
+export async function extractCompetitorsAction(workspaceId: string, previous: GeoFormState, formData: FormData): Promise<GeoFormState> {
+  const result = await extractCompetitors(getDb(), workspaceId, values(formData), createCompetitorDeps());
+  if (!result.ok) {
+    if (result.error === "conflict") revalidatePath(geoPath(workspaceId));
+    return failure(previous, formData, result.error, result.fieldErrors);
+  }
+  revalidatePath(geoPath(workspaceId));
+  const n = result.value.suggestions.length;
+  return success(
+    previous,
+    result.value.repeated
+      ? "Esta misma captura ya se procesó antes; no se repite. La página muestra la extracción más reciente de la empresa."
+      : `${n} ${n === 1 ? "candidato" : "candidatos"} para revisar.`,
+  );
+}
+
+export async function acceptSuggestionAction(workspaceId: string, suggestionId: string, previous: GeoFormState, formData: FormData): Promise<GeoFormState> {
+  const result = await acceptSuggestion(getDb(), workspaceId, suggestionId, values(formData));
+  if (!result.ok) return failure(previous, formData, result.error, result.fieldErrors);
+  revalidatePath(geoPath(workspaceId));
+  return success(previous, `${result.value.name} añadido como competidor.`);
+}
+
+export async function dismissSuggestionAction(workspaceId: string, suggestionId: string, previous: GeoFormState): Promise<GeoFormState> {
+  const result = await dismissSuggestion(getDb(), workspaceId, suggestionId);
+  if (!result.ok) return { ...previous, ok: false, message: ERROR_MESSAGES[result.error] ?? "No se pudo descartar.", attempt: previous.attempt + 1 };
+  revalidatePath(geoPath(workspaceId));
+  return success(previous, "Descartado.");
 }

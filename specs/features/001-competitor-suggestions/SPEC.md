@@ -2,9 +2,9 @@
 
 ## Status
 
-Ready
+In Progress
 
-Revisada el 2026-10-26 tras la revisión independiente. Se mantiene el estado documental; las tareas siguen pendientes y no se afirma que la funcionalidad esté implementada.
+Revisada el 2026-10-26 tras la revisión independiente. Implementación y pruebas ejecutadas ese mismo día (ver TASKS.md); pendientes la verificación manual con captura real y las revisiones de cierre.
 
 ## Problem
 

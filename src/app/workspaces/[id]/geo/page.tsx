@@ -5,27 +5,40 @@ import { connection } from "next/server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { CompetitorSuggestions, type SuggestionCard } from "@/components/geo/competitor-suggestions";
 import { AliasesForm, CompetitorForm, PromptForm, RunForm } from "@/components/geo/geo-forms";
 import { getDb } from "@/db/client";
 import { geoProviderStatus } from "@/modules/geo/deps";
 import { formatMicros } from "@/modules/geo/budget";
 import { fraction, INTENT_LABELS, PROVIDER_LABELS, RUN_STATUS_LABELS } from "@/modules/geo/presentation";
-import { suggestPrompts } from "@/modules/geo/prompt-suggestions";
+import type { ExtractionContext } from "@/modules/geo/competitors/schema";
+import { listSuggestions } from "@/modules/geo/competitors/service";
+import { discoveryQuestions, suggestPrompts } from "@/modules/geo/prompt-suggestions";
 import { listCompetitors, listGeoRuns, listPrompts, MAX_ACTIVE_COMPETITORS, MAX_ACTIVE_PROMPTS } from "@/modules/geo/service";
 import { displayCountry, displayDate, displayDomain } from "@/modules/workspaces/presentation";
 import { getWorkspace } from "@/modules/workspaces/service";
 import {
+  acceptSuggestionAction,
   addCompetitorAction,
   addPromptAction,
   addSuggestedPromptAction,
   archiveCompetitorAction,
   archivePromptAction,
   createRunAction,
+  dismissSuggestionAction,
+  extractCompetitorsAction,
   updateAliasesAction,
 } from "./actions";
 
 export const metadata: Metadata = { title: "Visibilidad en IA" };
 export const instant = false;
+
+function contextLine(c: ExtractionContext): string {
+  const parts = [c.brandName, c.sector, c.city ? `${c.city} (${c.countryName})` : c.countryName];
+  if (c.aliases.length) parts.push(`alias: ${c.aliases.join(", ")}`);
+  if (c.services.length) parts.push(`servicios: ${c.services.join(", ")}`);
+  return parts.join(" · ");
+}
 
 export default async function GeoPage({ params }: PageProps<"/workspaces/[id]/geo">) {
   await connection();
@@ -33,14 +46,37 @@ export default async function GeoPage({ params }: PageProps<"/workspaces/[id]/ge
   const db = getDb();
   const workspace = await getWorkspace(db, id);
   if (!workspace) notFound();
-  const [competitors, prompts, runs] = await Promise.all([listCompetitors(db, workspace.id), listPrompts(db, workspace.id), listGeoRuns(db, workspace.id)]);
+  const [competitors, prompts, runs, discovery] = await Promise.all([
+    listCompetitors(db, workspace.id),
+    listPrompts(db, workspace.id),
+    listGeoRuns(db, workspace.id),
+    listSuggestions(db, workspace.id),
+  ]);
+  const countryName = displayCountry(workspace.country);
+  const questions = discoveryQuestions({ brandName: workspace.name, sector: workspace.sector, city: workspace.city, countryName });
+  const cards: SuggestionCard[] = (discovery?.suggestions ?? [])
+    .filter((s) => s.status !== "superseded")
+    .map((s) => ({
+      id: s.id,
+      status: s.status,
+      name: s.name,
+      domain: s.domain,
+      sourceUrls: s.sourceUrls,
+      snippet: s.snippet,
+      pageTitle: s.pageTitle,
+      pageDescription: s.pageDescription,
+      factors: s.factors,
+      webStatus: s.webStatus,
+      finalUrl: s.finalUrl,
+      acceptedName: s.acceptedInput?.name ?? null,
+    }));
   const providers = geoProviderStatus();
   const activeTexts = new Set(prompts.map((p) => p.text.toLocaleLowerCase("es")));
   const suggestions = suggestPrompts({
     brandName: workspace.name,
     sector: workspace.sector,
     city: workspace.city,
-    countryName: displayCountry(workspace.country),
+    countryName,
     services: workspace.services,
     competitorNames: competitors.map((c) => c.name),
   }).filter((s) => !activeTexts.has(s.text.toLocaleLowerCase("es")));
@@ -97,6 +133,29 @@ export default async function GeoPage({ params }: PageProps<"/workspaces/[id]/ge
             <p className="text-sm text-muted-foreground">Sin competidores todavía.</p>
           )}
           {competitors.length < MAX_ACTIVE_COMPETITORS ? <CompetitorForm action={addCompetitorAction.bind(null, workspace.id)} /> : null}
+          <CompetitorSuggestions
+            workspaceId={workspace.id}
+            questions={questions}
+            extraction={
+              discovery
+                ? {
+                    question: discovery.extraction.question,
+                    capturedAt: displayDate(discovery.extraction.createdAt),
+                    sourcesCount: discovery.extraction.sources.length,
+                    candidatesTotal: discovery.extraction.candidatesTotal,
+                    warnings: discovery.extraction.warnings,
+                    context: contextLine(discovery.extraction.contextSnapshot),
+                    rulesVersion: discovery.extraction.rulesVersion,
+                  }
+                : null
+            }
+            cards={cards}
+            activeCount={competitors.length}
+            maxActive={MAX_ACTIVE_COMPETITORS}
+            extract={extractCompetitorsAction.bind(null, workspace.id)}
+            accept={acceptSuggestionAction}
+            dismiss={dismissSuggestionAction}
+          />
         </CardContent>
       </Card>
 

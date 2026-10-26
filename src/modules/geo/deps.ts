@@ -1,4 +1,7 @@
 import { env } from "@/config/env";
+import { AUDIT_USER_AGENT } from "@/modules/audits/collect";
+import { createSafeFetcher } from "@/modules/audits/fetcher/safe-fetch";
+import type { CompetitorDeps } from "@/modules/geo/competitors/service";
 import { parseUsdToMicros } from "@/modules/geo/budget";
 import { createDataForSeoClient } from "@/modules/geo/dataforseo";
 import type { GeoDeps } from "@/modules/geo/service";
@@ -28,4 +31,9 @@ export function createGeoDeps(): GeoDeps {
         : null,
     budgetCapMicros: parseUsdToMicros(e.GEO_MONTHLY_BUDGET_USD),
   };
+}
+
+/** Competitor discovery reads home pages through the same safe fetcher as the audit engine. */
+export function createCompetitorDeps(): CompetitorDeps {
+  return { fetcher: createSafeFetcher({ userAgent: AUDIT_USER_AGENT }) };
 }

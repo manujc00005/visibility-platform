@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { suggestPrompts } from "@/modules/geo/prompt-suggestions";
+import { discoveryQuestions, suggestPrompts } from "@/modules/geo/prompt-suggestions";
 
 describe("suggestPrompts", () => {
   const base = {
@@ -52,5 +52,21 @@ describe("suggestPrompts", () => {
   it("returns unique questions", () => {
     const texts = suggestPrompts(base).map((p) => p.text);
     expect(new Set(texts).size).toBe(texts.length);
+  });
+});
+
+describe("discoveryQuestions", () => {
+  it("shares the sector question with suggestPrompts and asks for alternatives to the brand", () => {
+    const questions = discoveryQuestions({ brandName: "Clínica Dental García", sector: "Clínica dental", city: "Valladolid", countryName: "España" });
+    expect(questions).toEqual(["¿Qué clínica dental me recomiendas en Valladolid?", "¿Qué alternativas hay a Clínica Dental García en Valladolid?"]);
+    const measured = suggestPrompts({ brandName: "Clínica Dental García", sector: "Clínica dental", city: "Valladolid", countryName: "España", services: [], competitorNames: [] });
+    expect(measured[0]!.text).toBe(questions[0]);
+  });
+
+  it("falls back to the country without a city", () => {
+    expect(discoveryQuestions({ brandName: "Olessium", sector: "Agencia de automatización", city: null, countryName: "España" })).toEqual([
+      "¿Qué agencia de automatización me recomiendas en España?",
+      "¿Qué alternativas hay a Olessium en España?",
+    ]);
   });
 });
