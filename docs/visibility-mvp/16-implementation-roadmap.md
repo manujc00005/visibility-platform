@@ -191,6 +191,7 @@ Comportamiento degradado comprobado: con la base de datos parada, `/api/health` 
 | **Captura asistida como proveedor de primera clase** (Fase 4) | Permite validar la fase y vender sin cuenta de pago ni licencia de terceros; no automatiza ninguna interfaz web | Esperar a DataForSEO |
 | **El informe muestra solo métricas, no el texto de las respuestas** (Fase 4) | Evita redistribuir contenido generado por terceros y reduce la superficie de inyección en el PDF | Citar respuestas en el informe |
 | **`force_web_search: true` y ubicación por nombre de país en inglés** (Fase 4) | Las preguntas de recomendación local necesitan búsqueda web; el nombre del país es lo que pide `location_name` | Coordenadas o códigos numéricos de ubicación |
+| **Experiencia real con la API de CrUX, no con el bloque de campo de PageSpeed** (2026-10-26) | Google anuncia la retirada de CrUX en PSI; la API de CrUX es gratuita (150 consultas/min). Se pide la página y, sin datos, el origen, indicando cuál se usó | Leer `loadingExperience` de la respuesta de PSI |
 | **Integración obligatoria, sin `skipIf`** (Fase 1) | Una suite verde que omite pruebas da falsa seguridad | Saltar la integración si falta configuración |
 | **Dominio canónico en ASCII (punycode), Unicode solo para mostrar** (Fase 1) | Una sola forma comparable para la clave única; la que usarán DNS y HTTP | Guardar Unicode y normalizar al comparar |
 | **Clave única sin `www.`, host original conservado** (Fase 1) | Evita duplicar la misma empresa sin asumir que `www` y el dominio raíz sirven lo mismo | Usar el host tal cual como clave |
@@ -259,7 +260,7 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 | D-08 | Vitest 5 falla al mapear la traza de un error lanzado en `globalSetup` y oculta el mensaje | Solo diagnóstico | El `globalSetup` imprime el motivo antes de fallar; quitar el rodeo al actualizar Vitest |
 | D-09 | La rama `dev` contiene dos empresas creadas en la verificación manual (`clinicagarcia.es`, `bücher.de`) | Datos de prueba en desarrollo | Borrarlas cuando molesten; no afectan a `test` ni a `production` |
 | D-10 | Los selectores de país ofrecen 15 países frecuentes; el servidor acepta cualquier código ISO válido | Un país fuera de la lista no se puede elegir desde el formulario | Ampliar la lista cuando haga falta |
-| D-11 | **PageSpeed Insights sin clave**: la cuota anónima de Google estaba agotada (429) el 2026-10-25 | La sección de rendimiento sale «no configurado» | Crear una clave en Google Cloud (API PageSpeed Insights) y ponerla en `PAGESPEED_API_KEY` |
+| D-11 | **Google sin clave**: PageSpeed anónimo sigue en 429 (comprobado de nuevo el 2026-10-26) y CrUX exige clave (403 sin ella) | Las secciones de velocidad y de experiencia real salen «no configurado» | Crear una clave en Google Cloud con las APIs «PageSpeed Insights» y «Chrome UX Report» habilitadas y ponerla en `PAGESPEED_API_KEY` (sirve para las dos; `CRUX_API_KEY` es opcional) |
 | D-12 | La auditoría corre síncrona dentro de la Server Action (1–60 s) | Una petición HTTP larga; aceptable para el operador | Pasar a cola cuando lleguen auditorías pagadas o programadas (B07) |
 | D-13 | «Incluye la portada» del sitemap se calcula sobre una muestra de 50 URLs | Con sitemaps grandes puede quedar «—» (desconocido) | Aceptado; no se presenta como hallazgo |
 | D-14 | Solo se analiza un sitemap (el primero declarado o `/sitemap.xml`); los índices no se recorren | Hallazgos de sitemap limitados | Ampliar si un cliente lo necesita |
@@ -272,6 +273,7 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 | D-21 | Tope de gasto global, no por empresa; la captura asistida usa una sola repetición; una sola superficie (ChatGPT); AI Overviews vía SERP no implementado | Alcance reducido de la medición | Ampliar cuando haya demanda o volumen |
 | D-22 | **Desplegar la migración antes del código.** Durante el desarrollo hubo 500 transitorios («column brand_aliases does not exist») por servir código nuevo con la BD sin migrar | Caída breve en un despliegue | El procedimiento de despliegue (M13) migra primero |
 | D-23 | La rama `dev` contiene para Olessium un competidor de ejemplo, 3 preguntas y una medición con respuestas marcadas «[RESPUESTA DE PRUEBA]» | Datos de prueba en desarrollo | Archivarlos o borrarlos cuando molesten; no afectan a `test` ni a `production` |
+| D-24 | La prueba de integración de concurrencia de auditorías falló una vez en la suite completa y pasó en las tres repeticiones siguientes | Prueba intermitente: depende de que tres auditorías se solapen en una ventana de 300 ms | Hacer el solapamiento determinista (barrera en el `pageSpeed` simulado) |
 | D-07 | `neon init -y` instaló el plugin de Neon (skills y MCP) a nivel de usuario en Claude Code, Codex y VS Code | Configuración global del equipo, no del repo | Ninguno; el servidor MCP de Neon en Claude Code necesita autorizar OAuth con `/mcp` |
 | R-01 | Las fases 2–6 dependen de cuentas externas (PSI, DataForSEO, Stripe) aún no abiertas; la Fase 4 se cerró sin la de DataForSEO | Retraso de fases | Abrir PSI antes de Fase 2; DataForSEO antes de Fase 4; Stripe test antes de Fase 5 |
 | R-02 | El NORTE del workspace `lead-platform` sigue en mantenimiento | Conflicto de foco del único desarrollador | Decisión del owner; este repo no depende de ello técnicamente |
@@ -360,3 +362,26 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 **Dependencias nuevas:** ninguna.
 
 **Siguiente tarea:** verificar DataForSEO en real cuando haya credenciales y tope; en paralelo, Fase 5 (B01, B02, B03 antes de abrir acceso al cliente).
+
+### Ampliación gratuita — 2026-10-26
+
+**Alcance:** la auditoría consulta la API Chrome UX Report (gratuita): LCP, INP, CLS, FCP y TTFB reales de visitantes con Chrome en el móvil (percentil 75, 28 días). Se consulta la página y, si no tiene datos, todo el origen. Nueva regla `field_cwv_failed` (mejora si alguna métrica es mejorable, importante si alguna es mala); `RULES_VERSION` `2026-10-26.1`. Nueva fila y fuente en el informe; plantilla `2026-10-26.1`. Las auditorías anteriores no muestran la fila.
+
+**Archivos:** nuevo `src/modules/audits/crux.ts` y `tests/unit/audits/crux.test.ts`; modificados `collect.ts`, `deps.ts`, `rules.ts`, `presentation.ts`, la página de la auditoría, `build-report.ts`, `env.ts`, `.env.example` y sus pruebas. Sin migración (los hechos se guardan en el JSON de la auditoría).
+
+**Pruebas:** 329 en total (279 unitarias, 50 de integración).
+
+**No verificado en real:** falta la clave de Google (D-11). Sin clave, la API real responde 403 y la sección dice «no configurado», comprobado en el navegador con una auditoría nueva de Olessium en `dev`.
+
+## 9. Backlog (aparcado por decisión del owner, 2026-10-26)
+
+Primero todo lo gratuito; lo siguiente queda aparcado.
+
+| ID | Elemento | Por qué está aquí | Qué hace falta para retomarlo |
+|---|---|---|---|
+| BL-01 | **DataForSEO en real** (medición automática de ChatGPT) | De pago | Cuenta con saldo, `DATAFORSEO_LOGIN` y `DATAFORSEO_PASSWORD` de la API, tope `GEO_MONTHLY_BUDGET_USD`, prueba con 3 preguntas (D-18, D-19). Confirmación escrita de licencia antes de usar sus datos en informes (M01) |
+| BL-02 | **Google Search Console** (clics, impresiones, posiciones, indexación) | Gratuita, pero exige que cada cliente autorice el acceso a su propiedad (OAuth) | Autenticación y cuentas de cliente (Fase 5), app OAuth verificada por Google, guardado cifrado de tokens |
+| BL-03 | **Google Analytics 4** (visitas reales) | Igual que BL-02 | Igual que BL-02 |
+| BL-04 | **Bing Webmaster Tools** | Gratuita, pero requiere que el cliente verifique su web y comparta acceso | Igual que BL-02 |
+| BL-05 | Superficies de IA adicionales (AI Overviews de Google vía SERP, Perplexity, Gemini) | De pago a través de proveedores | Después de BL-01 |
+

@@ -11,7 +11,7 @@ import { REPORT_STYLES } from "@/modules/reports/report-styles";
  * Every value from the audited website goes through the escaping `html` template.
  * Deterministic: the same input always produces the same document.
  */
-export const TEMPLATE_VERSION = "2026-10-25.2";
+export const TEMPLATE_VERSION = "2026-10-26.1";
 
 export interface ReportFinding {
   ruleId: string;
@@ -127,6 +127,22 @@ function technicalChecks(facts: AuditFacts, findings: ReportFinding[]): Check[] 
   } else {
     checks.push({ label: "Velocidad en móvil (laboratorio)", status: "ok", detail: perf.score !== null ? `Puntuación ${perf.score}/100` : "Correcta" });
   }
+
+  // Audits stored before real-user data existed have no fieldData: no row rather than a false "unknown".
+  const field = facts.fieldData;
+  if (field) {
+    const label = "Experiencia real en móvil (usuarios de Chrome)";
+    const fieldFinding = findings.find((f) => f.ruleId === "field_cwv_failed");
+    if (fieldFinding) {
+      checks.push({ label, status: "review", severity: fieldFinding.severity, detail: fieldFinding.title });
+    } else if (field.status === "ok") {
+      checks.push({ label, status: "ok", detail: "LCP, INP y CLS dentro de los valores buenos" });
+    } else if (field.status === "no_data") {
+      checks.push({ label, status: "unknown", detail: "Sin datos: pocas visitas registradas por Chrome" });
+    } else {
+      checks.push({ label, status: "unknown", detail: "No consultada en este análisis" });
+    }
+  }
   return checks;
 }
 
@@ -174,12 +190,20 @@ function evidenceSources(input: ReportInput): SafeHtml {
     perf.status === "ok"
       ? html`<li>Rendimiento: Google PageSpeed Insights, prueba de laboratorio en móvil (Lighthouse ${perf.lighthouseVersion ?? "—"}). No son datos de visitantes reales.</li>`
       : html`<li>Rendimiento: no medido en este análisis.</li>`;
+  const field = facts.fieldData;
+  const fieldSource =
+    field?.status === "ok"
+      ? html`<li>Experiencia real: Chrome UX Report de Google, visitantes con Chrome en el móvil, percentil 75 de 28 días${field.collectionPeriod ? html` (${field.collectionPeriod.firstDate} a ${field.collectionPeriod.lastDate})` : null}, ${field.scope === "url" ? "de la página principal" : "del conjunto de la web"}.</li>`
+      : field?.status === "no_data"
+        ? html`<li>Experiencia real: Chrome UX Report no tiene datos suficientes de esta web.</li>`
+        : null;
   return html`
     <ul class="sources">
       <li>Datos públicos de la web, leídos por nuestro analizador el ${dateTime.format(audit.startedAt)} (hora de Madrid).</li>
       ${facts.robots ? html`<li>robots.txt: <span class="mono">${facts.robots.url}</span></li>` : null}
       ${facts.sitemap?.url ? html`<li>Sitemap: <span class="mono">${facts.sitemap.url}</span></li>` : null}
       ${perfSource}
+      ${fieldSource}
     </ul>
     <table class="log">
       <thead><tr><th>Dirección consultada</th><th>Resultado</th><th>HTTP</th><th>Tiempo</th></tr></thead>
@@ -238,7 +262,7 @@ const LIMITATIONS = [
   "Se analiza la página principal, su robots.txt y un sitemap. No es un rastreo completo de la web: otras páginas pueden tener problemas distintos.",
   "Los datos son públicos y se observaron en un momento concreto; la web puede cambiar después del análisis.",
   "No incluye datos privados del propietario (Google Search Console, Analytics): no mide visitas, clics ni posiciones reales en Google.",
-  "Las métricas de velocidad, si aparecen, son una prueba de laboratorio en un móvil simulado, no la experiencia de los visitantes reales.",
+  "La velocidad de laboratorio es una prueba en un móvil simulado. La experiencia real, si aparece, resume 28 días de visitantes con Chrome en el móvil; no incluye otros navegadores ni ordenadores.",
   "Las recomendaciones son orientativas y no garantizan una posición concreta en buscadores.",
 ];
 

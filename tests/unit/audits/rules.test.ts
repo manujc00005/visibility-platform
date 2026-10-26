@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { extractPage } from "@/modules/audits/html";
+import type { FieldDataResult } from "@/modules/audits/crux";
 import type { PerformanceResult } from "@/modules/audits/pagespeed";
 import { evaluateAudit, type AuditFacts } from "@/modules/audits/rules";
 
@@ -64,6 +65,40 @@ function facts(overrides: Partial<AuditFacts> = {}, html = CLEAN_HTML, pageOverr
 
 const ids = (input: AuditFacts) => evaluateAudit(input).map((f) => f.ruleId);
 const find = (input: AuditFacts, ruleId: string) => evaluateAudit(input).find((f) => f.ruleId === ruleId);
+
+const FIELD: FieldDataResult = {
+  status: "ok",
+  formFactor: "PHONE",
+  scope: "origin",
+  key: "https://www.clinicagarcia.es",
+  collectionPeriod: { firstDate: "2026-09-27", lastDate: "2026-10-24" },
+  metrics: { lcpMs: 2100, inpMs: 150, cls: 0.05, fcpMs: 1500, ttfbMs: 600 },
+  error: null,
+};
+const field = (metrics: Partial<NonNullable<FieldDataResult["metrics"]>>) => ({ fieldData: { ...FIELD, metrics: { ...FIELD.metrics!, ...metrics } } });
+
+describe("real-user (CrUX) findings", () => {
+  it("adds nothing when every Core Web Vital is good, when there is no data, or for old audits", () => {
+    expect(ids(facts({ fieldData: FIELD }))).toEqual([]);
+    expect(ids(facts({ fieldData: { ...FIELD, status: "no_data", metrics: null } }))).toEqual([]);
+    expect(ids(facts())).toEqual([]);
+  });
+
+  it("is info when a metric needs improvement and warning when one is poor", () => {
+    expect(find(facts(field({ inpMs: 300 })), "field_cwv_failed")).toMatchObject({ severity: "info", category: "performance" });
+    const poor = find(facts(field({ lcpMs: 4500, cls: 0.12 })), "field_cwv_failed")!;
+    expect(poor.severity).toBe("warning");
+    expect(poor.evidence).toEqual([
+      "Carga del contenido principal (LCP): 4,5 s, mala (bueno: ≤ 2,5 s)",
+      "Estabilidad visual (CLS): 0,12, mejorable (bueno: ≤ 0,1)",
+      "Datos de usuarios de Chrome en móvil, percentil 75, últimos 28 días (2026-09-27 a 2026-10-24), de toda la web",
+    ]);
+  });
+
+  it("ignores metrics that CrUX did not report", () => {
+    expect(ids(facts(field({ lcpMs: null, inpMs: null, cls: null })))).toEqual([]);
+  });
+});
 
 describe("evaluateAudit", () => {
   it("produces no findings for a clean, well-configured page", () => {

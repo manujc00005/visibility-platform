@@ -1,4 +1,5 @@
 import type { FetchLogEntry } from "@/modules/audits/fetcher/safe-fetch";
+import type { FieldDataStatus, FieldRating } from "@/modules/audits/crux";
 import type { PerformanceStatus } from "@/modules/audits/pagespeed";
 import type { Category, Severity } from "@/modules/audits/rules";
 
@@ -29,6 +30,21 @@ export const PERFORMANCE_STATUS_MESSAGES: Record<Exclude<PerformanceStatus, "ok"
   quota_exceeded: "No disponible: la cuota diaria de PageSpeed Insights está agotada. Repite la auditoría más tarde.",
   error: "No se pudo medir el rendimiento en esta auditoría.",
   skipped: "No se midió porque la página principal no se pudo leer.",
+};
+
+export const FIELD_DATA_STATUS_MESSAGES: Record<Exclude<FieldDataStatus, "ok">, string> = {
+  no_data:
+    "Sin datos: la web no tiene suficientes visitas de Chrome en móvil para que Google publique datos reales. Es habitual en webs pequeñas.",
+  not_configured: "No configurado: falta la clave de la API Chrome UX Report (CRUX_API_KEY o PAGESPEED_API_KEY con esa API habilitada).",
+  quota_exceeded: "No disponible: la cuota de la API de CrUX está agotada. Repite la auditoría más tarde.",
+  error: "No se pudieron consultar los datos reales en esta auditoría.",
+  skipped: "No se consultó porque la página principal no se pudo leer.",
+};
+
+export const FIELD_RATING_LABELS: Record<FieldRating, string> = {
+  good: "Buena",
+  needs_improvement: "Mejorable",
+  poor: "Mala",
 };
 
 export const OUTCOME_LABELS: Record<FetchLogEntry["outcome"], string> = {

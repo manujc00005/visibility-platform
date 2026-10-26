@@ -6,13 +6,14 @@ import {
   type SafeResponse,
 } from "@/modules/audits/fetcher/safe-fetch";
 import { decodeHtml, extractPage } from "@/modules/audits/html";
+import { emptyFieldData, type FieldDataResult } from "@/modules/audits/crux";
 import { emptyResult, type PerformanceResult } from "@/modules/audits/pagespeed";
 import { isAllowedByRobots, parseRobots, type Robots } from "@/modules/audits/robots";
 import type { AuditFacts, PageResult, RobotsResult, SitemapResultFacts } from "@/modules/audits/rules";
 import { parseSitemap } from "@/modules/audits/sitemap";
 
 /**
- * Collects the facts of one audit: robots.txt, the home page, one sitemap and PageSpeed.
+ * Collects the facts of one audit: robots.txt, the home page, one sitemap, PageSpeed and CrUX.
  * Every request goes through the safe fetcher and shares one budget. Single page only:
  * this is not a crawler.
  */
@@ -33,6 +34,8 @@ export const AUDIT_LIMITS = {
 export interface CollectDeps {
   fetcher: SafeFetcher;
   pageSpeed: (url: string) => Promise<PerformanceResult>;
+  /** Real-user data (CrUX). Absent = not configured. */
+  fieldData?: (url: string) => Promise<FieldDataResult>;
 }
 
 interface RobotsFetch {
@@ -152,13 +155,19 @@ export async function collectAuditFacts(hostname: string, deps: CollectDeps): Pr
   const robotsResult = withPermissions(robots, path);
   const homepage = page.kind === "fetched" ? page.result.url : null;
 
-  const [sitemap, performance] = await Promise.all([
+  const readable = page.kind === "fetched" && page.result.status < 400 ? page.result.url : null;
+  const [sitemap, performance, fieldData] = await Promise.all([
     fetchSitemap(robotsResult, origin, homepage, deps, budget),
-    page.kind === "fetched" && page.result.status < 400 ? deps.pageSpeed(page.result.url) : Promise.resolve(emptyResult("skipped")),
+    readable ? deps.pageSpeed(readable) : Promise.resolve(emptyResult("skipped")),
+    !readable
+      ? Promise.resolve(emptyFieldData("skipped"))
+      : deps.fieldData
+        ? deps.fieldData(readable)
+        : Promise.resolve(emptyFieldData("not_configured")),
   ]);
 
   return {
-    facts: { requestedUrl, httpsFailure, page, robots: robotsResult, sitemap, performance },
+    facts: { requestedUrl, httpsFailure, page, robots: robotsResult, sitemap, performance, fieldData },
     log: budget.log,
   };
 }

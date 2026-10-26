@@ -13,9 +13,12 @@ import {
   formatBytes,
   formatMs,
   OUTCOME_LABELS,
+  FIELD_DATA_STATUS_MESSAGES,
+  FIELD_RATING_LABELS,
   PERFORMANCE_STATUS_MESSAGES,
   SEVERITY_LABELS,
 } from "@/modules/audits/presentation";
+import { rateFieldMetric, type FieldMetricName } from "@/modules/audits/crux";
 import type { Category, Severity } from "@/modules/audits/rules";
 import { getAudit } from "@/modules/audits/service";
 import { GenerateReportButton } from "@/components/reports/generate-report-button";
@@ -34,6 +37,11 @@ const SEVERITY_BADGE: Record<Severity, "destructive" | "outline" | "secondary"> 
   warning: "outline",
   info: "secondary",
 };
+
+function fieldValue(metric: FieldMetricName, value: number | null, text: string | null): string | null {
+  if (value === null || text === null) return null;
+  return `${text} · ${FIELD_RATING_LABELS[rateFieldMetric(metric, value)]}`;
+}
 
 /** Everything below renders text only: values come from the audited site and are never HTML. */
 function Row({ label, children }: { label: string; children: ReactNode }) {
@@ -368,6 +376,44 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
                 ) : (
                   <p className="text-sm text-muted-foreground">
                     {facts ? PERFORMANCE_STATUS_MESSAGES[facts.performance.status as Exclude<typeof facts.performance.status, "ok">] : "—"}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card size="sm">
+              <CardHeader>
+                <CardTitle>Experiencia real en móvil</CardTitle>
+                <CardDescription>
+                  Chrome UX Report: visitantes reales con Chrome en el móvil, percentil 75 de los últimos 28 días.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {facts?.fieldData?.status === "ok" && facts.fieldData.metrics ? (
+                  <Facts>
+                    <Row label="Datos de">{facts.fieldData.scope === "url" ? "Esta página" : "Toda la web (la página no tiene datos propios)"}</Row>
+                    <Row label="Periodo">
+                      {facts.fieldData.collectionPeriod
+                        ? `${facts.fieldData.collectionPeriod.firstDate} a ${facts.fieldData.collectionPeriod.lastDate}`
+                        : null}
+                    </Row>
+                    <Row label="LCP">{fieldValue("lcp", facts.fieldData.metrics.lcpMs, formatMs(facts.fieldData.metrics.lcpMs))}</Row>
+                    <Row label="INP">{fieldValue("inp", facts.fieldData.metrics.inpMs, formatMs(facts.fieldData.metrics.inpMs))}</Row>
+                    <Row label="CLS">
+                      {fieldValue(
+                        "cls",
+                        facts.fieldData.metrics.cls,
+                        facts.fieldData.metrics.cls?.toLocaleString("es-ES", { maximumFractionDigits: 2 }) ?? null,
+                      )}
+                    </Row>
+                    <Row label="FCP">{formatMs(facts.fieldData.metrics.fcpMs)}</Row>
+                    <Row label="TTFB">{formatMs(facts.fieldData.metrics.ttfbMs)}</Row>
+                  </Facts>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {facts?.fieldData
+                      ? FIELD_DATA_STATUS_MESSAGES[facts.fieldData.status as Exclude<typeof facts.fieldData.status, "ok">]
+                      : "Esta auditoría es anterior a la consulta de datos reales."}
                   </p>
                 )}
               </CardContent>

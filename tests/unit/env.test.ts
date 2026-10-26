@@ -57,6 +57,15 @@ describe("PAGESPEED_API_KEY", () => {
   });
 });
 
+describe("CRUX_API_KEY", () => {
+  it("is optional and trimmed", () => {
+    const base = { DATABASE_URL: "postgresql://u:p@h/db" };
+    expect(parseEnv(base).CRUX_API_KEY).toBeUndefined();
+    expect(parseEnv({ ...base, CRUX_API_KEY: " " }).CRUX_API_KEY).toBeUndefined();
+    expect(parseEnv({ ...base, CRUX_API_KEY: " AIza-y " }).CRUX_API_KEY).toBe("AIza-y");
+  });
+});
+
 describe("GEO provider variables", () => {
   const base = { DATABASE_URL: "postgresql://u:p@h/db" };
   it("treats empty credentials as absent and redistribution as false unless explicitly true", () => {

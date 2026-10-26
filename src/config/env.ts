@@ -32,6 +32,11 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((value) => value?.trim() || undefined),
+  /**
+   * Chrome UX Report API key (real-user data). Optional: without it PAGESPEED_API_KEY is used,
+   * which works when that Google Cloud key also has the Chrome UX Report API enabled.
+   */
+  CRUX_API_KEY: z.string().optional().transform((v) => v?.trim() || undefined),
   /** DataForSEO API credentials (optional). Without both, paid AI measurements are unavailable. */
   DATAFORSEO_LOGIN: z.string().optional().transform((v) => v?.trim() || undefined),
   DATAFORSEO_PASSWORD: z.string().optional().transform((v) => v?.trim() || undefined),

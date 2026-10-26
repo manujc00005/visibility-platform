@@ -1,5 +1,6 @@
 import type { FetchFailure } from "@/modules/audits/fetcher/safe-fetch";
 import type { PageFacts } from "@/modules/audits/html";
+import { rateFieldMetric, type FieldDataResult, type FieldRating } from "@/modules/audits/crux";
 import type { PerformanceResult } from "@/modules/audits/pagespeed";
 import type { ParsedSitemap, SitemapParseError } from "@/modules/audits/sitemap";
 
@@ -9,7 +10,7 @@ import type { ParsedSitemap, SitemapParseError } from "@/modules/audits/sitemap"
  * that triggered them and an owner-friendly recommendation. Bump RULES_VERSION whenever
  * a rule, threshold or severity changes, so stored audits stay interpretable.
  */
-export const RULES_VERSION = "2026-10-25.2";
+export const RULES_VERSION = "2026-10-26.1";
 
 export type Severity = "critical" | "warning" | "info";
 export type Category =
@@ -73,6 +74,8 @@ export interface AuditFacts {
   robots: RobotsResult | null;
   sitemap: SitemapResultFacts | null;
   performance: PerformanceResult;
+  /** Real-user data (CrUX). Absent in audits stored before 2026-10-26. */
+  fieldData?: FieldDataResult;
 }
 
 const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, warning: 1, info: 2 };
@@ -606,6 +609,34 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
         title: "La página tarda en responder a la interacción",
         evidence: [`Tiempo total de bloqueo: ${Math.round(tbtMs)} ms (bueno: ≤ 200 ms)`],
         recommendation: "Reduce el JavaScript que se carga al inicio (plugins, chats, scripts de terceros).",
+      });
+    }
+  }
+
+  // --- Real-user experience (CrUX, phones, 28 days) ------------------------------------
+  const field = facts.fieldData;
+  if (field?.status === "ok" && field.metrics) {
+    const { lcpMs, inpMs, cls } = field.metrics;
+    const rated: { label: string; value: string; good: string; rating: FieldRating }[] = [];
+    if (lcpMs !== null) rated.push({ label: "Carga del contenido principal (LCP)", value: ms(lcpMs), good: "≤ 2,5 s", rating: rateFieldMetric("lcp", lcpMs) });
+    if (inpMs !== null) rated.push({ label: "Respuesta a la interacción (INP)", value: `${Math.round(inpMs)} ms`, good: "≤ 200 ms", rating: rateFieldMetric("inp", inpMs) });
+    if (cls !== null) {
+      rated.push({ label: "Estabilidad visual (CLS)", value: cls.toLocaleString("es-ES", { maximumFractionDigits: 2 }), good: "≤ 0,1", rating: rateFieldMetric("cls", cls) });
+    }
+    const failing = rated.filter((r) => r.rating !== "good");
+    if (failing.length > 0) {
+      const scope = field.scope === "url" ? "esta página" : "toda la web";
+      const period = field.collectionPeriod ? ` (${field.collectionPeriod.firstDate} a ${field.collectionPeriod.lastDate})` : "";
+      add({
+        ruleId: "field_cwv_failed",
+        severity: failing.some((r) => r.rating === "poor") ? "warning" : "info",
+        category: "performance",
+        title: "Los visitantes reales en móvil tienen una experiencia mejorable",
+        evidence: [
+          ...failing.map((r) => `${r.label}: ${r.value}, ${r.rating === "poor" ? "mala" : "mejorable"} (bueno: ${r.good})`),
+          `Datos de usuarios de Chrome en móvil, percentil 75, últimos 28 días${period}, de ${scope}`,
+        ],
+        recommendation: "Prioriza las métricas marcadas: son las que Google usa para valorar la experiencia real de la web.",
       });
     }
   }

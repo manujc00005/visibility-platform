@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { collectAuditFacts } from "@/modules/audits/collect";
+import { emptyFieldData, type FieldDataResult } from "@/modules/audits/crux";
 import { emptyResult, type PerformanceResult } from "@/modules/audits/pagespeed";
 import { fakeFetcher, HTML_OK, SITEMAP_OK } from "../../support/fake-fetcher";
 
@@ -10,6 +11,34 @@ const pageSpeed = async (url: string): Promise<PerformanceResult> => {
 };
 
 describe("collectAuditFacts", () => {
+  it("queries real-user data for the final page URL, and skips it when the page is unreadable", async () => {
+    const fieldCalls: string[] = [];
+    const fieldData = async (url: string): Promise<FieldDataResult> => {
+      fieldCalls.push(url);
+      return emptyFieldData("no_data");
+    };
+    const ok = fakeFetcher({
+      "https://clinicagarcia.es/robots.txt": { status: 404 },
+      "https://clinicagarcia.es/": { status: 200, body: HTML_OK, contentType: "text/html" },
+      "https://clinicagarcia.es/sitemap.xml": { status: 404 },
+    });
+    expect((await collectAuditFacts("clinicagarcia.es", { fetcher: ok, pageSpeed, fieldData })).facts.fieldData?.status).toBe("no_data");
+    expect(fieldCalls).toEqual(["https://clinicagarcia.es/"]);
+
+    const down = fakeFetcher({ "https://caida.es/robots.txt": { fail: "dns" }, "https://caida.es/": { fail: "dns" } });
+    expect((await collectAuditFacts("caida.es", { fetcher: down, pageSpeed, fieldData })).facts.fieldData?.status).toBe("skipped");
+    expect(fieldCalls).toHaveLength(1);
+  });
+
+  it("marks real-user data as not configured when no provider is wired", async () => {
+    const fetcher = fakeFetcher({
+      "https://clinicagarcia.es/robots.txt": { status: 404 },
+      "https://clinicagarcia.es/": { status: 200, body: HTML_OK, contentType: "text/html" },
+      "https://clinicagarcia.es/sitemap.xml": { status: 404 },
+    });
+    expect((await collectAuditFacts("clinicagarcia.es", { fetcher, pageSpeed })).facts.fieldData?.status).toBe("not_configured");
+  });
+
   it("reads robots.txt first, then the page, then the sitemap declared in robots.txt", async () => {
     const fetcher = fakeFetcher({
       "https://clinicagarcia.es/robots.txt": { status: 200, body: "User-agent: *\nAllow: /\nSitemap: https://clinicagarcia.es/sm.xml", contentType: "text/plain" },

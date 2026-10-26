@@ -1,6 +1,7 @@
 import { parse, type DefaultTreeAdapterMap } from "parse5";
 import { describe, expect, it } from "vitest";
 import { extractPage } from "@/modules/audits/html";
+import { emptyFieldData } from "@/modules/audits/crux";
 import { emptyResult } from "@/modules/audits/pagespeed";
 import { evaluateAudit, type AuditFacts } from "@/modules/audits/rules";
 import { buildReportHtml, TEMPLATE_VERSION, type ReportInput } from "@/modules/reports/build-report";
@@ -130,6 +131,28 @@ describe("buildReportHtml", () => {
     expect(byLabel["Sitemap XML"]).toBe("review"); // sitemap_not_declared
     expect(byLabel["Velocidad en móvil (laboratorio)"]).toBe("unknown");
     expect(document).toContain("La velocidad de carga no se midió");
+  });
+
+  it("shows real-user data as a check and a source only when the audit has it", () => {
+    const label = "Experiencia real en móvil (usuarios de Chrome)";
+    expect(document).not.toContain(label); // audits stored before CrUX existed
+    const noData = buildReportHtml(input(facts({ fieldData: emptyFieldData("no_data") })));
+    expect(noData).toMatch(/Experiencia real en móvil \(usuarios de Chrome\)<\/td><td><span class="status unknown">/);
+    expect(noData).toContain("Chrome UX Report no tiene datos suficientes");
+    const measured = facts({
+      fieldData: {
+        status: "ok",
+        formFactor: "PHONE",
+        scope: "origin",
+        key: "https://www.clinicagarcia.es",
+        collectionPeriod: { firstDate: "2026-09-27", lastDate: "2026-10-24" },
+        metrics: { lcpMs: 4500, inpMs: 150, cls: 0.05, fcpMs: 1500, ttfbMs: 600 },
+        error: null,
+      },
+    });
+    const withFinding = buildReportHtml(input(measured));
+    expect(withFinding).toMatch(/Experiencia real en móvil \(usuarios de Chrome\)<\/td><td><span class="status review warning">/);
+    expect(withFinding).toContain("(2026-09-27 a 2026-10-24), del conjunto de la web");
   });
 
   it("marks content checks as not verified when the home page could not be read", () => {
