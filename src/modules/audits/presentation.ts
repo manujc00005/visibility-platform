@@ -1,5 +1,5 @@
 import type { FetchLogEntry } from "@/modules/audits/fetcher/safe-fetch";
-import type { FieldDataStatus, FieldRating } from "@/modules/audits/crux";
+import type { FieldDataStatus } from "@/modules/audits/crux";
 import type { PerformanceStatus } from "@/modules/audits/pagespeed";
 import type { Category, Severity } from "@/modules/audits/rules";
 
@@ -39,12 +39,6 @@ export const FIELD_DATA_STATUS_MESSAGES: Record<Exclude<FieldDataStatus, "ok">, 
   quota_exceeded: "No disponible: la cuota de la API de CrUX está agotada. Repite la auditoría más tarde.",
   error: "No se pudieron consultar los datos reales en esta auditoría.",
   skipped: "No se consultó porque la página principal no se pudo leer.",
-};
-
-export const FIELD_RATING_LABELS: Record<FieldRating, string> = {
-  good: "Buena",
-  needs_improvement: "Mejorable",
-  poor: "Mala",
 };
 
 export const OUTCOME_LABELS: Record<FetchLogEntry["outcome"], string> = {

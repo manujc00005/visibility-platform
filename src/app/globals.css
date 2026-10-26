@@ -39,6 +39,19 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  /* Status tones (traffic light): text/icon, soft background and accent line. */
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --color-good-line: var(--good-line);
+  --color-fair: var(--fair);
+  --color-fair-soft: var(--fair-soft);
+  --color-fair-line: var(--fair-line);
+  --color-bad: var(--bad);
+  --color-bad-soft: var(--bad-soft);
+  --color-bad-line: var(--bad-line);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-info-line: var(--info-line);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -81,6 +94,19 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  /* Text tones keep ≥ 4.5:1 on their soft background and on white. */
+  --good: oklch(0.448 0.119 151.328);
+  --good-soft: oklch(0.982 0.018 155.826);
+  --good-line: oklch(0.723 0.219 149.579);
+  --fair: oklch(0.473 0.137 46.201);
+  --fair-soft: oklch(0.987 0.022 95.277);
+  --fair-line: oklch(0.769 0.188 70.08);
+  --bad: oklch(0.505 0.213 27.518);
+  --bad-soft: oklch(0.971 0.013 17.38);
+  --bad-line: oklch(0.637 0.237 25.331);
+  --info: oklch(0.488 0.243 264.376);
+  --info-soft: oklch(0.97 0.014 254.604);
+  --info-line: oklch(0.623 0.214 259.815);
 }
 
 .dark {
@@ -115,6 +141,18 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --good: oklch(0.792 0.209 151.711);
+  --good-soft: oklch(0.627 0.194 149.214 / 15%);
+  --good-line: oklch(0.723 0.219 149.579);
+  --fair: oklch(0.879 0.169 91.605);
+  --fair-soft: oklch(0.769 0.188 70.08 / 15%);
+  --fair-line: oklch(0.769 0.188 70.08);
+  --bad: oklch(0.808 0.114 19.571);
+  --bad-soft: oklch(0.637 0.237 25.331 / 18%);
+  --bad-line: oklch(0.637 0.237 25.331);
+  --info: oklch(0.809 0.105 251.813);
+  --info-soft: oklch(0.623 0.214 259.815 / 18%);
+  --info-line: oklch(0.623 0.214 259.815);
 }
 
 @layer base {

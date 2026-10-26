@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
-import { Badge } from "@/components/ui/badge";
+import { MetricTile, StatusPill, ToneIcon, toneClasses } from "@/components/audits/status-ui";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getDb } from "@/db/client";
@@ -14,14 +14,24 @@ import {
   formatMs,
   OUTCOME_LABELS,
   FIELD_DATA_STATUS_MESSAGES,
-  FIELD_RATING_LABELS,
   PERFORMANCE_STATUS_MESSAGES,
   SEVERITY_LABELS,
 } from "@/modules/audits/presentation";
-import { rateFieldMetric, type FieldMetricName } from "@/modules/audits/crux";
-import type { Category, Severity } from "@/modules/audits/rules";
+import type { Category } from "@/modules/audits/rules";
 import { getAudit } from "@/modules/audits/service";
+import {
+  auditHeadline,
+  categoryStatuses,
+  METRIC_THRESHOLDS,
+  rateMetric,
+  RATING_LABELS,
+  RATING_TONE,
+  SEVERITY_TONE,
+  type MetricName,
+  type Tone,
+} from "@/modules/audits/status";
 import { GenerateReportButton } from "@/components/reports/generate-report-button";
+import { cn } from "@/lib/utils";
 import { listReports } from "@/modules/reports/service";
 import { generateReportAction } from "./actions";
 import { displayDate, displayDomain } from "@/modules/workspaces/presentation";
@@ -32,15 +42,32 @@ export const metadata: Metadata = { title: "Auditoría técnica" };
 /** Blocking route so an unknown audit returns a real 404 (same reason as the workspace page). */
 export const instant = false;
 
-const SEVERITY_BADGE: Record<Severity, "destructive" | "outline" | "secondary"> = {
-  critical: "destructive",
-  warning: "outline",
-  info: "secondary",
+const cls = (value: number, digits = 2) => value.toLocaleString("es-ES", { maximumFractionDigits: digits });
+
+/** How each metric is displayed, and its "good" reference. */
+const METRIC_FORMAT: Record<MetricName, { format: (v: number) => string; good: string }> = {
+  score: { format: (v) => `${v}/100`, good: "≥ 90" },
+  lcp: { format: formatMs, good: `≤ ${formatMs(METRIC_THRESHOLDS.lcp[0])}` },
+  inp: { format: formatMs, good: `≤ ${formatMs(METRIC_THRESHOLDS.inp[0])}` },
+  cls: { format: (v) => cls(v, 3), good: `≤ ${cls(METRIC_THRESHOLDS.cls[0])}` },
+  tbt: { format: formatMs, good: `≤ ${formatMs(METRIC_THRESHOLDS.tbt[0])}` },
+  fcp: { format: formatMs, good: `≤ ${formatMs(METRIC_THRESHOLDS.fcp[0])}` },
+  speedIndex: { format: formatMs, good: `≤ ${formatMs(METRIC_THRESHOLDS.speedIndex[0])}` },
+  ttfb: { format: formatMs, good: `≤ ${formatMs(METRIC_THRESHOLDS.ttfb[0])}` },
 };
 
-function fieldValue(metric: FieldMetricName, value: number | null, text: string | null): string | null {
-  if (value === null || text === null) return null;
-  return `${text} · ${FIELD_RATING_LABELS[rateFieldMetric(metric, value)]}`;
+function Metric({ label, metric, value }: { label: string; metric: MetricName; value: number | null }) {
+  if (value === null) return <MetricTile label={label} value="—" tone="neutral" verdict="Sin dato" />;
+  const rating = rateMetric(metric, value);
+  return (
+    <MetricTile
+      label={label}
+      value={METRIC_FORMAT[metric].format(value)}
+      tone={RATING_TONE[rating]}
+      verdict={RATING_LABELS[rating]}
+      hint={`Bueno: ${METRIC_FORMAT[metric].good}`}
+    />
+  );
 }
 
 /** Everything below renders text only: values come from the audited site and are never HTML. */
@@ -61,6 +88,28 @@ function Mono({ children }: { children: ReactNode }) {
   return <span className="font-mono text-xs break-all">{children}</span>;
 }
 
+/** Yes/no answer where one of the two is the good one. */
+function YesNo({ value, goodWhen }: { value: boolean | null | undefined; goodWhen: boolean }) {
+  if (value === null || value === undefined) return null;
+  return <StatusPill tone={value === goodWhen ? "good" : "bad"}>{value ? "Sí" : "No"}</StatusPill>;
+}
+
+function httpTone(status: number): Tone {
+  if (status < 300) return "good";
+  return status < 400 ? "fair" : "bad";
+}
+
+function SectionTitle({ id, children, description }: { id: string; children: ReactNode; description?: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <h2 id={id} className="text-lg font-semibold">
+        {children}
+      </h2>
+      {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+    </div>
+  );
+}
+
 export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/audits/[auditId]">) {
   await connection();
   const { id, auditId } = await params;
@@ -78,8 +127,14 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
   const pageFacts = page && page.status < 400 ? page.facts : null;
   const duration = audit.finishedAt ? audit.finishedAt.getTime() - audit.startedAt.getTime() : null;
 
+  const counts = { critical: audit.criticalCount, warning: audit.warningCount, info: audit.infoCount };
+  const headline = auditHeadline(counts);
+  const areas = categoryStatuses(findings, facts);
+  const perf = facts?.performance;
+  const field = facts?.fieldData;
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       <div>
         <Link href={`/workspaces/${workspace.id}`} className="text-sm text-muted-foreground hover:underline">
           ← {workspace.name}
@@ -104,11 +159,89 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
         </Card>
       ) : (
         <>
-          <div className="flex flex-wrap gap-2">
-            <Badge variant={audit.criticalCount > 0 ? "destructive" : "outline"}>{audit.criticalCount} críticos</Badge>
-            <Badge variant="outline">{audit.warningCount} importantes</Badge>
-            <Badge variant="secondary">{audit.infoCount} mejoras</Badge>
-          </div>
+          <section aria-labelledby="summary-title" className="flex flex-col gap-4">
+            <h2 id="summary-title" className="sr-only">
+              Resumen
+            </h2>
+            <div
+              className={cn(
+                "flex items-start gap-3 rounded-xl border border-l-4 p-4",
+                toneClasses(headline.tone).soft,
+                toneClasses(headline.tone).line,
+              )}
+            >
+              <ToneIcon tone={headline.tone} className="mt-0.5 size-6" />
+              <div className="flex flex-col gap-0.5">
+                <p className={cn("text-base font-semibold", toneClasses(headline.tone).text)}>{headline.title}</p>
+                <p className="text-sm text-foreground/80">{headline.detail}</p>
+              </div>
+            </div>
+
+            <ul className="grid grid-cols-3 gap-2 sm:gap-3">
+              {(
+                [
+                  ["critical", "Críticos", "Bloquean o dañan la visibilidad"],
+                  ["warning", "Importantes", "Conviene corregirlos pronto"],
+                  ["info", "Mejoras", "Opcionales, suman calidad"],
+                ] as const
+              ).map(([severity, label, hint]) => {
+                const n = counts[severity];
+                const tone: Tone = n > 0 ? SEVERITY_TONE[severity] : "good";
+                return (
+                  <li key={severity} className={cn("flex flex-col gap-2 rounded-lg border border-l-4 bg-card p-3 sm:flex-row sm:items-center sm:gap-3", toneClasses(tone).accent)}>
+                    <ToneIcon tone={tone} className="size-5" />
+                    <div className="flex flex-col">
+                      <span className="text-2xl leading-none font-semibold tabular-nums">{n}</span>
+                      <span className="text-sm font-medium">{label}</span>
+                      <span className="hidden text-xs text-muted-foreground sm:block">{hint}</span>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+
+            <div className="flex flex-col gap-2">
+              <h3 className="text-sm font-medium">Estado por área</h3>
+              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                {areas.map((area) => {
+                  const body = (
+                    <>
+                      <span className="text-sm font-medium">{area.label}</span>
+                      <StatusPill tone={area.tone}>
+                        {area.verdict}
+                        {area.count > 0 ? ` · ${area.count}` : ""}
+                      </StatusPill>
+                    </>
+                  );
+                  const className = cn(
+                    "flex h-full flex-col gap-2 rounded-lg border border-l-4 bg-card p-3",
+                    toneClasses(area.tone).accent,
+                  );
+                  return (
+                    <li key={area.category}>
+                      {area.firstFindingId ? (
+                        <a
+                          href={`#finding-${area.firstFindingId}`}
+                          className={cn(className, "transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none")}
+                        >
+                          {body}
+                        </a>
+                      ) : (
+                        <div className={className}>{body}</div>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                <span>Verde: bien</span>
+                <span>Ámbar: regular</span>
+                <span>Rojo: mal</span>
+                <span>Azul: mejorable (opcional)</span>
+                <span>Gris: no comprobado</span>
+              </p>
+            </div>
+          </section>
 
           <Card>
             <CardHeader>
@@ -141,53 +274,129 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
           </Card>
 
           <section aria-labelledby="findings-title" className="flex flex-col gap-3">
-            <h2 id="findings-title" className="text-lg font-semibold">
+            <SectionTitle id="findings-title" description="Ordenados de más a menos urgente.">
               Problemas y recomendaciones
-            </h2>
+            </SectionTitle>
             {findings.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No hemos detectado problemas en las comprobaciones realizadas.</p>
+              <div className={cn("flex items-center gap-2 rounded-lg border p-4 text-sm", toneClasses("good").soft, toneClasses("good").line)}>
+                <ToneIcon tone="good" className="size-5" />
+                No hemos detectado problemas en las comprobaciones realizadas.
+              </div>
             ) : (
-              findings.map((finding) => (
-                <Card key={finding.id} size="sm">
-                  <CardHeader>
-                    <CardTitle className="flex flex-wrap items-center gap-2">
-                      <Badge variant={SEVERITY_BADGE[finding.severity]}>{SEVERITY_LABELS[finding.severity]}</Badge>
-                      <span className="text-xs font-normal text-muted-foreground">
-                        {CATEGORY_LABELS[finding.category as Category] ?? finding.category}
-                      </span>
-                      <span>{finding.title}</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-2 text-sm">
-                    {finding.evidence.length > 0 ? (
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground">Evidencia</p>
-                        <ul className="mt-1 flex flex-col gap-0.5">
-                          {finding.evidence.map((line, index) => (
-                            <li key={index}>
-                              <Mono>{line}</Mono>
-                            </li>
-                          ))}
-                        </ul>
+              findings.map((finding) => {
+                const tone = SEVERITY_TONE[finding.severity];
+                return (
+                  <Card
+                    key={finding.id}
+                    id={`finding-${finding.id}`}
+                    size="sm"
+                    className={cn("scroll-mt-6 border-l-4", toneClasses(tone).accent)}
+                  >
+                    <CardHeader>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <StatusPill tone={tone}>{SEVERITY_LABELS[finding.severity]}</StatusPill>
+                        <span className="text-xs text-muted-foreground">
+                          {CATEGORY_LABELS[finding.category as Category] ?? finding.category}
+                        </span>
                       </div>
-                    ) : null}
-                    <p>
-                      <span className="font-medium">Qué hacer: </span>
-                      {finding.recommendation}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))
+                      <CardTitle className="text-base">{finding.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex flex-col gap-3 text-sm">
+                      {finding.evidence.length > 0 ? (
+                        <div className="rounded-md bg-muted/60 p-2.5">
+                          <p className="text-xs font-medium text-muted-foreground">Evidencia</p>
+                          <ul className="mt-1 flex flex-col gap-0.5">
+                            {finding.evidence.map((line, index) => (
+                              <li key={index}>
+                                <Mono>{line}</Mono>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                      <p>
+                        <span className="font-medium">Qué hacer: </span>
+                        {finding.recommendation}
+                      </p>
+                    </CardContent>
+                  </Card>
+                );
+              })
             )}
           </section>
 
+          <section aria-labelledby="speed-title" className="flex flex-col gap-3">
+            <SectionTitle id="speed-title" description="Verde: bueno · ámbar: mejorable · rojo: malo, según los umbrales de Google.">
+              Velocidad y experiencia en móvil
+            </SectionTitle>
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+              <Card size="sm">
+                <CardHeader>
+                  <CardTitle>Prueba de laboratorio</CardTitle>
+                  <CardDescription>
+                    PageSpeed Insights en un móvil simulado
+                    {perf?.status === "ok" && perf.lighthouseVersion ? ` (Lighthouse ${perf.lighthouseVersion})` : ""}. No son visitantes reales.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {perf?.status === "ok" && perf.metrics ? (
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      <Metric label="Puntuación" metric="score" value={perf.score} />
+                      <Metric label="Contenido principal (LCP)" metric="lcp" value={perf.metrics.lcpMs} />
+                      <Metric label="Estabilidad (CLS)" metric="cls" value={perf.metrics.cls} />
+                      <Metric label="Bloqueo (TBT)" metric="tbt" value={perf.metrics.tbtMs} />
+                      <Metric label="Primer contenido (FCP)" metric="fcp" value={perf.metrics.fcpMs} />
+                      <Metric label="Speed Index" metric="speedIndex" value={perf.metrics.speedIndexMs} />
+                    </div>
+                  ) : (
+                    <p className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <ToneIcon tone="neutral" className="mt-0.5 size-4" />
+                      {perf ? PERFORMANCE_STATUS_MESSAGES[perf.status as Exclude<typeof perf.status, "ok">] : "—"}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card size="sm">
+                <CardHeader>
+                  <CardTitle>Experiencia real</CardTitle>
+                  <CardDescription>
+                    Chrome UX Report: visitantes con Chrome en el móvil, percentil 75 de 28 días
+                    {field?.status === "ok"
+                      ? `${field.collectionPeriod ? ` (${field.collectionPeriod.firstDate} a ${field.collectionPeriod.lastDate})` : ""}, ${field.scope === "url" ? "de esta página" : "de toda la web: la página no tiene datos propios"}`
+                      : ""}
+                    .
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {field?.status === "ok" && field.metrics ? (
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      <Metric label="Contenido principal (LCP)" metric="lcp" value={field.metrics.lcpMs} />
+                      <Metric label="Respuesta (INP)" metric="inp" value={field.metrics.inpMs} />
+                      <Metric label="Estabilidad (CLS)" metric="cls" value={field.metrics.cls} />
+                      <Metric label="Primer contenido (FCP)" metric="fcp" value={field.metrics.fcpMs} />
+                      <Metric label="Respuesta del servidor (TTFB)" metric="ttfb" value={field.metrics.ttfbMs} />
+                    </div>
+                  ) : (
+                    <p className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <ToneIcon tone="neutral" className="mt-0.5 size-4" />
+                      {field
+                        ? FIELD_DATA_STATUS_MESSAGES[field.status as Exclude<typeof field.status, "ok">]
+                        : "Esta auditoría es anterior a la consulta de datos reales."}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+
           <section aria-labelledby="technical-title" className="flex flex-col gap-3">
-            <h2 id="technical-title" className="text-lg font-semibold">
+            <SectionTitle
+              id="technical-title"
+              description="Alcance: la portada, su robots.txt, un sitemap y la velocidad en móvil. No se rastrea el resto de la web."
+            >
               Datos técnicos
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Alcance: la portada, su robots.txt, un sitemap y la velocidad en móvil. No se rastrea el resto de la web.
-            </p>
+            </SectionTitle>
 
             <Card size="sm">
               <CardHeader>
@@ -199,7 +408,15 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
                     <Mono>{audit.requestedUrl}</Mono>
                   </Row>
                   <Row label="URL final">{page ? <Mono>{page.url}</Mono> : null}</Row>
-                  <Row label="Estado HTTP">{page ? String(page.status) : facts?.page.kind === "disallowed" ? "No leída (robots.txt)" : "Sin respuesta"}</Row>
+                  <Row label="Estado HTTP">
+                    {page ? (
+                      <StatusPill tone={httpTone(page.status)}>{String(page.status)}</StatusPill>
+                    ) : facts?.page.kind === "disallowed" ? (
+                      <StatusPill tone="fair">No leída (robots.txt)</StatusPill>
+                    ) : (
+                      <StatusPill tone="bad">Sin respuesta</StatusPill>
+                    )}
+                  </Row>
                   <Row label="Tipo de contenido">{page?.contentType ? <Mono>{page.contentType}</Mono> : null}</Row>
                   <Row label="Redirecciones">
                     {page && page.redirects.length > 0 ? (
@@ -329,7 +546,7 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
                 <Facts>
                   <Row label="robots.txt">{facts?.robots ? <Mono>{`${facts.robots.url} · ${facts.robots.httpStatus ?? facts.robots.status}`}</Mono> : null}</Row>
                   <Row label="Google puede rastrear la portada">
-                    {facts?.robots?.homepageAllowedForGoogle === null || !facts?.robots ? null : facts.robots.homepageAllowedForGoogle ? "Sí" : "No"}
+                    <YesNo value={facts?.robots?.homepageAllowedForGoogle} goodWhen={true} />
                   </Row>
                   <Row label="Sitemaps declarados">
                     {facts?.robots?.sitemaps.length ? (
@@ -344,78 +561,22 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
                   </Row>
                   <Row label="Sitemap analizado">{facts?.sitemap?.url ? <Mono>{facts.sitemap.url}</Mono> : null}</Row>
                   <Row label="Resultado">
-                    {facts?.sitemap
-                      ? facts.sitemap.status === "ok" && facts.sitemap.sitemap
-                        ? `${facts.sitemap.sitemap.kind === "index" ? "Índice de sitemaps" : "Sitemap"} con ${facts.sitemap.sitemap.locCount} URLs`
-                        : `${facts.sitemap.status}${facts.sitemap.httpStatus ? ` (${facts.sitemap.httpStatus})` : ""}`
-                      : null}
+                    {facts?.sitemap ? (
+                      facts.sitemap.status === "ok" && facts.sitemap.sitemap ? (
+                        <StatusPill tone="good">
+                          {`${facts.sitemap.sitemap.kind === "index" ? "Índice de sitemaps" : "Sitemap"} con ${facts.sitemap.sitemap.locCount} URLs`}
+                        </StatusPill>
+                      ) : (
+                        <StatusPill tone="fair">
+                          {`${facts.sitemap.status}${facts.sitemap.httpStatus ? ` (${facts.sitemap.httpStatus})` : ""}`}
+                        </StatusPill>
+                      )
+                    ) : null}
                   </Row>
                   <Row label="Incluye la portada">
-                    {facts?.sitemap?.homepageListed === null || !facts?.sitemap ? null : facts.sitemap.homepageListed ? "Sí" : "No"}
+                    <YesNo value={facts?.sitemap?.homepageListed} goodWhen={true} />
                   </Row>
                 </Facts>
-              </CardContent>
-            </Card>
-
-            <Card size="sm">
-              <CardHeader>
-                <CardTitle>Rendimiento en móvil (laboratorio)</CardTitle>
-                <CardDescription>Medición de PageSpeed Insights en un entorno simulado; no son datos de visitantes reales.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {facts?.performance.status === "ok" && facts.performance.metrics ? (
-                  <Facts>
-                    <Row label="Puntuación Lighthouse">{facts.performance.score !== null ? `${facts.performance.score}/100` : null}</Row>
-                    <Row label="LCP">{formatMs(facts.performance.metrics.lcpMs)}</Row>
-                    <Row label="CLS">{facts.performance.metrics.cls?.toLocaleString("es-ES", { maximumFractionDigits: 3 }) ?? null}</Row>
-                    <Row label="Tiempo de bloqueo">{formatMs(facts.performance.metrics.tbtMs)}</Row>
-                    <Row label="FCP">{formatMs(facts.performance.metrics.fcpMs)}</Row>
-                    <Row label="Speed Index">{formatMs(facts.performance.metrics.speedIndexMs)}</Row>
-                    <Row label="Versión Lighthouse">{facts.performance.lighthouseVersion}</Row>
-                  </Facts>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    {facts ? PERFORMANCE_STATUS_MESSAGES[facts.performance.status as Exclude<typeof facts.performance.status, "ok">] : "—"}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card size="sm">
-              <CardHeader>
-                <CardTitle>Experiencia real en móvil</CardTitle>
-                <CardDescription>
-                  Chrome UX Report: visitantes reales con Chrome en el móvil, percentil 75 de los últimos 28 días.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {facts?.fieldData?.status === "ok" && facts.fieldData.metrics ? (
-                  <Facts>
-                    <Row label="Datos de">{facts.fieldData.scope === "url" ? "Esta página" : "Toda la web (la página no tiene datos propios)"}</Row>
-                    <Row label="Periodo">
-                      {facts.fieldData.collectionPeriod
-                        ? `${facts.fieldData.collectionPeriod.firstDate} a ${facts.fieldData.collectionPeriod.lastDate}`
-                        : null}
-                    </Row>
-                    <Row label="LCP">{fieldValue("lcp", facts.fieldData.metrics.lcpMs, formatMs(facts.fieldData.metrics.lcpMs))}</Row>
-                    <Row label="INP">{fieldValue("inp", facts.fieldData.metrics.inpMs, formatMs(facts.fieldData.metrics.inpMs))}</Row>
-                    <Row label="CLS">
-                      {fieldValue(
-                        "cls",
-                        facts.fieldData.metrics.cls,
-                        facts.fieldData.metrics.cls?.toLocaleString("es-ES", { maximumFractionDigits: 2 }) ?? null,
-                      )}
-                    </Row>
-                    <Row label="FCP">{formatMs(facts.fieldData.metrics.fcpMs)}</Row>
-                    <Row label="TTFB">{formatMs(facts.fieldData.metrics.ttfbMs)}</Row>
-                  </Facts>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    {facts?.fieldData
-                      ? FIELD_DATA_STATUS_MESSAGES[facts.fieldData.status as Exclude<typeof facts.fieldData.status, "ok">]
-                      : "Esta auditoría es anterior a la consulta de datos reales."}
-                  </p>
-                )}
               </CardContent>
             </Card>
 
@@ -442,7 +603,9 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
                           <Mono>{entry.url}</Mono>
                         </TableCell>
                         <TableCell className="max-w-xs whitespace-normal">
-                          {OUTCOME_LABELS[entry.outcome]}
+                          <StatusPill tone={entry.outcome === "ok" ? "good" : entry.outcome === "redirect" ? "neutral" : "bad"}>
+                            {OUTCOME_LABELS[entry.outcome]}
+                          </StatusPill>
                           {entry.error ? <span className="block text-xs text-muted-foreground break-words">{entry.error}</span> : null}
                         </TableCell>
                         <TableCell>{entry.status ?? "—"}</TableCell>
