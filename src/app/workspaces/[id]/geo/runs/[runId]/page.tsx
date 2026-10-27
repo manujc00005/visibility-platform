@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ManualObservationForm, RefreshRunButton } from "@/components/geo/geo-forms";
+import { PageHeader } from "@/components/overview/page-header";
 import { getDb } from "@/db/client";
 import { fraction, INTENT_LABELS, OBSERVATION_STATUS_LABELS, PROVIDER_LABELS, RUN_STATUS_LABELS } from "@/modules/geo/presentation";
 import { getGeoRun } from "@/modules/geo/service";
@@ -31,16 +31,15 @@ export default async function GeoRunPage({ params }: PageProps<"/workspaces/[id]
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <Link href={`/workspaces/${workspace.id}/geo`} className="text-sm text-muted-foreground hover:underline">
-          ← Visibilidad en IA
-        </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">Medición de {displayDomain(workspace.domain)}</h1>
-        <p className="text-sm text-muted-foreground">
-          {displayDate(run.createdAt)} · {PROVIDER_LABELS[run.provider]} · {RUN_STATUS_LABELS[run.status]} · {config.location.locationName},{" "}
-          {config.location.languageCode} · {config.repetitions} repetición(es) · metodología {config.methodologyVersion}
-        </p>
-      </div>
+      <PageHeader
+        breadcrumbs={[
+          { href: "/workspaces", label: "Empresas" },
+          { href: `/workspaces/${workspace.id}`, label: workspace.name },
+          { href: `/workspaces/${workspace.id}/geo`, label: "Presencia en IA" },
+        ]}
+        title={`Medición de ${workspace.name}`}
+        meta={`${displayDomain(workspace.domain)} · ${displayDate(run.createdAt)} · ${PROVIDER_LABELS[run.provider]} · ${RUN_STATUS_LABELS[run.status]} · ${config.location.locationName}, ${config.location.languageCode} · ${config.repetitions} repetición(es) · metodología ${config.methodologyVersion}`}
+      />
 
       {run.provider === "dataforseo_chatgpt" && run.status === "collecting" ? (
         <RefreshRunButton action={refreshRunAction.bind(null, workspace.id, run.id)} />

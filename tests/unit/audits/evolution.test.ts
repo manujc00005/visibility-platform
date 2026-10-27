@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { emptyFieldData } from "@/modules/audits/crux";
 import { emptyResult, type PerformanceResult } from "@/modules/audits/pagespeed";
-import { computeEvolution, type AuditLike } from "@/modules/audits/evolution";
+import { speedBreaks, speedSegments, toPoint, type AuditLike } from "@/modules/audits/evolution";
 import type { AuditFacts } from "@/modules/audits/rules";
 
 const perf = (score: number, lcpMs = 2000): PerformanceResult => ({
@@ -13,70 +12,62 @@ const perf = (score: number, lcpMs = 2000): PerformanceResult => ({
   error: null,
 });
 
-function facts(performance: PerformanceResult, fieldData?: AuditFacts["fieldData"]): AuditFacts {
-  return { requestedUrl: "https://e.es/", httpsFailure: null, page: { kind: "disallowed" }, robots: null, sitemap: null, performance, fieldData };
+function facts(performance: PerformanceResult): AuditFacts {
+  return { requestedUrl: "https://e.es/", httpsFailure: null, page: { kind: "disallowed" }, robots: null, sitemap: null, performance };
 }
 
-let n = 0;
-function audit(partial: Partial<AuditLike> & { day: number }): AuditLike {
-  n += 1;
-  return {
-    id: `a${n}`,
-    status: "completed",
-    startedAt: new Date(Date.UTC(2026, 9, partial.day)),
-    criticalCount: 0,
-    warningCount: 0,
-    infoCount: 0,
-    facts: null,
-    ...partial,
-  };
+function audit(partial: Partial<AuditLike>): AuditLike {
+  return { id: "a1", status: "completed", startedAt: new Date(Date.UTC(2026, 9, 1)), criticalCount: 1, warningCount: 2, infoCount: 3, facts: null, ...partial };
 }
 
-describe("computeEvolution", () => {
-  it("is empty without completed audits", () => {
-    const e = computeEvolution([audit({ day: 1, status: "running" }), audit({ day: 2, status: "failed" })]);
-    expect(e.points).toEqual([]);
-    expect(e.headline).toBeNull();
-    expect(e.trend).toBeNull();
+describe("toPoint", () => {
+  it("keeps the stored counts and takes score and LCP from a successful measurement", () => {
+    expect(toPoint(audit({ facts: facts(perf(72, 3100)) }))).toEqual({
+      id: "a1",
+      date: new Date(Date.UTC(2026, 9, 1)),
+      counts: { critical: 1, warning: 2, info: 3 },
+      score: 72,
+      lcpMs: 3100,
+      methodology: { strategy: "mobile", major: "13" },
+    });
   });
 
-  it("orders points oldest first regardless of the input order and has no trend with one audit", () => {
-    const e = computeEvolution([audit({ day: 5, criticalCount: 1 }), audit({ day: 2 })]);
-    expect(e.points.map((p) => p.date.getUTCDate())).toEqual([2, 5]);
-    expect(e.latest?.counts.critical).toBe(1);
-    expect(e.headline?.tone).toBe("bad");
-    expect(computeEvolution([audit({ day: 1 })]).trend).toBeNull();
+  it("never turns a missing measurement into a zero", () => {
+    expect(toPoint(audit({ facts: facts(emptyResult("not_configured")) }))).toMatchObject({ score: null, lcpMs: null });
+    expect(toPoint(audit({ facts: null }))).toMatchObject({ score: null, lcpMs: null });
+  });
+});
+
+describe("speed methodology and segments (D019)", () => {
+  const point = (id: string, score: number | null, major: string | null) => ({
+    id,
+    score,
+    methodology: score !== null && major !== null ? { strategy: "mobile", major } : null,
   });
 
-  it("says it is better when urgent problems go down, worse when they go up", () => {
-    const better = computeEvolution([audit({ day: 1, criticalCount: 2, warningCount: 1 }), audit({ day: 2, warningCount: 1 })]);
-    expect(better.trend).toMatchObject({ direction: "better", tone: "good", text: "Va mejor: 2 problemas menos que en la auditoría anterior." });
-    expect(better.indicators[0]).toMatchObject({ value: "1", tone: "fair", verdict: "Regular", change: { direction: "better", text: "2 menos que antes" } });
-
-    const worse = computeEvolution([audit({ day: 1 }), audit({ day: 2, criticalCount: 1 })]);
-    expect(worse.trend).toMatchObject({ direction: "worse", text: "Va peor: 1 problema nuevo desde la auditoría anterior." });
+  it("records strategy and Lighthouse major only for a measurement with a known version", () => {
+    expect(toPoint(audit({ facts: facts(perf(72)) })).methodology).toEqual({ strategy: "mobile", major: "13" });
+    expect(toPoint(audit({ facts: facts({ ...perf(72), lighthouseVersion: "12.8.2" }) })).methodology).toEqual({ strategy: "mobile", major: "12" });
+    expect(toPoint(audit({ facts: facts({ ...perf(72), lighthouseVersion: null }) })).methodology).toBeNull();
+    expect(toPoint(audit({ facts: facts(emptyResult("error")) })).methodology).toBeNull();
   });
 
-  it("falls back to Google's speed score when problems are unchanged, ignoring small noise", () => {
-    const faster = computeEvolution([audit({ day: 1, facts: facts(perf(60)) }), audit({ day: 2, facts: facts(perf(72)) })]);
-    expect(faster.trend).toMatchObject({ direction: "better", text: "Va mejor: la web carga más rápido (+12 puntos de velocidad)." });
-    expect(faster.indicators[1]).toMatchObject({ value: "72/100", tone: "fair", verdict: "Mejorable", change: { direction: "better", text: "+12 puntos" } });
-
-    const noise = computeEvolution([audit({ day: 1, facts: facts(perf(95)) }), audit({ day: 2, facts: facts(perf(86)) })]);
-    expect(noise.trend).toMatchObject({ direction: "same" });
-    expect(noise.indicators[1]?.change).toEqual({ direction: "same", text: "Sin cambio apreciable" });
+  it("joins consecutive measurements with the same methodology", () => {
+    expect(speedSegments([point("a", 60, "13"), point("b", 70, "13"), point("c", 65, "13")])).toEqual([[0, 1, 2]]);
   });
 
-  it("reports speed as not measured and real users as no data when absent", () => {
-    const e = computeEvolution([audit({ day: 1, facts: facts(emptyResult("not_configured"), emptyFieldData("no_data")) })]);
-    expect(e.indicators[1]).toMatchObject({ value: "—", tone: "neutral", verdict: "No medida", change: null });
-    expect(e.indicators[2]).toMatchObject({ value: "—", verdict: "Pocas visitas" });
-    expect(e.points[0]).toMatchObject({ score: null, lcpMs: null });
+  it("breaks the line at a different major, an unknown version or an audit without measurement", () => {
+    expect(speedSegments([point("a", 60, "12"), point("b", 70, "13"), point("c", 65, "13")])).toEqual([[0], [1, 2]]);
+    expect(speedSegments([point("a", 60, "13"), point("b", 70, null), point("c", 65, "13")])).toEqual([[0], [1], [2]]);
+    expect(speedSegments([point("a", 60, "13"), point("b", null, null), point("c", 65, "13")])).toEqual([[0], [2]]);
   });
 
-  it("rates real-user LCP from the latest audit", () => {
-    const field = { ...emptyFieldData("ok"), status: "ok" as const, metrics: { lcpMs: 4500, inpMs: null, cls: null, fcpMs: null, ttfbMs: null } };
-    const e = computeEvolution([audit({ day: 1, facts: facts(perf(95), field) })]);
-    expect(e.indicators[2]).toMatchObject({ value: "4,5 s", tone: "bad", verdict: "Malo" });
+  it("explains the breaks found among the points shown", () => {
+    expect(speedBreaks([point("a", 60, "13"), point("b", 70, "13")])).toEqual({ differentVersion: false, unknownVersion: false, gap: false });
+    expect(speedBreaks([point("a", 60, "12"), point("b", 70, "13")])).toMatchObject({ differentVersion: true });
+    expect(speedBreaks([point("a", 60, null), point("b", 70, "13")])).toMatchObject({ unknownVersion: true });
+    expect(speedBreaks([point("a", 60, "13"), point("x", null, null), point("b", 70, "13")])).toMatchObject({ gap: true });
+    // Unmeasured audits before the first or after the last measurement do not break any line.
+    expect(speedBreaks([point("x", null, null), point("a", 60, "13"), point("b", 70, "13"), point("y", null, null)]).gap).toBe(false);
   });
 });

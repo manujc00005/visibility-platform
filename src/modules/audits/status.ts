@@ -65,7 +65,7 @@ interface FindingLike {
   category: string;
 }
 
-function checked(category: Category, facts: AuditFacts | null): boolean {
+export function isCategoryChecked(category: Category, facts: AuditFacts | null): boolean {
   if (!facts) return false;
   const readable = facts.page.kind === "fetched" && facts.page.result.status < 400 && facts.page.result.facts !== null;
   if (CONTENT_CATEGORIES.includes(category)) return readable;
@@ -79,7 +79,7 @@ export function categoryStatuses(findings: FindingLike[], facts: AuditFacts | nu
     const related = findings.filter((f) => f.category === category);
     const base = { category, label: CATEGORY_LABELS[category], count: related.length, firstFindingId: related[0]?.id ?? null };
     if (related.length === 0) {
-      return checked(category, facts)
+      return isCategoryChecked(category, facts)
         ? { ...base, tone: "good" as const, verdict: "Bien" }
         : { ...base, tone: "neutral" as const, verdict: "No comprobado" };
     }

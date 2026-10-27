@@ -61,46 +61,53 @@ function success(previous: GeoFormState, message: string): GeoFormState {
 
 const geoPath = (workspaceId: string) => `/workspaces/${workspaceId}/geo`;
 
+/** Everything that reads GEO data: the overview card, the results page and the setup page (FR-007). */
+function revalidateGeo(workspaceId: string): void {
+  revalidatePath(`/workspaces/${workspaceId}`);
+  revalidatePath(geoPath(workspaceId));
+  revalidatePath(`${geoPath(workspaceId)}/setup`);
+}
+
 export async function updateAliasesAction(workspaceId: string, previous: GeoFormState, formData: FormData): Promise<GeoFormState> {
   const result = await updateBrandAliases(getDb(), workspaceId, values(formData));
   if (!result.ok) return failure(previous, formData, result.error, result.fieldErrors);
-  revalidatePath(geoPath(workspaceId));
+  revalidateGeo(workspaceId);
   return { ...success(previous, "Alias guardados."), values: { aliases: result.value.join("\n") } };
 }
 
 export async function addCompetitorAction(workspaceId: string, previous: GeoFormState, formData: FormData): Promise<GeoFormState> {
   const result = await addCompetitor(getDb(), workspaceId, values(formData));
   if (!result.ok) return failure(previous, formData, result.error, result.fieldErrors);
-  revalidatePath(geoPath(workspaceId));
+  revalidateGeo(workspaceId);
   return success(previous, `${result.value.name} añadido.`);
 }
 
 export async function archiveCompetitorAction(workspaceId: string, competitorId: string): Promise<void> {
   await archiveCompetitor(getDb(), workspaceId, competitorId);
-  revalidatePath(geoPath(workspaceId));
+  revalidateGeo(workspaceId);
 }
 
 export async function addPromptAction(workspaceId: string, previous: GeoFormState, formData: FormData): Promise<GeoFormState> {
   const result = await addPrompt(getDb(), workspaceId, values(formData));
   if (!result.ok) return failure(previous, formData, result.error, result.fieldErrors);
-  revalidatePath(geoPath(workspaceId));
+  revalidateGeo(workspaceId);
   return success(previous, "Pregunta añadida.");
 }
 
 export async function addSuggestedPromptAction(workspaceId: string, text: string, intent: string): Promise<void> {
   await addPrompt(getDb(), workspaceId, { text, intent });
-  revalidatePath(geoPath(workspaceId));
+  revalidateGeo(workspaceId);
 }
 
 export async function archivePromptAction(workspaceId: string, promptId: string): Promise<void> {
   await archivePrompt(getDb(), workspaceId, promptId);
-  revalidatePath(geoPath(workspaceId));
+  revalidateGeo(workspaceId);
 }
 
 export async function createRunAction(workspaceId: string, previous: GeoFormState, formData: FormData): Promise<GeoFormState> {
   const result = await createGeoRun(getDb(), workspaceId, values(formData), createGeoDeps());
   if (!result.ok) return failure(previous, formData, result.error, result.fieldErrors);
-  revalidatePath(geoPath(workspaceId));
+  revalidateGeo(workspaceId);
   redirect(`${geoPath(workspaceId)}/runs/${result.value.id}`);
 }
 
@@ -114,6 +121,7 @@ export async function recordObservationAction(
   const result = await recordManualObservation(getDb(), workspaceId, runId, observationId, values(formData));
   if (!result.ok) return failure(previous, formData, result.error, result.fieldErrors);
   revalidatePath(`${geoPath(workspaceId)}/runs/${runId}`);
+  revalidateGeo(workspaceId);
   return success(previous, "Respuesta registrada.");
 }
 
@@ -121,6 +129,7 @@ export async function refreshRunAction(workspaceId: string, runId: string, previ
   const result = await refreshGeoRun(getDb(), workspaceId, runId, createGeoDeps());
   if (!result.ok) return { ...previous, ok: false, message: ERROR_MESSAGES[result.error] ?? "No se pudo actualizar.", attempt: previous.attempt + 1 };
   revalidatePath(`${geoPath(workspaceId)}/runs/${runId}`);
+  revalidateGeo(workspaceId);
   const { collected, reconciled } = result.value;
   return success(previous, `${collected} respuestas recogidas${reconciled ? `, ${reconciled} envíos reconciliados` : ""}.`);
 }
@@ -130,10 +139,10 @@ export async function refreshRunAction(workspaceId: string, runId: string, previ
 export async function extractCompetitorsAction(workspaceId: string, previous: GeoFormState, formData: FormData): Promise<GeoFormState> {
   const result = await extractCompetitors(getDb(), workspaceId, values(formData), createCompetitorDeps());
   if (!result.ok) {
-    if (result.error === "conflict") revalidatePath(geoPath(workspaceId));
+    if (result.error === "conflict") revalidateGeo(workspaceId);
     return failure(previous, formData, result.error, result.fieldErrors);
   }
-  revalidatePath(geoPath(workspaceId));
+  revalidateGeo(workspaceId);
   const n = result.value.suggestions.length;
   return success(
     previous,
@@ -146,13 +155,13 @@ export async function extractCompetitorsAction(workspaceId: string, previous: Ge
 export async function acceptSuggestionAction(workspaceId: string, suggestionId: string, previous: GeoFormState, formData: FormData): Promise<GeoFormState> {
   const result = await acceptSuggestion(getDb(), workspaceId, suggestionId, values(formData));
   if (!result.ok) return failure(previous, formData, result.error, result.fieldErrors);
-  revalidatePath(geoPath(workspaceId));
+  revalidateGeo(workspaceId);
   return success(previous, `${result.value.name} añadido como competidor.`);
 }
 
 export async function dismissSuggestionAction(workspaceId: string, suggestionId: string, previous: GeoFormState): Promise<GeoFormState> {
   const result = await dismissSuggestion(getDb(), workspaceId, suggestionId);
   if (!result.ok) return { ...previous, ok: false, message: ERROR_MESSAGES[result.error] ?? "No se pudo descartar.", attempt: previous.attempt + 1 };
-  revalidatePath(geoPath(workspaceId));
+  revalidateGeo(workspaceId);
   return success(previous, "Descartado.");
 }

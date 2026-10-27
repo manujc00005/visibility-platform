@@ -21,6 +21,9 @@ export async function runAuditAction(workspaceId: string): Promise<RunAuditState
     }
     return { error: "Esta empresa ya no existe.", runningAuditId: null };
   }
+  // The overview and both detail pages read audits.
   revalidatePath(`/workspaces/${workspaceId}`);
+  revalidatePath(`/workspaces/${workspaceId}/performance`);
+  revalidatePath(`/workspaces/${workspaceId}/seo`);
   redirect(`/workspaces/${workspaceId}/audits/${result.audit.id}`);
 }

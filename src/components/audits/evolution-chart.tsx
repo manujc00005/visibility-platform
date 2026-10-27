@@ -1,4 +1,4 @@
-import type { EvolutionPoint } from "@/modules/audits/evolution";
+import { speedSegments, type EvolutionPoint } from "@/modules/audits/evolution";
 import { METRIC_THRESHOLDS } from "@/modules/audits/status";
 
 /**
@@ -37,14 +37,13 @@ const fullDate = new Intl.DateTimeFormat("es-ES", {
 const W = 640;
 const H = 180;
 const PAD = { top: 16, right: 12, bottom: 28, left: 32 };
-const MAX_POINTS = 12;
 
 function xOf(index: number, count: number): number {
   const inner = W - PAD.left - PAD.right;
   return PAD.left + (inner / count) * (index + 0.5);
 }
 
-function ProblemsChart({ points }: { points: EvolutionPoint[] }) {
+export function ProblemsChart({ points }: { points: EvolutionPoint[] }) {
   const labels = axisLabels(points);
   const maxTotal = Math.max(
     1,
@@ -54,7 +53,8 @@ function ProblemsChart({ points }: { points: EvolutionPoint[] }) {
   const slot = (W - PAD.left - PAD.right) / points.length;
   const barW = Math.min(40, slot * 0.6);
   const yOf = (value: number) => PAD.top + innerH - (value / maxTotal) * innerH;
-  const ticks = [0, Math.ceil(maxTotal / 2), maxTotal];
+  // Unique ticks: with a maximum of 1 the middle and top ticks would repeat (same key, same line).
+  const ticks = [...new Set([0, Math.ceil(maxTotal / 2), maxTotal])];
 
   return (
     <svg
@@ -182,20 +182,22 @@ function ProblemsChart({ points }: { points: EvolutionPoint[] }) {
   );
 }
 
-function SpeedChart({ points }: { points: EvolutionPoint[] }) {
+export function SpeedChart({ points }: { points: EvolutionPoint[] }) {
   const labels = axisLabels(points);
   const innerH = H - PAD.top - PAD.bottom;
   const yOf = (score: number) => PAD.top + innerH - (score / 100) * innerH;
-  const measured = points
-    .map((p, i) => ({ p, i }))
-    .filter(({ p }) => p.score !== null);
   const [good, poor] = METRIC_THRESHOLDS.score;
-  const path = measured
-    .map(
-      ({ p, i }, k) =>
-        `${k === 0 ? "M" : "L"}${xOf(i, points.length)},${yOf(p.score!)}`,
-    )
-    .join(" ");
+  // One stroke per run of comparable measurements (D019): no line where continuity cannot be claimed.
+  const paths = speedSegments(points)
+    .filter((segment) => segment.length > 1)
+    .map((segment) =>
+      segment
+        .map(
+          (i, k) =>
+            `${k === 0 ? "M" : "L"}${xOf(i, points.length)},${yOf(points[i]!.score!)}`,
+        )
+        .join(" "),
+    );
 
   return (
     <svg
@@ -249,15 +251,16 @@ function SpeedChart({ points }: { points: EvolutionPoint[] }) {
           ) : null}
         </g>
       ))}
-      {measured.length > 1 ? (
+      {paths.map((d) => (
         <path
-          d={path}
+          key={d}
+          d={d}
           fill="none"
           className="stroke-foreground"
           strokeWidth="2"
           strokeLinejoin="round"
         />
-      ) : null}
+      ))}
       {points.map((p, i) => {
         const x = xOf(i, points.length);
         return (
@@ -317,84 +320,72 @@ function Swatch({ className, label }: { className: string; label: string }) {
   );
 }
 
-export function EvolutionChart({ points }: { points: EvolutionPoint[] }) {
-  const shown = points.slice(-MAX_POINTS);
-  const anySpeed = shown.some((p) => p.score !== null);
+export function ProblemsLegend() {
   return (
-    <div className="flex flex-col gap-6">
-      {points.length > MAX_POINTS ? (
-        <p className="text-xs text-muted-foreground">
-          Se muestran las {MAX_POINTS} auditorías más recientes de{" "}
-          {points.length}.
-        </p>
-      ) : null}
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="text-sm font-medium">Problemas por auditoría</h3>
-          <p className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-            <Swatch className="bg-bad-line" label="Críticos" />
-            <Swatch
-              className="bg-[repeating-linear-gradient(45deg,var(--fair-line)_0_2px,var(--background)_2px_3px)]"
-              label="Importantes"
-            />
-            <Swatch className="bg-info-line" label="Mejoras" />
-          </p>
-        </div>
-        <ProblemsChart points={shown} />
-      </div>
-      <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="text-sm font-medium">
-            Velocidad en móvil (puntuación de Google, 0 a 100)
-          </h3>
-          <p className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-            <Swatch
-              className="bg-good-soft ring-1 ring-good-line"
-              label="Bueno ≥ 90"
-            />
-            <Swatch
-              className="bg-fair-soft ring-1 ring-fair-line"
-              label="Mejorable"
-            />
-            <Swatch
-              className="bg-bad-soft ring-1 ring-bad-line"
-              label="Malo < 50"
-            />
-          </p>
-        </div>
-        {anySpeed ? (
-          <SpeedChart points={shown} />
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Ninguna de estas auditorías midió la velocidad.
-          </p>
-        )}
-      </div>
-      <div className="sr-only">
-        <table>
-          <caption>Datos de la evolución por auditoría</caption>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Críticos</th>
-              <th>Importantes</th>
-              <th>Mejoras</th>
-              <th>Velocidad</th>
+    <p className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+      <Swatch className="bg-bad-line" label="Críticos" />
+      <Swatch
+        className="bg-[repeating-linear-gradient(45deg,var(--fair-line)_0_2px,var(--background)_2px_3px)]"
+        label="Importantes"
+      />
+      <Swatch className="bg-info-line" label="Mejoras" />
+    </p>
+  );
+}
+
+export function SpeedLegend() {
+  return (
+    <p className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+      <Swatch className="bg-good-soft ring-1 ring-good-line" label="Bueno ≥ 90" />
+      <Swatch className="bg-fair-soft ring-1 ring-fair-line" label="Mejorable" />
+      <Swatch className="bg-bad-soft ring-1 ring-bad-line" label="Malo < 50" />
+    </p>
+  );
+}
+
+/** The chart data as a visually hidden table for screen readers (charts are images to them). */
+export function ChartDataTable({ points, kind }: { points: EvolutionPoint[]; kind: "problems" | "speed" }) {
+  return (
+    <div className="sr-only">
+      <table>
+        <caption>{kind === "problems" ? "Problemas por auditoría" : "Puntuación de velocidad en móvil por auditoría"}</caption>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            {kind === "problems" ? (
+              <>
+                <th>Críticos</th>
+                <th>Importantes</th>
+                <th>Mejoras</th>
+              </>
+            ) : (
+              <>
+                <th>Velocidad</th>
+                <th>Prueba</th>
+              </>
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {points.map((p) => (
+            <tr key={p.id}>
+              <td>{fullDate.format(p.date)}</td>
+              {kind === "problems" ? (
+                <>
+                  <td>{p.counts.critical}</td>
+                  <td>{p.counts.warning}</td>
+                  <td>{p.counts.info}</td>
+                </>
+              ) : (
+                <>
+                  <td>{p.score ?? "no medida"}</td>
+                  <td>{p.score === null ? "—" : p.methodology ? `Lighthouse ${p.methodology.major}` : "versión desconocida"}</td>
+                </>
+              )}
             </tr>
-          </thead>
-          <tbody>
-            {shown.map((p) => (
-              <tr key={p.id}>
-                <td>{fullDate.format(p.date)}</td>
-                <td>{p.counts.critical}</td>
-                <td>{p.counts.warning}</td>
-                <td>{p.counts.info}</td>
-                <td>{p.score ?? "no medida"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }

@@ -1,25 +1,37 @@
-import { ArrowDownRight, ArrowRight, ArrowUpRight, ChevronRight } from "lucide-react";
+import { Gauge, Search, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { EvolutionChart } from "@/components/audits/evolution-chart";
 import { RunAuditButton } from "@/components/audits/run-audit-button";
-import { StatusPill, ToneIcon, toneClasses } from "@/components/audits/status-ui";
-import { Badge } from "@/components/ui/badge";
+import { Opportunities } from "@/components/overview/opportunities";
+import { ChangeLine, OverviewCard, type Notice } from "@/components/overview/overview-card";
+import { PageHeader } from "@/components/overview/page-header";
+import { WorkspaceNav } from "@/components/overview/workspace-nav";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getDb } from "@/db/client";
-import { cn } from "@/lib/utils";
-import { computeEvolution, DIRECTION_TONE, type Direction } from "@/modules/audits/evolution";
-import { AUDIT_STATUS_LABELS } from "@/modules/audits/presentation";
-import { listAudits } from "@/modules/audits/service";
-import { auditHeadline, rateMetric, RATING_LABELS, RATING_TONE } from "@/modules/audits/status";
-import { displayCountry, displayDate, displayDomain } from "@/modules/workspaces/presentation";
+import type { Tone } from "@/modules/audits/status";
+import { getAudit, listAudits } from "@/modules/audits/service";
+import { listGeoRuns, listPrompts } from "@/modules/geo/service";
+import {
+  buildOpportunities,
+  splitAudits,
+  summarizeAi,
+  summarizePerformance,
+  summarizeSeo,
+  type AiSummary,
+  type Attempt,
+  type BlockState,
+  type FindingsByAudit,
+  type PerformanceSummary,
+  type SeoSummary,
+  type Stale,
+} from "@/modules/overview";
+import { displayDate, displayDomain } from "@/modules/workspaces/presentation";
 import { getWorkspace } from "@/modules/workspaces/service";
 import { runAuditAction } from "./audits/actions";
 
-export const metadata: Metadata = { title: "Empresa" };
+export const metadata: Metadata = { title: "Resumen" };
 
 /**
  * Blocking route: the whole page depends on one record, and rendering it before the
@@ -27,16 +39,198 @@ export const metadata: Metadata = { title: "Empresa" };
  */
 export const instant = false;
 
-const CHANGE_ICON: Record<Direction, typeof ArrowUpRight> = { better: ArrowUpRight, same: ArrowRight, worse: ArrowDownRight };
+const STATE_STATUS: Record<Exclude<BlockState, "ok">, { tone: Tone; label: string }> = {
+  not_configured: { tone: "neutral", label: "No medida" },
+  no_data: { tone: "neutral", label: "Sin datos" },
+  analyzing: { tone: "neutral", label: "Analizando" },
+  partial: { tone: "neutral", label: "Parcial" },
+  error: { tone: "bad", label: "Error" },
+};
 
-function Change({ direction, text }: { direction: Direction; text: string }) {
-  const Icon = CHANGE_ICON[direction];
-  const tone = DIRECTION_TONE[direction];
+function notices(attempt: Attempt | { status: "running" | "failed"; text: string } | null, stale: Stale | null, extra?: string | null): Notice[] {
+  const list: Notice[] = [];
+  if (attempt) list.push({ kind: attempt.status === "running" ? "running" : "failed", text: attempt.text });
+  if (stale) list.push({ kind: "stale", text: stale.text });
+  if (extra) list.push({ kind: "info", text: extra });
+  return list;
+}
+
+function Muted({ children }: { children: React.ReactNode }) {
+  return <span className="text-xl font-medium text-muted-foreground">{children}</span>;
+}
+
+function Line({ children }: { children: React.ReactNode }) {
+  return <p className="text-sm text-muted-foreground">{children}</p>;
+}
+
+function PerformanceCard({ workspaceId, s }: { workspaceId: string; s: PerformanceSummary }) {
+  // Without a score the measurement simply did not happen: "No medida", not "Parcial".
+  const status = s.state === "ok" ? { tone: s.tone, label: s.verdict } : s.state === "partial" ? STATE_STATUS.not_configured : STATE_STATUS[s.state];
   return (
-    <span className={cn("inline-flex items-center gap-1 font-medium", toneClasses(tone).text)}>
-      <Icon aria-hidden="true" className="size-[1.1em]" />
-      {text}
-    </span>
+    <OverviewCard
+      id="card-performance"
+      href={`/workspaces/${workspaceId}/performance`}
+      icon={Gauge}
+      title="Rendimiento de tu web"
+      description="Descubre cómo de rápida y cómoda es tu página para los visitantes."
+      status={status}
+      headline={
+        s.score !== null ? (
+          <>
+            {s.score}
+            <span className="text-base font-normal text-muted-foreground">/100</span>
+          </>
+        ) : (
+          <Muted>{s.state === "analyzing" ? "Analizando…" : s.state === "error" ? "Sin resultado" : "No medida"}</Muted>
+        )
+      }
+      notices={notices(s.attempt, s.stale)}
+      source={`PageSpeed Insights · ${s.measuredAt ? displayDate(s.measuredAt) : s.state === "error" || s.state === "analyzing" ? "sin resultado" : "sin medir"}`}
+    >
+      {s.score !== null ? <Line>Puntuación de Google en un móvil simulado, no la experiencia de todos tus visitantes.</Line> : null}
+      {s.reason ? <Line>{s.reason}</Line> : null}
+      <ChangeLine change={s.change} note={s.comparisonNote} />
+      {s.topIssue ? (
+        <p className="text-sm">
+          <span className="text-muted-foreground">Principal problema: </span>
+          {s.topIssue}
+        </p>
+      ) : null}
+      {s.measuredAt ? (
+        <div className="flex flex-col gap-0.5">
+          <Line>{s.field.text}</Line>
+          {s.field.source ? <p className="text-xs text-muted-foreground">Fuente de este dato: {s.field.source}</p> : null}
+        </div>
+      ) : null}
+    </OverviewCard>
+  );
+}
+
+const SEO_VERDICT: Record<Tone, string> = { good: "Bien", fair: "Regular", bad: "Mal", info: "Mejorable", neutral: "Parcial" };
+
+function SeoCard({ workspaceId, s }: { workspaceId: string; s: SeoSummary }) {
+  // A partial check keeps the severity it did find: "Mal (parcial)", never a neutral grey over critical problems.
+  const status =
+    s.state === "ok"
+      ? { tone: s.tone, label: SEO_VERDICT[s.tone] }
+      : s.state === "partial" && s.tone !== "neutral"
+        ? { tone: s.tone, label: `${SEO_VERDICT[s.tone]} (parcial)` }
+        : STATE_STATUS[s.state];
+  const measured = s.headline !== null;
+  return (
+    <OverviewCard
+      id="card-seo"
+      href={`/workspaces/${workspaceId}/seo`}
+      icon={Search}
+      title="Visibilidad en Google"
+      description="Descubre si los clientes encuentran tu empresa cuando buscan tus servicios."
+      status={status}
+      headline={
+        measured ? (
+          <span className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+            <span>
+              {s.counts.critical}
+              <span className="ml-1.5 text-sm font-normal text-muted-foreground">{s.counts.critical === 1 ? "crítico" : "críticos"}</span>
+            </span>
+            <span>
+              {s.counts.warning}
+              <span className="ml-1.5 text-sm font-normal text-muted-foreground">{s.counts.warning === 1 ? "importante" : "importantes"}</span>
+            </span>
+          </span>
+        ) : (
+          <Muted>{s.state === "analyzing" ? "Analizando…" : s.state === "error" ? "Sin resultado" : "Sin auditoría"}</Muted>
+        )
+      }
+      notices={notices(s.attempt, s.stale)}
+      source={`Auditoría técnica de la portada · ${s.auditedAt ? displayDate(s.auditedAt) : s.state === "error" || s.state === "analyzing" ? "sin resultado" : "sin auditar"}`}
+    >
+      {s.headline ? <p className="text-sm font-medium">{s.headline.title}</p> : null}
+      {s.reason ? <Line>{s.reason}</Line> : null}
+      <ChangeLine change={s.change} note={s.comparisonNote} />
+      <Line>
+        Posicionamiento todavía no medido: falta conectar Google Search Console. Esto es la salud técnica de tu portada, no tu posición en
+        Google.
+      </Line>
+    </OverviewCard>
+  );
+}
+
+const AI_STATUS: Record<BlockState, { tone: Tone; label: string }> = {
+  ok: { tone: "neutral", label: "Medido" },
+  partial: { tone: "fair", label: "Parcial" },
+  analyzing: { tone: "neutral", label: "Recogiendo respuestas" },
+  error: { tone: "bad", label: "Error" },
+  not_configured: { tone: "neutral", label: "Sin configurar" },
+  no_data: { tone: "neutral", label: "Sin mediciones" },
+};
+
+function plural(n: number, one: string, many: string): string {
+  return n === 1 ? one : many;
+}
+
+/** What the headline leaves out, in one small line: capture, unanswered and branded questions. */
+function AiFootnote({ s }: { s: AiSummary }) {
+  if (s.configured === null || s.capture === null) return null;
+  const parts = [`${s.configured} ${plural(s.configured, "pregunta medida", "preguntas medidas")}`];
+  if (s.capture.k < s.capture.n) parts.push(`${s.capture.k} de ${s.capture.n} respuestas recogidas`);
+  if (s.unanswered.length > 0) parts.push(`${s.unanswered.length} sin respuesta válida`);
+  if (s.branded) {
+    parts.push(
+      `${s.branded.questions} sobre tu marca (te nombra en ${s.branded.mentioned.k} de ${s.branded.mentioned.n} ${plural(s.branded.mentioned.n, "respuesta", "respuestas")})`,
+    );
+  }
+  if (parts.length === 1) return null;
+  return <p className="text-xs text-muted-foreground">{parts.join(" · ")}. Solo cuentan arriba las preguntas evaluadas que no nombran tu marca.</p>;
+}
+
+function AiCard({ workspaceId, s }: { workspaceId: string; s: AiSummary }) {
+  const toSetup = s.coverage === null && (s.state === "not_configured" || s.state === "no_data");
+  return (
+    <OverviewCard
+      id="card-ai"
+      href={`/workspaces/${workspaceId}/geo${toSetup ? "/setup" : ""}`}
+      icon={Sparkles}
+      title="Presencia en IA"
+      description="Descubre si herramientas como ChatGPT mencionan o recomiendan tu empresa."
+      status={AI_STATUS[s.state]}
+      headline={
+        s.coverage && s.coverage.n > 0 ? (
+          <>
+            {s.coverage.k}
+            <span className="text-base font-normal text-muted-foreground">
+              {" "}
+              de {s.coverage.n} {plural(s.coverage.n, "pregunta", "preguntas")}
+            </span>
+          </>
+        ) : (
+          <Muted>
+            {s.coverage ? "Sin datos" : s.state === "analyzing" ? "Recogiendo…" : s.state === "error" ? "Sin resultado" : s.state === "not_configured" ? "Sin preguntas" : "Pendiente de medir"}
+          </Muted>
+        )
+      }
+      notices={notices(s.attempt, s.stale, s.setupNotice)}
+      source={`Medición en ChatGPT · ${s.measuredAt && s.provider ? `${s.provider} · ${displayDate(s.measuredAt)}` : s.state === "error" || s.state === "analyzing" ? "sin resultado" : "sin mediciones"}`}
+      cta={toSetup ? "Configurar" : "Ver informe"}
+    >
+      {s.coverage && s.coverage.n > 0 ? (
+        <Line>Preguntas monitorizadas en las que ChatGPT te mencionó, de las que obtuvieron respuesta válida. Es una muestra, no el total de búsquedas en IA.</Line>
+      ) : s.reason ? (
+        <Line>{s.reason}</Line>
+      ) : null}
+      {s.citing && s.citing.n > 0 ? (
+        <Line>
+          Tu web aparece citada como fuente en {s.citing.k} de {s.citing.n} {plural(s.citing.n, "respuesta", "respuestas")}.
+        </Line>
+      ) : null}
+      <ChangeLine change={s.change} note={s.comparisonNote} />
+      {s.uncovered[0] ? (
+        <p className="text-sm">
+          <span className="text-muted-foreground">Principal oportunidad: </span>
+          no te menciona en «{s.uncovered[0]}».
+        </p>
+      ) : null}
+      <AiFootnote s={s} />
+    </OverviewCard>
   );
 }
 
@@ -46,215 +240,76 @@ export default async function WorkspacePage({ params }: PageProps<"/workspaces/[
   const db = getDb();
   const workspace = await getWorkspace(db, id);
   if (!workspace) notFound();
-  const audits = await listAudits(db, workspace.id);
-  const evolution = computeEvolution(audits);
-  const domain = displayDomain(workspace.domain);
 
-  const rows: [string, React.ReactNode][] = [
-    ["Dominio", <span key="d" className="font-mono">{domain}</span>],
-    [
-      "Host introducido",
-      <span key="h" className="font-mono">
-        {displayDomain(workspace.hostname)}
-        {displayDomain(workspace.hostname) !== workspace.hostname ? (
-          <span className="text-muted-foreground"> ({workspace.hostname})</span>
-        ) : null}
-      </span>,
-    ],
-    // Shown as text, not as a link: the address has not been checked by the safe fetcher yet.
-    ["Dirección original", <span key="o" className="font-mono break-all">{workspace.originalUrl}</span>],
-    ["Sector", workspace.sector],
-    ["País", displayCountry(workspace.country)],
-    ["Ciudad", workspace.city ?? <span key="c" className="text-muted-foreground">No indicada</span>],
-    ["Alta", displayDate(workspace.createdAt)],
-    ["Última edición", displayDate(workspace.updatedAt)],
-  ];
+  // Stored data only: nothing on this page calls PageSpeed, CrUX, a website or an AI provider.
+  const [audits, runs, prompts] = await Promise.all([listAudits(db, workspace.id), listGeoRuns(db, workspace.id), listPrompts(db, workspace.id)]);
+  const { result, previous } = splitAudits(audits);
+  const loaded = await Promise.all([result, previous].filter((a) => a !== null).map((a) => getAudit(db, workspace.id, a.id)));
+  const findingsByAudit: FindingsByAudit = Object.fromEntries(loaded.filter((r) => r !== null).map((r) => [r.audit.id, r.findings]));
+  const latestFindings = result ? (findingsByAudit[result.id] ?? []) : [];
+
+  const now = new Date();
+  const performance = summarizePerformance(audits, latestFindings, now);
+  const seo = summarizeSeo(audits, findingsByAudit, now);
+  const ai = summarizeAi(
+    runs.map(({ run, metrics }) => ({
+      id: run.id,
+      status: run.status,
+      provider: run.provider,
+      methodologyKey: run.methodologyKey,
+      createdAt: run.createdAt,
+      completedAt: run.completedAt,
+      metrics,
+    })),
+    prompts.length,
+    now,
+  );
+  const opportunities = buildOpportunities({ findings: latestFindings, seo, performance, ai });
+  const domain = displayDomain(workspace.domain);
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link href="/workspaces" className="text-sm text-muted-foreground hover:underline">
-            ← Empresas
-          </Link>
-          <h1 className="text-2xl font-semibold tracking-tight">{workspace.name}</h1>
-          <p className="text-sm text-muted-foreground">
-            <span className="font-mono">{domain}</span> · {workspace.sector}
-          </p>
-        </div>
-        <Link href={`/workspaces/${workspace.id}/edit`} className={buttonVariants({ variant: "outline" })}>
-          Editar
-        </Link>
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          breadcrumbs={[{ href: "/workspaces", label: "Empresas" }]}
+          title={workspace.name}
+          meta={
+            <>
+              <span className="font-mono">{domain}</span> · {workspace.sector}
+              {workspace.city ? ` · ${workspace.city}` : ""}
+            </>
+          }
+          actions={
+            <>
+              <RunAuditButton workspaceId={workspace.id} action={runAuditAction.bind(null, workspace.id)} />
+              <Link href={`/workspaces/${workspace.id}/edit`} className={buttonVariants({ variant: "outline" })}>
+                Editar
+              </Link>
+            </>
+          }
+        />
+        <WorkspaceNav workspaceId={workspace.id} current="overview" />
       </div>
 
-      <section aria-labelledby="state-title" className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 id="state-title" className="text-lg font-semibold">
-              Estado de la web
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              {evolution.latest ? `Según la auditoría del ${displayDate(evolution.latest.date)}.` : "Aún no hay ninguna auditoría."}
-            </p>
-          </div>
-          <RunAuditButton workspaceId={workspace.id} action={runAuditAction.bind(null, workspace.id)} />
-        </div>
-
-        {evolution.headline && evolution.latest ? (
-          <>
-            <Link
-              href={`/workspaces/${workspace.id}/audits/${evolution.latest.id}`}
-              className={cn(
-                "flex items-start gap-3 rounded-xl border border-l-4 p-4 transition-colors hover:brightness-[0.98] focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                toneClasses(evolution.headline.tone).soft,
-                toneClasses(evolution.headline.tone).accent,
-              )}
-            >
-              <ToneIcon tone={evolution.headline.tone} className="mt-0.5 size-6" />
-              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span className={cn("text-base font-semibold", toneClasses(evolution.headline.tone).text)}>{evolution.headline.title}</span>
-                <span className="text-sm text-foreground/80">{evolution.headline.detail}</span>
-                {evolution.trend ? (
-                  <span className="mt-1 text-sm">
-                    <Change direction={evolution.trend.direction} text={evolution.trend.text} />
-                  </span>
-                ) : null}
-              </span>
-              <ChevronRight aria-hidden="true" className="mt-1 size-5 shrink-0 text-muted-foreground" />
-            </Link>
-
-            <ul className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {evolution.indicators.map((ind) => (
-                <li key={ind.label} className={cn("flex flex-col gap-1.5 rounded-lg border border-l-4 bg-card p-3", toneClasses(ind.tone).accent)}>
-                  <span className="text-xs text-muted-foreground">{ind.label}</span>
-                  <span className="text-2xl leading-none font-semibold tabular-nums">{ind.value}</span>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <StatusPill tone={ind.tone}>{ind.verdict}</StatusPill>
-                    {ind.change ? <Change direction={ind.change.direction} text={ind.change.text} /> : null}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <Card>
-            <CardContent className="text-sm text-muted-foreground">
-              Ejecuta la primera auditoría para ver si la web carga rápido y qué problemas tiene. Tarda menos de un minuto.
-            </CardContent>
-          </Card>
-        )}
+      <section aria-label="Estado de tu presencia digital" className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <PerformanceCard workspaceId={workspace.id} s={performance} />
+        <SeoCard workspaceId={workspace.id} s={seo} />
+        <AiCard workspaceId={workspace.id} s={ai} />
       </section>
 
-      {evolution.points.length > 1 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Evolución</CardTitle>
-            <CardDescription>Cómo han cambiado los problemas y la velocidad en cada auditoría. Menos problemas y más puntuación es mejor.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <EvolutionChart points={evolution.points} />
-          </CardContent>
-        </Card>
-      ) : null}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Auditorías técnicas</CardTitle>
-          <CardDescription>
-            Cada auditoría analiza la portada de {domain}, su robots.txt, el sitemap y la velocidad en móvil. Pulsa una para ver el detalle.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {audits.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Todavía no hay auditorías.</p>
-          ) : (
-            <ul className="-mx-2 flex flex-col text-sm">
-              {audits.map((audit) => {
-                const completed = audit.status === "completed";
-                const headline = completed ? auditHeadline({ critical: audit.criticalCount, warning: audit.warningCount, info: audit.infoCount }) : null;
-                const perf = audit.facts?.performance;
-                const score = perf?.status === "ok" ? perf.score : null;
-                const verdict = headline ? (headline.tone === "bad" ? "Mal" : headline.tone === "fair" ? "Regular" : "Bien") : null;
-                return (
-                  <li key={audit.id}>
-                    <Link
-                      href={`/workspaces/${workspace.id}/audits/${audit.id}`}
-                      className="flex items-center gap-3 rounded-md px-2 py-2.5 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                    >
-                      {headline ? (
-                        <ToneIcon tone={headline.tone} className="size-5" />
-                      ) : (
-                        <ToneIcon tone={audit.status === "failed" ? "bad" : "neutral"} className="size-5" />
-                      )}
-                      <span className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
-                        <span className="font-medium">{displayDate(audit.startedAt)}</span>
-                        <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                          {completed && headline && verdict ? (
-                            <>
-                              <StatusPill tone={headline.tone}>{verdict}</StatusPill>
-                              <span>
-                                {audit.criticalCount} críticos · {audit.warningCount} importantes · {audit.infoCount} mejoras
-                              </span>
-                            </>
-                          ) : (
-                            <StatusPill tone={audit.status === "failed" ? "bad" : "neutral"}>{AUDIT_STATUS_LABELS[audit.status]}</StatusPill>
-                          )}
-                        </span>
-                      </span>
-                      {score !== null ? (
-                        <StatusPill tone={RATING_TONE[rateMetric("score", score)]} className="hidden sm:inline-flex">
-                          {`Velocidad ${score} · ${RATING_LABELS[rateMetric("score", score)]}`}
-                        </StatusPill>
-                      ) : completed ? (
-                        <span className="hidden text-xs text-muted-foreground sm:inline">Velocidad no medida</span>
-                      ) : null}
-                      <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-muted-foreground" />
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Visibilidad en asistentes de IA</CardTitle>
-          <CardDescription>Marca, competidores, preguntas y mediciones de si ChatGPT menciona y cita esta web.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link href={`/workspaces/${workspace.id}/geo`} className={buttonVariants({ variant: "outline" })}>
-            Abrir visibilidad en IA
-          </Link>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Ficha</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-[auto_1fr]">
-            {rows.map(([label, value]) => (
-              <div key={label} className="contents">
-                <dt className="text-muted-foreground">{label}</dt>
-                <dd>{value}</dd>
-              </div>
-            ))}
-          </dl>
-          <div>
-            <p className="mb-2 text-xs font-medium text-muted-foreground">Servicios principales</p>
-            <div className="flex flex-wrap gap-2">
-              {workspace.services.map((service) => (
-                <Badge key={service} variant="secondary">
-                  {service}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <Opportunities
+        workspaceId={workspace.id}
+        list={opportunities}
+        emptyAction={
+          <p className="text-sm text-muted-foreground">
+            Pulsa «Ejecutar auditoría» arriba o{" "}
+            <Link href={`/workspaces/${workspace.id}/geo/setup`} className="font-medium text-foreground underline underline-offset-4">
+              configura las preguntas de IA
+            </Link>
+            .
+          </p>
+        }
+      />
     </div>
   );
 }
