@@ -1,4 +1,4 @@
-import { ChevronRight, Search } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { ChartDataTable, ProblemsChart, ProblemsLegend } from "@/components/audits/evolution-chart";
 import { RunAuditButton } from "@/components/audits/run-audit-button";
 import { StatusPill, ToneIcon } from "@/components/audits/status-ui";
+import { SearchConsoleSection } from "@/components/search-console/search-console-section";
 import { ChangeLine, NoticeList, type Notice } from "@/components/overview/overview-card";
 import { PageHeader } from "@/components/overview/page-header";
 import { WorkspaceNav } from "@/components/overview/workspace-nav";
@@ -15,10 +16,14 @@ import { AUDIT_STATUS_LABELS, CATEGORY_LABELS, SEVERITY_LABELS } from "@/modules
 import type { Category } from "@/modules/audits/rules";
 import { getAudit, listAudits } from "@/modules/audits/service";
 import { SEVERITY_TONE } from "@/modules/audits/status";
+import { searchConsoleConfig } from "@/modules/search-console/deps";
+import { latestSearchConsole } from "@/modules/search-console/service";
+import { summarizeSearchConsole } from "@/modules/search-console/summary";
 import { seoCounts, seoFindings, seoHistoryPoints, splitAudits, summarizeSeo, type FindingsByAudit } from "@/modules/overview";
 import { displayDate } from "@/modules/workspaces/presentation";
 import { getWorkspace } from "@/modules/workspaces/service";
 import { runAuditAction } from "../audits/actions";
+import { refreshSearchConsoleAction } from "./actions";
 
 export const metadata: Metadata = { title: "Visibilidad en Google" };
 
@@ -53,7 +58,9 @@ export default async function SeoPage({ params }: PageProps<"/workspaces/[id]/se
   const workspace = await getWorkspace(db, id);
   if (!workspace) notFound();
 
-  const audits = await listAudits(db, workspace.id);
+  const [audits, stored] = await Promise.all([listAudits(db, workspace.id), latestSearchConsole(db, workspace.id)]);
+  const gscConfig = searchConsoleConfig();
+  const gsc = summarizeSearchConsole(stored, gscConfig, workspace.domain);
   const recent = audits.slice(0, HISTORY_LIMIT);
   const { result, previous } = splitAudits(audits);
   const toLoad = new Set([...recent.filter((a) => a.status === "completed").map((a) => a.id), ...[result, previous].flatMap((a) => (a ? [a.id] : []))]);
@@ -83,22 +90,12 @@ export default async function SeoPage({ params }: PageProps<"/workspaces/[id]/se
         <WorkspaceNav workspaceId={workspace.id} current="seo" />
       </div>
 
-      <Section id="ranking-title" title="Posicionamiento en Google">
-        <div className="flex flex-col gap-3 rounded-2xl border border-dashed bg-card/60 p-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand ring-1 ring-brand/15">
-              <Search className="size-4" />
-            </span>
-            <span className="text-sm font-medium">Google Search Console</span>
-            <StatusPill tone="neutral">No disponible todavía</StatusPill>
-          </div>
-          <p className="max-w-3xl text-sm text-muted-foreground">
-            Para saber cuántas personas te encuentran en Google necesitamos conectar Search Console, la herramienta gratuita de Google para
-            propietarios de webs. Con ella podremos mostrarte los clics y las veces que apareces en los resultados, las búsquedas por las que te
-            encuentran, tus páginas más visibles y su evolución. Esta conexión aún no está disponible en la plataforma: mientras tanto no
-            mostramos ninguna cifra de tráfico.
-          </p>
-        </div>
+      <Section
+        id="ranking-title"
+        title="Posicionamiento en Google"
+        description="Cuántas veces apareces en Google, cuántas personas entran en tu web y con qué búsquedas, según Search Console, la herramienta gratuita de Google para propietarios de webs."
+      >
+        <SearchConsoleSection s={gsc} config={gscConfig} action={refreshSearchConsoleAction.bind(null, workspace.id)} />
       </Section>
 
       <Section

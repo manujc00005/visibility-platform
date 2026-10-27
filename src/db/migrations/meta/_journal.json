@@ -43,6 +43,13 @@
       "when": 1793031734873,
       "tag": "0005_competitor_suggestions",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793113484581,
+      "tag": "0006_search_console",
+      "breakpoints": true
     }
   ]
 }

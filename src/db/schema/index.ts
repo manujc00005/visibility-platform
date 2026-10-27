@@ -7,3 +7,4 @@ export * from "@/modules/audits/schema";
 export * from "@/modules/reports/schema";
 export * from "@/modules/geo/schema";
 export * from "@/modules/geo/competitors/schema";
+export * from "@/modules/search-console/schema";

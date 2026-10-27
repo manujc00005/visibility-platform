@@ -13,6 +13,9 @@ import { getDb } from "@/db/client";
 import type { Tone } from "@/modules/audits/status";
 import { getAudit, listAudits } from "@/modules/audits/service";
 import { listGeoRuns, listPrompts } from "@/modules/geo/service";
+import { searchConsoleConfig } from "@/modules/search-console/deps";
+import { latestSearchConsole } from "@/modules/search-console/service";
+import { summarizeSearchConsole } from "@/modules/search-console/summary";
 import {
   buildOpportunities,
   splitAudits,
@@ -108,7 +111,7 @@ function PerformanceCard({ workspaceId, s }: { workspaceId: string; s: Performan
 
 const SEO_VERDICT: Record<Tone, string> = { good: "Bien", fair: "Regular", bad: "Mal", info: "Mejorable", neutral: "Parcial" };
 
-function SeoCard({ workspaceId, s }: { workspaceId: string; s: SeoSummary }) {
+function SeoCard({ workspaceId, s, rankingLine }: { workspaceId: string; s: SeoSummary; rankingLine: string | null }) {
   // A partial check keeps the severity it did find: "Mal (parcial)", never a neutral grey over critical problems.
   const status =
     s.state === "ok"
@@ -147,10 +150,14 @@ function SeoCard({ workspaceId, s }: { workspaceId: string; s: SeoSummary }) {
       {s.headline ? <p className="text-sm font-medium">{s.headline.title}</p> : null}
       {s.reason ? <Line>{s.reason}</Line> : null}
       <ChangeLine change={s.change} note={s.comparisonNote} />
-      <Line>
-        Posicionamiento todavía no medido: falta conectar Google Search Console. Esto es la salud técnica de tu portada, no tu posición en
-        Google.
-      </Line>
+      {rankingLine ? (
+        <Line>{rankingLine}</Line>
+      ) : (
+        <Line>
+          Posicionamiento todavía no medido: falta conectar Google Search Console. Esto es la salud técnica de tu portada, no tu posición en
+          Google.
+        </Line>
+      )}
     </OverviewCard>
   );
 }
@@ -241,8 +248,13 @@ export default async function WorkspacePage({ params }: PageProps<"/workspaces/[
   const workspace = await getWorkspace(db, id);
   if (!workspace) notFound();
 
-  // Stored data only: nothing on this page calls PageSpeed, CrUX, a website or an AI provider.
-  const [audits, runs, prompts] = await Promise.all([listAudits(db, workspace.id), listGeoRuns(db, workspace.id), listPrompts(db, workspace.id)]);
+  // Stored data only: nothing on this page calls PageSpeed, CrUX, Search Console, a website or an AI provider.
+  const [audits, runs, prompts, gscStored] = await Promise.all([
+    listAudits(db, workspace.id),
+    listGeoRuns(db, workspace.id),
+    listPrompts(db, workspace.id),
+    latestSearchConsole(db, workspace.id),
+  ]);
   const { result, previous } = splitAudits(audits);
   const loaded = await Promise.all([result, previous].filter((a) => a !== null).map((a) => getAudit(db, workspace.id, a.id)));
   const findingsByAudit: FindingsByAudit = Object.fromEntries(loaded.filter((r) => r !== null).map((r) => [r.audit.id, r.findings]));
@@ -264,6 +276,7 @@ export default async function WorkspacePage({ params }: PageProps<"/workspaces/[
     prompts.length,
     now,
   );
+  const gsc = summarizeSearchConsole(gscStored, searchConsoleConfig(), workspace.domain);
   const opportunities = buildOpportunities({ findings: latestFindings, seo, performance, ai });
   const domain = displayDomain(workspace.domain);
 
@@ -293,7 +306,7 @@ export default async function WorkspacePage({ params }: PageProps<"/workspaces/[
 
       <section aria-label="Estado de tu presencia digital" className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <PerformanceCard workspaceId={workspace.id} s={performance} />
-        <SeoCard workspaceId={workspace.id} s={seo} />
+        <SeoCard workspaceId={workspace.id} s={seo} rankingLine={gsc.cardLine} />
         <AiCard workspaceId={workspace.id} s={ai} />
       </section>
 
