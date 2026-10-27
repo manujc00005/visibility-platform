@@ -18,6 +18,13 @@ export const REDACTED_PATHS = [
   "databaseUrl",
   "*.databaseUrl",
   "DATABASE_URL",
+  "private_key",
+  "*.private_key",
+  "access_token",
+  "*.access_token",
+  "assertion",
+  "*.assertion",
+  "GSC_SERVICE_ACCOUNT_JSON",
 ];
 
 export function createLogger(options: { level?: string; destination?: pino.DestinationStream } = {}) {

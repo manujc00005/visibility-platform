@@ -47,6 +47,11 @@ const envSchema = z.object({
     .string()
     .optional()
     .transform((v) => v?.trim().toLowerCase() === "true"),
+  /**
+   * Google Search Console: service account key JSON (raw or base64). Optional: without it the
+   * Search Console section is "not configured". Parsed when used, so a bad value never stops the app.
+   */
+  GSC_SERVICE_ACCOUNT_JSON: z.string().optional().transform((v) => v?.trim() || undefined),
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),
