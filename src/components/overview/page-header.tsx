@@ -1,6 +1,8 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
+import { getMessages } from "@/i18n/messages";
 
 /**
  * Page title block shared by the overview and the detail pages: optional breadcrumb,
@@ -12,18 +14,20 @@ export function PageHeader({
   meta,
   description,
   actions,
+  locale = DEFAULT_LOCALE,
 }: {
   breadcrumbs?: { href: string; label: string }[];
   title: string;
   meta?: ReactNode;
   description?: ReactNode;
   actions?: ReactNode;
+  locale?: Locale;
 }) {
   return (
     <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
       <div className="flex min-w-0 flex-col gap-1.5">
         {breadcrumbs?.length ? (
-          <nav aria-label="Ruta de navegación">
+          <nav aria-label={getMessages(locale).common.breadcrumbs}>
             <ol className="flex flex-wrap items-center gap-1 text-sm text-muted-foreground">
               {breadcrumbs.map((crumb, i) => (
                 <li key={crumb.href} className="flex items-center gap-1">

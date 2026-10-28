@@ -1,0 +1,8 @@
+npm run lint EXIT=1 (problemas fuera de .claude/worktrees: 0)
+eslint --ignore-pattern '.claude/**' EXIT=0
+npm run typecheck EXIT=0
+npm run test:unit EXIT=0 · Test Files 48 passed (48) · Tests 515 passed (515)
+npm run build EXIT=0
+integration: INTEGRATION_EXIT=0
+npm run test:integration · Test Files 8 passed (8) · Tests 74 passed (74)
+npm run lint EXIT=0 tras añadir ".claude/**" a globalIgnores de eslint.config.mjs (2026-10-27, petición del propietario)

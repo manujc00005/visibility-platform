@@ -1,3 +1,5 @@
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
+import { getMessages } from "@/i18n/messages";
 import type { AuditLike, Direction } from "@/modules/audits/evolution";
 import type { Severity } from "@/modules/audits/rules";
 
@@ -9,6 +11,7 @@ import type { Severity } from "@/modules/audits/rules";
  * - the latest usable RESULT, with its own date, and
  * - the latest ATTEMPT when it is newer and did not produce a result (running or failed).
  * A newer attempt never replaces nor re-dates the result. Staleness is an extra notice.
+ * Texts come from the catalog of `locale`, Spanish by default (D007).
  */
 export type BlockState = "not_configured" | "no_data" | "analyzing" | "partial" | "error" | "ok";
 
@@ -53,10 +56,10 @@ export function isStale(date: Date | null, now: Date): boolean {
 }
 
 /** "Datos de hace N días" (N in whole days) when the result is stale, otherwise null. */
-export function staleInfo(date: Date | null, now: Date): Stale | null {
+export function staleInfo(date: Date | null, now: Date, locale: Locale = DEFAULT_LOCALE): Stale | null {
   if (!date || !isStale(date, now)) return null;
   const days = Math.floor((now.getTime() - date.getTime()) / DAY_MS);
-  return { days, text: `Datos de hace ${days} días` };
+  return { days, text: getMessages(locale).overview.stale(days) };
 }
 
 export interface AuditSplit<T extends AuditLike> {
@@ -79,9 +82,10 @@ export function splitAudits<T extends AuditLike>(audits: T[]): AuditSplit<T> {
   };
 }
 
-export function auditAttempt(pending: AuditLike | null): Attempt | null {
+export function auditAttempt(pending: AuditLike | null, locale: Locale = DEFAULT_LOCALE): Attempt | null {
   if (!pending) return null;
+  const t = getMessages(locale).overview.attempt;
   return pending.status === "running"
-    ? { status: "running", startedAt: pending.startedAt, text: "Actualizando: hay una auditoría en curso." }
-    : { status: "failed", startedAt: pending.startedAt, text: "El último intento de auditoría no terminó. Se muestra el resultado anterior." };
+    ? { status: "running", startedAt: pending.startedAt, text: t.running }
+    : { status: "failed", startedAt: pending.startedAt, text: t.failed };
 }

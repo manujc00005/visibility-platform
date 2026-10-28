@@ -1,3 +1,5 @@
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
+import { getMessages } from "@/i18n/messages";
 import type { EvolutionPoint } from "@/modules/audits/evolution";
 import type { AuditFacts, Category, Severity } from "@/modules/audits/rules";
 import { auditHeadline, isCategoryChecked, SEVERITY_TONE, type Tone } from "@/modules/audits/status";
@@ -16,7 +18,8 @@ import {
 /**
  * Technical SEO health of the home page: the honest proxy while Search Console is not
  * connected. Performance findings are excluded everywhere (counts, headline, areas,
- * changes, chart): speed has its own block. No global score.
+ * changes, chart): speed has its own block. No global score. Texts come from the catalog
+ * of `locale`, Spanish by default (D007).
  */
 export type SeoAreaKey = "indexability" | "metadata" | "structure" | "sitemap" | "canonicals" | "structured_data";
 
@@ -51,14 +54,7 @@ export type FindingsByAudit = Record<string, FindingLike[] | undefined>;
 const SEO_CATEGORIES: Category[] = ["access", "indexability", "metadata", "headings", "crawling", "links", "structured_data", "social", "mobile"];
 const SEVERITY_RANK: Record<Severity, number> = { critical: 0, warning: 1, info: 2 };
 
-const AREA_LABELS: Record<SeoAreaKey, string> = {
-  indexability: "Indexabilidad",
-  metadata: "Metadatos",
-  structure: "Estructura",
-  sitemap: "Sitemap y rastreo",
-  canonicals: "Canonicals",
-  structured_data: "Datos estructurados",
-};
+const AREA_KEYS: SeoAreaKey[] = ["indexability", "metadata", "structure", "sitemap", "canonicals", "structured_data"];
 
 export function seoFindings<T extends FindingLike>(findings: T[]): T[] {
   return findings.filter((f) => f.category !== "performance");
@@ -120,29 +116,32 @@ function areaChecked(key: SeoAreaKey, facts: AuditFacts | null): boolean {
   }
 }
 
-export function seoAreaStatuses(findings: FindingLike[], facts: AuditFacts | null): SeoArea[] {
+export function seoAreaStatuses(findings: FindingLike[], facts: AuditFacts | null, locale: Locale = DEFAULT_LOCALE): SeoArea[] {
+  const m = getMessages(locale);
+  const labels = m.overview.seo.areas;
+  const verdict = m.audits.labels.verdict;
   const seo = seoFindings(findings);
-  return (Object.keys(AREA_LABELS) as SeoAreaKey[]).map((key) => {
+  return AREA_KEYS.map((key) => {
     const related = seo.filter((f) => areaOf(f) === key);
-    const base = { key, label: AREA_LABELS[key], count: related.length, firstFindingId: related[0]?.id ?? null };
+    const base = { key, label: labels[key], count: related.length, firstFindingId: related[0]?.id ?? null };
     if (related.length === 0) {
-      return areaChecked(key, facts) ? { ...base, tone: "good" as const, verdict: "Bien" } : { ...base, tone: "neutral" as const, verdict: "No comprobado" };
+      return areaChecked(key, facts) ? { ...base, tone: "good" as const, verdict: verdict.good } : { ...base, tone: "neutral" as const, verdict: verdict.unchecked };
     }
     const worst = related.reduce((a, b) => (SEVERITY_RANK[b.severity] < SEVERITY_RANK[a.severity] ? b : a)).severity;
-    return { ...base, tone: SEVERITY_TONE[worst], verdict: worst === "critical" ? "Mal" : worst === "warning" ? "Regular" : "Mejorable" };
+    return { ...base, tone: SEVERITY_TONE[worst], verdict: verdict[worst] };
   });
 }
 
-export function urgentChange(latest: Record<Severity, number>, previous: Record<Severity, number>): Change {
+export function urgentChange(latest: Record<Severity, number>, previous: Record<Severity, number>, locale: Locale = DEFAULT_LOCALE): Change {
+  const t = getMessages(locale).overview.seo;
   const diff = latest.critical + latest.warning - (previous.critical + previous.warning);
-  if (diff < 0) return { direction: "better", text: `${Math.abs(diff)} ${diff === -1 ? "problema menos" : "problemas menos"} que en la auditoría anterior` };
-  if (diff > 0) return { direction: "worse", text: `${diff} ${diff === 1 ? "problema nuevo" : "problemas nuevos"} desde la auditoría anterior` };
-  return { direction: "same", text: "Igual que en la auditoría anterior" };
+  if (diff < 0) return { direction: "better", text: t.fewer(Math.abs(diff)) };
+  if (diff > 0) return { direction: "worse", text: t.more(diff) };
+  return { direction: "same", text: t.same };
 }
 
-const PARTIAL_DETAIL = "Resultado parcial: la portada no se pudo leer, así que solo se comprobaron el acceso, robots.txt y el sitemap.";
-
-export function summarizeSeo(audits: AuditInput[], findingsByAudit: FindingsByAudit, now: Date): SeoSummary {
+export function summarizeSeo(audits: AuditInput[], findingsByAudit: FindingsByAudit, now: Date, locale: Locale = DEFAULT_LOCALE): SeoSummary {
+  const t = getMessages(locale).overview.seo;
   const { result, previous, pending } = splitAudits(audits);
   const base: SeoSummary = {
     state: "no_data",
@@ -154,30 +153,30 @@ export function summarizeSeo(audits: AuditInput[], findingsByAudit: FindingsByAu
     comparisonNote: null,
     auditedAt: result?.startedAt ?? null,
     reason: null,
-    attempt: result ? auditAttempt(pending) : null,
-    stale: staleInfo(result?.startedAt ?? null, now),
+    attempt: result ? auditAttempt(pending, locale) : null,
+    stale: staleInfo(result?.startedAt ?? null, now, locale),
     auditId: result?.id ?? null,
   };
 
   if (!result) {
-    if (pending?.status === "running") return { ...base, state: "analyzing", reason: "Estamos analizando la web. Tarda menos de un minuto." };
-    if (pending?.status === "failed") return { ...base, state: "error", reason: "La auditoría no terminó. Vuelve a ejecutarla." };
-    return { ...base, reason: "Ejecuta la primera auditoría para comprobar si Google puede leer y entender la web." };
+    if (pending?.status === "running") return { ...base, state: "analyzing", reason: t.analyzingReason };
+    if (pending?.status === "failed") return { ...base, state: "error", reason: t.errorReason };
+    return { ...base, reason: t.firstAudit };
   }
 
   const loaded = findingsByAudit[result.id];
   // Without the findings we cannot tell problems from no problems: never default to "Bien".
-  if (!loaded) return { ...base, state: "error", reason: "No se pudieron leer los resultados de la última auditoría. Recarga la página." };
+  if (!loaded) return { ...base, state: "error", reason: t.notLoaded };
   const findings = loaded;
   const counts = seoCounts(findings);
   const read = pageRead(result.facts);
   let headline: { tone: Tone; title: string; detail: string };
   if (read) {
-    headline = auditHeadline(counts);
+    headline = auditHeadline(counts, locale);
   } else {
     // A partial check is never presented as positive.
     const tone: Tone = counts.critical > 0 ? "bad" : counts.warning > 0 ? "fair" : "neutral";
-    headline = { tone, title: tone === "neutral" ? "Resultado parcial" : auditHeadline(counts).title, detail: PARTIAL_DETAIL };
+    headline = { tone, title: tone === "neutral" ? t.partialTitle : auditHeadline(counts, locale).title, detail: t.partialDetail };
   }
 
   let change: Change | null = null;
@@ -186,8 +185,8 @@ export function summarizeSeo(audits: AuditInput[], findingsByAudit: FindingsByAu
     const previousFindings = findingsByAudit[previous.id];
     const a = coverageKey(result);
     const b = coverageKey(previous);
-    if (previousFindings && a !== null && a === b) change = urgentChange(counts, seoCounts(previousFindings));
-    else comparisonNote = "Sin comparación: la auditoría anterior comprobó cosas distintas.";
+    if (previousFindings && a !== null && a === b) change = urgentChange(counts, seoCounts(previousFindings), locale);
+    else comparisonNote = t.noComparison;
   }
 
   return {
@@ -196,10 +195,10 @@ export function summarizeSeo(audits: AuditInput[], findingsByAudit: FindingsByAu
     counts,
     tone: headline.tone,
     headline: { title: headline.title, detail: headline.detail },
-    areas: seoAreaStatuses(findings, result.facts),
+    areas: seoAreaStatuses(findings, result.facts, locale),
     change,
     comparisonNote,
-    reason: read ? null : PARTIAL_DETAIL,
+    reason: read ? null : t.partialDetail,
   };
 }
 

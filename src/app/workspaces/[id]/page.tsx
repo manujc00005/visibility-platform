@@ -10,6 +10,9 @@ import { PageHeader } from "@/components/overview/page-header";
 import { WorkspaceNav } from "@/components/overview/workspace-nav";
 import { buttonVariants } from "@/components/ui/button";
 import { getDb } from "@/db/client";
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
+import { getMessages, type Messages } from "@/i18n/messages";
+import { getLocale } from "@/i18n/server";
 import type { Tone } from "@/modules/audits/status";
 import { getAudit, listAudits } from "@/modules/audits/service";
 import { listGeoRuns, listPrompts } from "@/modules/geo/service";
@@ -18,13 +21,13 @@ import { latestSearchConsole } from "@/modules/search-console/service";
 import { summarizeSearchConsole } from "@/modules/search-console/summary";
 import {
   buildOpportunities,
+  overviewOriginalText,
   splitAudits,
   summarizeAi,
   summarizePerformance,
   summarizeSeo,
   type AiSummary,
   type Attempt,
-  type BlockState,
   type FindingsByAudit,
   type PerformanceSummary,
   type SeoSummary,
@@ -34,7 +37,9 @@ import { displayDate, displayDomain } from "@/modules/workspaces/presentation";
 import { getWorkspace } from "@/modules/workspaces/service";
 import { runAuditAction } from "./audits/actions";
 
-export const metadata: Metadata = { title: "Resumen" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: getMessages(await getLocale()).overview.metaTitle };
+}
 
 /**
  * Blocking route: the whole page depends on one record, and rendering it before the
@@ -42,13 +47,9 @@ export const metadata: Metadata = { title: "Resumen" };
  */
 export const instant = false;
 
-const STATE_STATUS: Record<Exclude<BlockState, "ok">, { tone: Tone; label: string }> = {
-  not_configured: { tone: "neutral", label: "No medida" },
-  no_data: { tone: "neutral", label: "Sin datos" },
-  analyzing: { tone: "neutral", label: "Analizando" },
-  partial: { tone: "neutral", label: "Parcial" },
-  error: { tone: "bad", label: "Error" },
-};
+type OverviewTexts = Messages["overview"];
+
+const STATE_TONE = { not_configured: "neutral", no_data: "neutral", analyzing: "neutral", partial: "neutral", error: "bad" } as const;
 
 function notices(attempt: Attempt | { status: "running" | "failed"; text: string } | null, stale: Stale | null, extra?: string | null): Notice[] {
   const list: Notice[] = [];
@@ -66,16 +67,22 @@ function Line({ children }: { children: React.ReactNode }) {
   return <p className="text-sm text-muted-foreground">{children}</p>;
 }
 
-function PerformanceCard({ workspaceId, s }: { workspaceId: string; s: PerformanceSummary }) {
+function PerformanceCard({ workspaceId, s, locale, t }: { workspaceId: string; s: PerformanceSummary; locale: Locale; t: OverviewTexts }) {
+  const c = t.cards.performance;
   // Without a score the measurement simply did not happen: "No medida", not "Parcial".
-  const status = s.state === "ok" ? { tone: s.tone, label: s.verdict } : s.state === "partial" ? STATE_STATUS.not_configured : STATE_STATUS[s.state];
+  const status =
+    s.state === "ok"
+      ? { tone: s.tone, label: s.verdict }
+      : s.state === "partial"
+        ? { tone: STATE_TONE.not_configured, label: t.states.not_configured }
+        : { tone: STATE_TONE[s.state], label: t.states[s.state] };
   return (
     <OverviewCard
       id="card-performance"
       href={`/workspaces/${workspaceId}/performance`}
       icon={Gauge}
-      title="Rendimiento de tu web"
-      description="Descubre cómo de rápida y cómoda es tu página para los visitantes."
+      title={c.title}
+      description={c.description}
       status={status}
       headline={
         s.score !== null ? (
@@ -84,159 +91,142 @@ function PerformanceCard({ workspaceId, s }: { workspaceId: string; s: Performan
             <span className="text-base font-normal text-muted-foreground">/100</span>
           </>
         ) : (
-          <Muted>{s.state === "analyzing" ? "Analizando…" : s.state === "error" ? "Sin resultado" : "No medida"}</Muted>
+          <Muted>{s.state === "analyzing" ? c.analyzing : s.state === "error" ? c.noResult : c.notMeasured}</Muted>
         )
       }
       notices={notices(s.attempt, s.stale)}
-      source={`PageSpeed Insights · ${s.measuredAt ? displayDate(s.measuredAt) : s.state === "error" || s.state === "analyzing" ? "sin resultado" : "sin medir"}`}
+      source={c.source(s.measuredAt ? displayDate(s.measuredAt, locale) : s.state === "error" || s.state === "analyzing" ? c.noResultShort : c.notMeasuredShort)}
+      cta={t.viewReport}
     >
-      {s.score !== null ? <Line>Puntuación de Google en un móvil simulado, no la experiencia de todos tus visitantes.</Line> : null}
+      {s.score !== null ? <Line>{c.labNote}</Line> : null}
       {s.reason ? <Line>{s.reason}</Line> : null}
       <ChangeLine change={s.change} note={s.comparisonNote} />
       {s.topIssue ? (
         <p className="text-sm">
-          <span className="text-muted-foreground">Principal problema: </span>
-          {s.topIssue}
+          <span className="text-muted-foreground">{c.topIssue} </span>
+          <span lang={s.topIssueOriginal ? DEFAULT_LOCALE : undefined}>{s.topIssue}</span>
         </p>
       ) : null}
       {s.measuredAt ? (
         <div className="flex flex-col gap-0.5">
           <Line>{s.field.text}</Line>
-          {s.field.source ? <p className="text-xs text-muted-foreground">Fuente de este dato: {s.field.source}</p> : null}
+          {s.field.source ? <p className="text-xs text-muted-foreground">{c.fieldSource(s.field.source)}</p> : null}
         </div>
       ) : null}
     </OverviewCard>
   );
 }
 
-const SEO_VERDICT: Record<Tone, string> = { good: "Bien", fair: "Regular", bad: "Mal", info: "Mejorable", neutral: "Parcial" };
-
-function SeoCard({ workspaceId, s, rankingLine }: { workspaceId: string; s: SeoSummary; rankingLine: string | null }) {
+function SeoCard({
+  workspaceId,
+  s,
+  locale,
+  t,
+  rankingLine,
+}: {
+  workspaceId: string;
+  s: SeoSummary;
+  locale: Locale;
+  t: OverviewTexts;
+  rankingLine: string | null;
+}) {
+  const c = t.cards.seo;
   // A partial check keeps the severity it did find: "Mal (parcial)", never a neutral grey over critical problems.
   const status =
     s.state === "ok"
-      ? { tone: s.tone, label: SEO_VERDICT[s.tone] }
+      ? { tone: s.tone, label: t.seoVerdict[s.tone] }
       : s.state === "partial" && s.tone !== "neutral"
-        ? { tone: s.tone, label: `${SEO_VERDICT[s.tone]} (parcial)` }
-        : STATE_STATUS[s.state];
+        ? { tone: s.tone, label: t.partial(t.seoVerdict[s.tone]) }
+        : { tone: STATE_TONE[s.state], label: t.states[s.state] };
   const measured = s.headline !== null;
   return (
     <OverviewCard
       id="card-seo"
       href={`/workspaces/${workspaceId}/seo`}
       icon={Search}
-      title="Visibilidad en Google"
-      description="Descubre si los clientes encuentran tu empresa cuando buscan tus servicios."
+      title={c.title}
+      description={c.description}
       status={status}
       headline={
         measured ? (
           <span className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
             <span>
               {s.counts.critical}
-              <span className="ml-1.5 text-sm font-normal text-muted-foreground">{s.counts.critical === 1 ? "crítico" : "críticos"}</span>
+              <span className="ml-1.5 text-sm font-normal text-muted-foreground">{c.critical(s.counts.critical)}</span>
             </span>
             <span>
               {s.counts.warning}
-              <span className="ml-1.5 text-sm font-normal text-muted-foreground">{s.counts.warning === 1 ? "importante" : "importantes"}</span>
+              <span className="ml-1.5 text-sm font-normal text-muted-foreground">{c.warning(s.counts.warning)}</span>
             </span>
           </span>
         ) : (
-          <Muted>{s.state === "analyzing" ? "Analizando…" : s.state === "error" ? "Sin resultado" : "Sin auditoría"}</Muted>
+          <Muted>{s.state === "analyzing" ? c.analyzing : s.state === "error" ? c.noResult : c.noAudit}</Muted>
         )
       }
       notices={notices(s.attempt, s.stale)}
-      source={`Auditoría técnica de la portada · ${s.auditedAt ? displayDate(s.auditedAt) : s.state === "error" || s.state === "analyzing" ? "sin resultado" : "sin auditar"}`}
+      source={c.source(s.auditedAt ? displayDate(s.auditedAt, locale) : s.state === "error" || s.state === "analyzing" ? c.noResultShort : c.notAuditedShort)}
+      cta={t.viewReport}
     >
       {s.headline ? <p className="text-sm font-medium">{s.headline.title}</p> : null}
       {s.reason ? <Line>{s.reason}</Line> : null}
       <ChangeLine change={s.change} note={s.comparisonNote} />
-      {rankingLine ? (
-        <Line>{rankingLine}</Line>
-      ) : (
-        <Line>
-          Posicionamiento todavía no medido: falta conectar Google Search Console. Esto es la salud técnica de tu portada, no tu posición en
-          Google.
-        </Line>
-      )}
+      {rankingLine ? <Line>{rankingLine}</Line> : <Line>{c.searchConsole}</Line>}
     </OverviewCard>
   );
 }
 
-const AI_STATUS: Record<BlockState, { tone: Tone; label: string }> = {
-  ok: { tone: "neutral", label: "Medido" },
-  partial: { tone: "fair", label: "Parcial" },
-  analyzing: { tone: "neutral", label: "Recogiendo respuestas" },
-  error: { tone: "bad", label: "Error" },
-  not_configured: { tone: "neutral", label: "Sin configurar" },
-  no_data: { tone: "neutral", label: "Sin mediciones" },
-};
-
-function plural(n: number, one: string, many: string): string {
-  return n === 1 ? one : many;
-}
+const AI_TONE = { ok: "neutral", partial: "fair", analyzing: "neutral", error: "bad", not_configured: "neutral", no_data: "neutral" } as const satisfies Record<AiSummary["state"], Tone>;
 
 /** What the headline leaves out, in one small line: capture, unanswered and branded questions. */
-function AiFootnote({ s }: { s: AiSummary }) {
+function AiFootnote({ s, t }: { s: AiSummary; t: OverviewTexts["cards"]["ai"]["footnote"] }) {
   if (s.configured === null || s.capture === null) return null;
-  const parts = [`${s.configured} ${plural(s.configured, "pregunta medida", "preguntas medidas")}`];
-  if (s.capture.k < s.capture.n) parts.push(`${s.capture.k} de ${s.capture.n} respuestas recogidas`);
-  if (s.unanswered.length > 0) parts.push(`${s.unanswered.length} sin respuesta válida`);
-  if (s.branded) {
-    parts.push(
-      `${s.branded.questions} sobre tu marca (te nombra en ${s.branded.mentioned.k} de ${s.branded.mentioned.n} ${plural(s.branded.mentioned.n, "respuesta", "respuestas")})`,
-    );
-  }
+  const parts = [t.measured(s.configured)];
+  if (s.capture.k < s.capture.n) parts.push(t.captured(s.capture.k, s.capture.n));
+  if (s.unanswered.length > 0) parts.push(t.unanswered(s.unanswered.length));
+  if (s.branded) parts.push(t.branded(s.branded.questions, s.branded.mentioned.k, s.branded.mentioned.n));
   if (parts.length === 1) return null;
-  return <p className="text-xs text-muted-foreground">{parts.join(" · ")}. Solo cuentan arriba las preguntas evaluadas que no nombran tu marca.</p>;
+  return (
+    <p className="text-xs text-muted-foreground">{t.line(parts.join(" · "))}</p>
+  );
 }
 
-function AiCard({ workspaceId, s }: { workspaceId: string; s: AiSummary }) {
+function AiCard({ workspaceId, s, locale, t }: { workspaceId: string; s: AiSummary; locale: Locale; t: OverviewTexts }) {
+  const c = t.cards.ai;
   const toSetup = s.coverage === null && (s.state === "not_configured" || s.state === "no_data");
   return (
     <OverviewCard
       id="card-ai"
       href={`/workspaces/${workspaceId}/geo${toSetup ? "/setup" : ""}`}
       icon={Sparkles}
-      title="Presencia en IA"
-      description="Descubre si herramientas como ChatGPT mencionan o recomiendan tu empresa."
-      status={AI_STATUS[s.state]}
+      title={c.title}
+      description={c.description}
+      status={{ tone: AI_TONE[s.state], label: c.status[s.state] }}
       headline={
         s.coverage && s.coverage.n > 0 ? (
           <>
             {s.coverage.k}
-            <span className="text-base font-normal text-muted-foreground">
-              {" "}
-              de {s.coverage.n} {plural(s.coverage.n, "pregunta", "preguntas")}
-            </span>
+            <span className="text-base font-normal text-muted-foreground"> {c.ofQuestions(s.coverage.n)}</span>
           </>
         ) : (
-          <Muted>
-            {s.coverage ? "Sin datos" : s.state === "analyzing" ? "Recogiendo…" : s.state === "error" ? "Sin resultado" : s.state === "not_configured" ? "Sin preguntas" : "Pendiente de medir"}
-          </Muted>
+          <Muted>{s.coverage ? c.noData : s.state === "analyzing" ? c.collecting : s.state === "error" ? c.noResult : s.state === "not_configured" ? c.noQuestions : c.pending}</Muted>
         )
       }
       notices={notices(s.attempt, s.stale, s.setupNotice)}
-      source={`Medición en ChatGPT · ${s.measuredAt && s.provider ? `${s.provider} · ${displayDate(s.measuredAt)}` : s.state === "error" || s.state === "analyzing" ? "sin resultado" : "sin mediciones"}`}
-      cta={toSetup ? "Configurar" : "Ver informe"}
+      source={c.source(
+        s.measuredAt && s.provider ? `${s.provider} · ${displayDate(s.measuredAt, locale)}` : s.state === "error" || s.state === "analyzing" ? c.noResultShort : c.noMeasurementsShort,
+      )}
+      cta={toSetup ? c.configure : t.viewReport}
     >
-      {s.coverage && s.coverage.n > 0 ? (
-        <Line>Preguntas monitorizadas en las que ChatGPT te mencionó, de las que obtuvieron respuesta válida. Es una muestra, no el total de búsquedas en IA.</Line>
-      ) : s.reason ? (
-        <Line>{s.reason}</Line>
-      ) : null}
-      {s.citing && s.citing.n > 0 ? (
-        <Line>
-          Tu web aparece citada como fuente en {s.citing.k} de {s.citing.n} {plural(s.citing.n, "respuesta", "respuestas")}.
-        </Line>
-      ) : null}
+      {s.coverage && s.coverage.n > 0 ? <Line>{c.sampleNote}</Line> : s.reason ? <Line>{s.reason}</Line> : null}
+      {s.citing && s.citing.n > 0 ? <Line>{c.cited(s.citing.k, s.citing.n)}</Line> : null}
       <ChangeLine change={s.change} note={s.comparisonNote} />
       {s.uncovered[0] ? (
         <p className="text-sm">
-          <span className="text-muted-foreground">Principal oportunidad: </span>
-          no te menciona en «{s.uncovered[0]}».
+          <span className="text-muted-foreground">{c.topOpportunity} </span>
+          {c.notMentioned(s.uncovered[0])}
         </p>
       ) : null}
-      <AiFootnote s={s} />
+      <AiFootnote s={s} t={c.footnote} />
     </OverviewCard>
   );
 }
@@ -244,9 +234,12 @@ function AiCard({ workspaceId, s }: { workspaceId: string; s: AiSummary }) {
 export default async function WorkspacePage({ params }: PageProps<"/workspaces/[id]">) {
   await connection();
   const { id } = await params;
+  const locale = await getLocale();
   const db = getDb();
   const workspace = await getWorkspace(db, id);
   if (!workspace) notFound();
+  const m = getMessages(locale);
+  const t = m.overview;
 
   // Stored data only: nothing on this page calls PageSpeed, CrUX, Search Console, a website or an AI provider.
   const [audits, runs, prompts, gscStored] = await Promise.all([
@@ -261,8 +254,8 @@ export default async function WorkspacePage({ params }: PageProps<"/workspaces/[
   const latestFindings = result ? (findingsByAudit[result.id] ?? []) : [];
 
   const now = new Date();
-  const performance = summarizePerformance(audits, latestFindings, now);
-  const seo = summarizeSeo(audits, findingsByAudit, now);
+  const performance = summarizePerformance(audits, latestFindings, now, locale);
+  const seo = summarizeSeo(audits, findingsByAudit, now, locale);
   const ai = summarizeAi(
     runs.map(({ run, metrics }) => ({
       id: run.id,
@@ -275,16 +268,27 @@ export default async function WorkspacePage({ params }: PageProps<"/workspaces/[
     })),
     prompts.length,
     now,
+    locale,
   );
-  const gsc = summarizeSearchConsole(gscStored, searchConsoleConfig(), workspace.domain);
-  const opportunities = buildOpportunities({ findings: latestFindings, seo, performance, ai });
+  // Findings are translated with the facts and rules version of the audit they belong to.
+  const context = result ? { facts: result.facts, rulesVersion: result.rulesVersion } : undefined;
+  const gsc = summarizeSearchConsole(gscStored, searchConsoleConfig(), workspace.domain, locale);
+  const opportunities = buildOpportunities({ findings: latestFindings, seo, performance, ai, context }, locale);
+  // One original-language notice for the whole view (AC-009): opportunities and the performance card.
+  const original = overviewOriginalText(opportunities, performance);
+  const notice =
+    locale !== DEFAULT_LOCALE && (original.storedEvidence || original.fallback)
+      ? [original.storedEvidence ? t.opportunities.originalNotice : null, original.fallback ? t.opportunities.fallbackNotice : null].filter(Boolean).join(" ")
+      : null;
   const domain = displayDomain(workspace.domain);
+  const [emptyBefore, emptyAfter] = t.emptyAction.split("{link}");
 
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-6">
         <PageHeader
-          breadcrumbs={[{ href: "/workspaces", label: "Empresas" }]}
+          locale={locale}
+          breadcrumbs={[{ href: "/workspaces", label: m.workspaces.list.title }]}
           title={workspace.name}
           meta={
             <>
@@ -294,32 +298,39 @@ export default async function WorkspacePage({ params }: PageProps<"/workspaces/[
           }
           actions={
             <>
-              <RunAuditButton workspaceId={workspace.id} action={runAuditAction.bind(null, workspace.id)} />
+              <RunAuditButton workspaceId={workspace.id} action={runAuditAction.bind(null, workspace.id)} labels={m.audits.runButton} />
               <Link href={`/workspaces/${workspace.id}/edit`} className={buttonVariants({ variant: "outline" })}>
-                Editar
+                {t.edit}
               </Link>
             </>
           }
         />
-        <WorkspaceNav workspaceId={workspace.id} current="overview" />
+        <WorkspaceNav workspaceId={workspace.id} current="overview" locale={locale} />
       </div>
 
-      <section aria-label="Estado de tu presencia digital" className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <PerformanceCard workspaceId={workspace.id} s={performance} />
-        <SeoCard workspaceId={workspace.id} s={seo} rankingLine={gsc.cardLine} />
-        <AiCard workspaceId={workspace.id} s={ai} />
+      <section aria-label={t.sectionLabel} className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <PerformanceCard workspaceId={workspace.id} s={performance} locale={locale} t={t} />
+        <SeoCard workspaceId={workspace.id} s={seo} locale={locale} t={t} rankingLine={gsc.cardLine} />
+        <AiCard workspaceId={workspace.id} s={ai} locale={locale} t={t} />
       </section>
+
+      {notice ? (
+        <p role="note" className="rounded-md border border-border/80 bg-muted/60 p-2.5 text-xs text-muted-foreground">
+          {notice}
+        </p>
+      ) : null}
 
       <Opportunities
         workspaceId={workspace.id}
         list={opportunities}
+        locale={locale}
         emptyAction={
           <p className="text-sm text-muted-foreground">
-            Pulsa «Ejecutar auditoría» arriba o{" "}
+            {emptyBefore}
             <Link href={`/workspaces/${workspace.id}/geo/setup`} className="font-medium text-foreground underline underline-offset-4">
-              configura las preguntas de IA
+              {t.emptyActionLink}
             </Link>
-            .
+            {emptyAfter}
           </p>
         }
       />

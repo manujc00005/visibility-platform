@@ -1,0 +1,13 @@
+# Corrección QA (D020): salida española de acba536 restaurada, 2026-10-27 21:12
+npm run lint EXIT=0
+npm run typecheck EXIT=0
+npm run test:unit EXIT=0 ·  Test Files 53 passed (53)  Tests 563 passed (563) 
+npm run test:integration EXIT=1 · ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯  Test Files 1 failed | 8 passed (9)  Tests 1 failed | 80 passed (81) 
+Primera ejecución: falló 1 de 81, «allows only one running audit per workspace, even under concurrency» (dos auditorías ok en vez de una). src/modules/audits/service.ts sin cambios en 003; el archivo pasó 3 de 3 en solitario.
+npm run test:integration (repetición) EXIT=0 ·  Test Files 9 passed (9)  Tests 81 passed (81) 
+
+## Segunda corrección QA: «repetición(es)» restaurado y pruebas de formatTimestamp literales con TZ=UTC, 2026-10-27 22:02
+npm run lint EXIT=0
+npm run typecheck EXIT=0
+npm run test:unit EXIT=0 ·  Test Files 54 passed (54)  Tests 565 passed (565) 
+npm run test:integration EXIT=0 ·  Test Files 9 passed (9)  Tests 81 passed (81) 

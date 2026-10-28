@@ -3,12 +3,15 @@ import type { PageFacts } from "@/modules/audits/html";
 import { rateFieldMetric, type FieldDataResult, type FieldRating } from "@/modules/audits/crux";
 import type { PerformanceResult } from "@/modules/audits/pagespeed";
 import type { ParsedSitemap, SitemapParseError } from "@/modules/audits/sitemap";
+import { FINDINGS_ES as T } from "@/i18n/messages/findings";
 
 /**
  * Turns the facts collected by an audit into findings. Pure function: no I/O.
  * There is deliberately no global score (B06): findings carry a severity, the evidence
  * that triggered them and an owner-friendly recommendation. Bump RULES_VERSION whenever
- * a rule, threshold or severity changes, so stored audits stay interpretable.
+ * a rule, threshold or severity changes, so stored audits stay interpretable. Titles and
+ * recommendations come from the Spanish findings catalog (`FINDINGS_ES`); evidence lines are
+ * built here, in Spanish, and stored as observed (they are never translated).
  */
 export const RULES_VERSION = "2026-10-26.1";
 
@@ -142,10 +145,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "page_unreachable",
       severity: "critical",
       category: "access",
-      title: "No se pudo acceder a la página principal",
+      title: T.page_unreachable.title,
       evidence: [`${failure.url}: ${describeFailure(failure)}`, failure.message.slice(0, 200)],
-      recommendation:
-        "Comprueba que el dominio está activo y que la web carga desde fuera de tu red. Si la web funciona, contacta con nosotros: el resto de la auditoría depende de poder leerla.",
+      recommendation: T.page_unreachable.recommendation,
     });
   }
   if (facts.page.kind === "disallowed") {
@@ -153,9 +155,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "page_disallowed_for_audit",
       severity: "warning",
       category: "access",
-      title: "robots.txt impide a nuestro analizador leer la página principal",
+      title: T.page_disallowed_for_audit.title,
       evidence: [facts.robots?.url ?? "robots.txt"],
-      recommendation: "Respetamos robots.txt. Si quieres el análisis completo, permite el acceso a la portada o pide una revisión asistida.",
+      recommendation: T.page_disallowed_for_audit.recommendation,
     });
   }
 
@@ -167,9 +169,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
         ruleId: "robots_blocks_homepage",
         severity: "critical",
         category: "indexability",
-        title: "robots.txt bloquea la página principal a Google",
+        title: T.robots_blocks_homepage.title,
         evidence: [robots.url],
-        recommendation: "Elimina la regla Disallow que afecta a «/» para Googlebot o para todos los robots; mientras exista, Google no rastreará tu portada.",
+        recommendation: T.robots_blocks_homepage.recommendation,
       });
     }
     if (robots.status === "not_found") {
@@ -177,18 +179,18 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
         ruleId: "robots_missing",
         severity: "info",
         category: "crawling",
-        title: "No hay archivo robots.txt",
+        title: T.robots_missing.title,
         evidence: [`${robots.url}: ${robots.httpStatus ?? "sin respuesta"}`],
-        recommendation: "No es obligatorio, pero un robots.txt sencillo que indique la ubicación del sitemap ayuda a los buscadores.",
+        recommendation: T.robots_missing.recommendation,
       });
     } else if (robots.status === "http_error" || robots.status === "fetch_failed") {
       add({
         ruleId: "robots_error",
         severity: "warning",
         category: "crawling",
-        title: "robots.txt responde con error",
+        title: T.robots_error.title,
         evidence: [`${robots.url}: ${robots.httpStatus ?? robots.error ?? "error"}`],
-        recommendation: "Un robots.txt que falla con error de servidor puede hacer que Google reduzca o pause el rastreo. Haz que responda 200 o 404.",
+        recommendation: T.robots_error.recommendation,
       });
     }
   }
@@ -200,18 +202,18 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
         ruleId: "sitemap_missing",
         severity: "warning",
         category: "crawling",
-        title: "No se encontró un sitemap XML",
+        title: T.sitemap_missing.title,
         evidence: [`${sitemap.url ?? "/sitemap.xml"}: ${sitemap.httpStatus ?? sitemap.error ?? "sin respuesta"}`],
-        recommendation: "Publica un sitemap.xml con tus páginas importantes y decláralo en robots.txt y en Search Console.",
+        recommendation: T.sitemap_missing.recommendation,
       });
     } else if (sitemap.status === "invalid") {
       add({
         ruleId: "sitemap_invalid",
         severity: "warning",
         category: "crawling",
-        title: "El sitemap no es válido",
+        title: T.sitemap_invalid.title,
         evidence: [`${sitemap.url}: ${sitemap.error === "not_a_sitemap" ? "no es un sitemap XML (parece una página web)" : sitemap.error}`],
-        recommendation: "Revisa que la URL del sitemap devuelva XML con el formato de sitemaps.org.",
+        recommendation: T.sitemap_invalid.recommendation,
       });
     } else if (sitemap.status === "ok" && sitemap.sitemap) {
       if (sitemap.source === "default" && robots?.status === "ok") {
@@ -219,9 +221,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
           ruleId: "sitemap_not_declared",
           severity: "info",
           category: "crawling",
-          title: "El sitemap no está declarado en robots.txt",
+          title: T.sitemap_not_declared.title,
           evidence: [sitemap.url ?? ""],
-          recommendation: "Añade una línea «Sitemap: <url>» en robots.txt para que todos los buscadores lo encuentren.",
+          recommendation: T.sitemap_not_declared.recommendation,
         });
       }
       if (sitemap.sitemap.locCount === 0) {
@@ -229,9 +231,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
           ruleId: "sitemap_empty",
           severity: "warning",
           category: "crawling",
-          title: "El sitemap está vacío",
+          title: T.sitemap_empty.title,
           evidence: [sitemap.url ?? ""],
-          recommendation: "Incluye en el sitemap las URLs que quieres que aparezcan en Google.",
+          recommendation: T.sitemap_empty.recommendation,
         });
       }
       if (sitemap.sitemap.invalidLocCount > 0) {
@@ -239,9 +241,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
           ruleId: "sitemap_invalid_urls",
           severity: "info",
           category: "crawling",
-          title: "El sitemap contiene URLs no válidas",
+          title: T.sitemap_invalid_urls.title,
           evidence: [`${sitemap.sitemap.invalidLocCount} de ${sitemap.sitemap.locCount} entradas`],
-          recommendation: "Cada <loc> debe ser una URL absoluta http o https.",
+          recommendation: T.sitemap_invalid_urls.recommendation,
         });
       }
     }
@@ -256,9 +258,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "page_http_error",
       severity: "critical",
       category: "access",
-      title: `La página principal responde con error ${page.status}`,
+      title: T.page_http_error.title({ status: page.status }),
       evidence: [`${page.url}: HTTP ${page.status}`],
-      recommendation: "La portada debe responder 200. Un error impide que Google la indexe.",
+      recommendation: T.page_http_error.recommendation,
     });
   }
   const isHtml = /text\/html|application\/xhtml\+xml/i.test(page.contentType ?? "");
@@ -267,9 +269,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "page_not_html",
       severity: "critical",
       category: "access",
-      title: "La página principal no devuelve HTML",
+      title: T.page_not_html.title,
       evidence: [`Content-Type: ${page.contentType ?? "(sin cabecera)"}`],
-      recommendation: "Revisa la configuración del servidor: la portada debe servirse como text/html.",
+      recommendation: T.page_not_html.recommendation,
     });
   }
   if (new URL(page.url).protocol !== "https:") {
@@ -278,9 +280,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "not_https",
       severity: "critical",
       category: "access",
-      title: https ? "La conexión segura (HTTPS) no funciona" : "La web no usa HTTPS",
+      title: T.not_https.title({ httpsFailed: https !== null }),
       evidence: https ? [`${https.url}: ${describeFailure(https)}`, `Se leyó por http: ${page.url}`] : [page.url],
-      recommendation: "Activa un certificado SSL y redirige todo el tráfico http a https. Los navegadores marcan como «no seguras» las webs sin HTTPS.",
+      recommendation: T.not_https.recommendation,
     });
   }
   if (page.redirects.length >= 2) {
@@ -288,9 +290,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "redirect_chain",
       severity: "info",
       category: "access",
-      title: `La portada pasa por ${page.redirects.length} redirecciones`,
+      title: T.redirect_chain.title({ count: page.redirects.length }),
       evidence: [...page.redirects.map((r) => `${r.status} ${r.url} → ${r.location}`)],
-      recommendation: "Redirige directamente a la URL final en un solo salto para cargar antes.",
+      recommendation: T.redirect_chain.recommendation,
     });
   }
   if (hostKey(page.url) !== hostKey(facts.requestedUrl)) {
@@ -298,9 +300,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "cross_host_redirect",
       severity: "warning",
       category: "access",
-      title: "La web redirige a otro dominio",
+      title: T.cross_host_redirect.title,
       evidence: [`${facts.requestedUrl} → ${page.url}`],
-      recommendation: "Comprueba que el dominio registrado es el principal de tu negocio; la auditoría analiza el dominio final.",
+      recommendation: T.cross_host_redirect.recommendation,
     });
   }
 
@@ -316,21 +318,21 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "noindex",
       severity: "critical",
       category: "indexability",
-      title: "La página principal pide no ser indexada (noindex)",
+      title: T.noindex.title,
       evidence: [
         ...f.metaRobots.map((value) => `<meta name="robots"> ${value}`),
         ...(page.xRobotsTag ? [`X-Robots-Tag: ${page.xRobotsTag}`] : []),
       ],
-      recommendation: "Quita «noindex» de la portada: mientras esté, Google no la mostrará en los resultados.",
+      recommendation: T.noindex.recommendation,
     });
   } else if (/\bnofollow\b/.test(directives)) {
     add({
       ruleId: "nofollow",
       severity: "warning",
       category: "indexability",
-      title: "La página principal indica no seguir sus enlaces (nofollow)",
+      title: T.nofollow.title,
       evidence: f.metaRobots,
-      recommendation: "Quita «nofollow» para que Google descubra el resto de páginas desde la portada.",
+      recommendation: T.nofollow.recommendation,
     });
   }
   if (f.canonicalCount === 0) {
@@ -338,9 +340,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "canonical_missing",
       severity: "warning",
       category: "indexability",
-      title: "Falta la etiqueta canonical",
+      title: T.canonical_missing.title,
       evidence: [page.url],
-      recommendation: "Añade <link rel=\"canonical\"> apuntando a la URL principal de la página para evitar duplicados.",
+      recommendation: T.canonical_missing.recommendation,
     });
   } else {
     if (f.canonicalCount > 1) {
@@ -348,9 +350,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
         ruleId: "canonical_multiple",
         severity: "warning",
         category: "indexability",
-        title: `Hay ${f.canonicalCount} etiquetas canonical`,
+        title: T.canonical_multiple.title({ count: f.canonicalCount }),
         evidence: f.canonicals,
-        recommendation: "Deja una sola etiqueta canonical; con varias, Google puede ignorarlas todas.",
+        recommendation: T.canonical_multiple.recommendation,
       });
     }
     if (f.canonicals.length < f.canonicalCount) {
@@ -358,9 +360,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
         ruleId: "canonical_invalid",
         severity: "warning",
         category: "indexability",
-        title: "La etiqueta canonical no contiene una URL válida",
+        title: T.canonical_invalid.title,
         evidence: [`${f.canonicalCount - f.canonicals.length} canonical sin URL http(s) válida`],
-        recommendation: "La canonical debe ser una URL absoluta http o https.",
+        recommendation: T.canonical_invalid.recommendation,
       });
     }
     const first = f.canonicals[0];
@@ -369,9 +371,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
         ruleId: "canonical_other_url",
         severity: "warning",
         category: "indexability",
-        title: "La canonical apunta a otra URL",
+        title: T.canonical_other_url.title,
         evidence: [`Página: ${page.url}`, `Canonical: ${first}`],
-        recommendation: "Si esta es la URL principal, la canonical debe apuntar a sí misma. Si no, comprueba que la URL indicada es la correcta y funciona.",
+        recommendation: T.canonical_other_url.recommendation,
       });
     }
   }
@@ -382,9 +384,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "title_missing",
       severity: "critical",
       category: "metadata",
-      title: "La página no tiene título",
+      title: T.title_missing.title,
       evidence: [page.url],
-      recommendation: "Añade un <title> con tu marca y lo que ofreces, por ejemplo «Clínica Dental García | Implantes en Valladolid».",
+      recommendation: T.title_missing.recommendation,
     });
   } else {
     if (f.titleLength > 60) {
@@ -392,18 +394,18 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
         ruleId: "title_too_long",
         severity: "info",
         category: "metadata",
-        title: `El título es largo (${f.titleLength} caracteres)`,
+        title: T.title_too_long.title({ length: f.titleLength }),
         evidence: [f.title],
-        recommendation: "Google suele cortar los títulos de más de ~60 caracteres. Pon lo importante al principio.",
+        recommendation: T.title_too_long.recommendation,
       });
     } else if (f.titleLength < 15) {
       add({
         ruleId: "title_too_short",
         severity: "warning",
         category: "metadata",
-        title: `El título es muy corto (${f.titleLength} caracteres)`,
+        title: T.title_too_short.title({ length: f.titleLength }),
         evidence: [f.title],
-        recommendation: "Usa un título descriptivo con tu actividad y tu zona.",
+        recommendation: T.title_too_short.recommendation,
       });
     }
   }
@@ -412,9 +414,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "title_multiple",
       severity: "warning",
       category: "metadata",
-      title: `Hay ${f.titleCount} etiquetas <title>`,
+      title: T.title_multiple.title({ count: f.titleCount }),
       evidence: [f.title ?? ""],
-      recommendation: "Deja un único <title> por página.",
+      recommendation: T.title_multiple.recommendation,
     });
   }
   if (!f.metaDescription) {
@@ -422,18 +424,18 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "description_missing",
       severity: "warning",
       category: "metadata",
-      title: "Falta la meta descripción",
+      title: T.description_missing.title,
       evidence: [page.url],
-      recommendation: "Escribe una descripción de 70–160 caracteres que invite a hacer clic; Google la usa a menudo como texto del resultado.",
+      recommendation: T.description_missing.recommendation,
     });
   } else if (f.metaDescriptionLength < 70 || f.metaDescriptionLength > 160) {
     add({
       ruleId: "description_length",
       severity: "info",
       category: "metadata",
-      title: `La meta descripción mide ${f.metaDescriptionLength} caracteres`,
+      title: T.description_length.title({ length: f.metaDescriptionLength }),
       evidence: [f.metaDescription],
-      recommendation: "Lo habitual es entre 70 y 160 caracteres para que no se corte ni se quede corta.",
+      recommendation: T.description_length.recommendation,
     });
   }
   if (f.metaDescriptionCount > 1) {
@@ -441,9 +443,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "description_multiple",
       severity: "info",
       category: "metadata",
-      title: `Hay ${f.metaDescriptionCount} meta descripciones`,
+      title: T.description_multiple.title({ count: f.metaDescriptionCount }),
       evidence: [f.metaDescription ?? ""],
-      recommendation: "Deja una sola meta descripción por página.",
+      recommendation: T.description_multiple.recommendation,
     });
   }
   if (!f.lang) {
@@ -451,9 +453,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "lang_missing",
       severity: "info",
       category: "metadata",
-      title: "No se declara el idioma de la página",
+      title: T.lang_missing.title,
       evidence: ["<html> sin atributo lang"],
-      recommendation: "Añade lang=\"es\" (o el idioma correspondiente) a la etiqueta <html>.",
+      recommendation: T.lang_missing.recommendation,
     });
   }
 
@@ -463,18 +465,18 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "h1_missing",
       severity: "warning",
       category: "headings",
-      title: "La página no tiene encabezado H1",
+      title: T.h1_missing.title,
       evidence: [f.headings.length ? `Primer encabezado: H${f.headings[0]!.level} «${f.headings[0]!.text}»` : "Sin encabezados"],
-      recommendation: "Añade un H1 visible que diga qué ofreces y dónde.",
+      recommendation: T.h1_missing.recommendation,
     });
   } else if (f.headingCounts.h1 > 1) {
     add({
       ruleId: "h1_multiple",
       severity: "info",
       category: "headings",
-      title: `Hay ${f.headingCounts.h1} encabezados H1`,
+      title: T.h1_multiple.title({ count: f.headingCounts.h1 }),
       evidence: f.headings.filter((h) => h.level === 1).map((h) => `H1 «${h.text}»`),
-      recommendation: "Lo recomendable es un único H1 con el tema principal de la página.",
+      recommendation: T.h1_multiple.recommendation,
     });
   }
   const skips: string[] = [];
@@ -489,9 +491,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "heading_level_skip",
       severity: "info",
       category: "headings",
-      title: "La jerarquía de encabezados salta niveles",
+      title: T.heading_level_skip.title,
       evidence: skips.slice(0, 5),
-      recommendation: "Ordena los encabezados sin saltos (H1 → H2 → H3) para que la estructura sea clara.",
+      recommendation: T.heading_level_skip.recommendation,
     });
   }
 
@@ -501,9 +503,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "internal_links_none",
       severity: "warning",
       category: "links",
-      title: "La portada no enlaza a otras páginas de la web",
+      title: T.internal_links_none.title,
       evidence: [`${f.links.externalCount} enlaces externos, 0 internos`],
-      recommendation: "Enlaza desde la portada a tus servicios y contacto con enlaces HTML normales; si el menú se genera solo con JavaScript, Google puede no verlo.",
+      recommendation: T.internal_links_none.recommendation,
     });
   }
 
@@ -513,9 +515,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "viewport_missing",
       severity: "warning",
       category: "mobile",
-      title: "Falta la etiqueta viewport para móviles",
+      title: T.viewport_missing.title,
       evidence: [page.url],
-      recommendation: "Añade <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"> para que la web se adapte al móvil.",
+      recommendation: T.viewport_missing.recommendation,
     });
   }
 
@@ -527,9 +529,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "structured_data_invalid",
       severity: "warning",
       category: "structured_data",
-      title: "Hay datos estructurados con errores de sintaxis",
+      title: T.structured_data_invalid.title,
       evidence: [`${sd.invalidJsonLdBlocks} de ${sd.jsonLdBlocks} bloques JSON-LD no se pueden leer`],
-      recommendation: "Corrige el JSON-LD (por ejemplo con la prueba de resultados enriquecidos de Google).",
+      recommendation: T.structured_data_invalid.recommendation,
     });
   }
   if (!hasStructuredData && isHtml) {
@@ -537,9 +539,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "structured_data_missing",
       severity: "info",
       category: "structured_data",
-      title: "No hay datos estructurados",
+      title: T.structured_data_missing.title,
       evidence: ["Sin JSON-LD ni microdatos"],
-      recommendation: "Añade datos estructurados de tu negocio (Organization o LocalBusiness con nombre, dirección y teléfono). Ayudan a Google y a los asistentes de IA a entender quién eres.",
+      recommendation: T.structured_data_missing.recommendation,
     });
   } else if (hasStructuredData) {
     const allTypes = [...sd.types, ...sd.microdataTypes];
@@ -548,9 +550,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
         ruleId: "structured_data_no_business",
         severity: "info",
         category: "structured_data",
-        title: "Los datos estructurados no describen al negocio",
+        title: T.structured_data_no_business.title,
         evidence: [`Tipos encontrados: ${allTypes.slice(0, 10).join(", ")}`],
-        recommendation: "Añade un bloque Organization o LocalBusiness con los datos de tu empresa.",
+        recommendation: T.structured_data_no_business.recommendation,
       });
     }
   }
@@ -562,9 +564,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "open_graph_incomplete",
       severity: "info",
       category: "social",
-      title: "Faltan etiquetas Open Graph",
+      title: T.open_graph_incomplete.title,
       evidence: [`Faltan: ${missingOg.join(", ")}`],
-      recommendation: "Añade título, descripción e imagen Open Graph para que la web se vea bien al compartirla en WhatsApp o redes sociales.",
+      recommendation: T.open_graph_incomplete.recommendation,
     });
   }
 
@@ -575,9 +577,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
       ruleId: "performance_unavailable",
       severity: "info",
       category: "performance",
-      title: "No se pudo medir el rendimiento",
+      title: T.performance_unavailable.title,
       evidence: [perf.error ?? "Error de PageSpeed Insights"],
-      recommendation: "Repite la auditoría más tarde para obtener las métricas de velocidad.",
+      recommendation: T.performance_unavailable.recommendation,
     });
   } else if (perf.status === "ok" && perf.metrics) {
     const { lcpMs, cls, tbtMs } = perf.metrics;
@@ -586,9 +588,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
         ruleId: "lcp_slow",
         severity: lcpMs > 4000 ? "warning" : "info",
         category: "performance",
-        title: `El contenido principal tarda ${ms(lcpMs)} en aparecer en móvil`,
+        title: T.lcp_slow.title({ lcp: ms(lcpMs) }),
         evidence: [`LCP de laboratorio: ${ms(lcpMs)} (bueno: ≤ 2,5 s)`],
-        recommendation: "Optimiza el tamaño de la imagen o bloque principal y el tiempo de respuesta del servidor.",
+        recommendation: T.lcp_slow.recommendation,
       });
     }
     if (cls !== null && cls > 0.1) {
@@ -596,9 +598,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
         ruleId: "cls_high",
         severity: cls > 0.25 ? "warning" : "info",
         category: "performance",
-        title: "La página se mueve mientras carga",
+        title: T.cls_high.title,
         evidence: [`CLS de laboratorio: ${cls.toLocaleString("es-ES", { maximumFractionDigits: 3 })} (bueno: ≤ 0,1)`],
-        recommendation: "Reserva espacio para imágenes, anuncios y banners para que el contenido no salte.",
+        recommendation: T.cls_high.recommendation,
       });
     }
     if (tbtMs !== null && tbtMs > 200) {
@@ -606,9 +608,9 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
         ruleId: "tbt_high",
         severity: tbtMs > 600 ? "warning" : "info",
         category: "performance",
-        title: "La página tarda en responder a la interacción",
+        title: T.tbt_high.title,
         evidence: [`Tiempo total de bloqueo: ${Math.round(tbtMs)} ms (bueno: ≤ 200 ms)`],
-        recommendation: "Reduce el JavaScript que se carga al inicio (plugins, chats, scripts de terceros).",
+        recommendation: T.tbt_high.recommendation,
       });
     }
   }
@@ -631,12 +633,12 @@ export function evaluateAudit(facts: AuditFacts): Finding[] {
         ruleId: "field_cwv_failed",
         severity: failing.some((r) => r.rating === "poor") ? "warning" : "info",
         category: "performance",
-        title: "Los visitantes reales en móvil tienen una experiencia mejorable",
+        title: T.field_cwv_failed.title,
         evidence: [
           ...failing.map((r) => `${r.label}: ${r.value}, ${r.rating === "poor" ? "mala" : "mejorable"} (bueno: ${r.good})`),
           `Datos de usuarios de Chrome en móvil, percentil 75, últimos 28 días${period}, de ${scope}`,
         ],
-        recommendation: "Prioriza las métricas marcadas: son las que Google usa para valorar la experiencia real de la web.",
+        recommendation: T.field_cwv_failed.recommendation,
       });
     }
   }

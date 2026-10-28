@@ -1,47 +1,52 @@
 import { Search } from "lucide-react";
 import { StatusPill } from "@/components/audits/status-ui";
 import { ChangeLine, NoticeList } from "@/components/overview/overview-card";
+import { formatNumber } from "@/i18n/format";
+import type { Locale } from "@/i18n/locale";
+import { getMessages, type Messages } from "@/i18n/messages";
 import type { Tone } from "@/modules/audits/status";
 import type { SearchConsoleConfig } from "@/modules/search-console/deps";
 import { displayDay, type SearchConsoleState, type SearchConsoleSummary } from "@/modules/search-console/summary";
 import { displayDate } from "@/modules/workspaces/presentation";
-import { RefreshSearchConsoleButton } from "./refresh-button";
 import type { RefreshSearchConsoleState } from "@/app/workspaces/[id]/seo/actions";
+import { RefreshSearchConsoleButton } from "./refresh-button";
 
-const STATUS: Record<SearchConsoleState, { tone: Tone; label: string }> = {
-  ok: { tone: "good", label: "Conectado" },
-  no_data: { tone: "neutral", label: "Sin datos" },
-  error: { tone: "bad", label: "Error" },
-  not_configured: { tone: "neutral", label: "Sin configurar" },
-  invalid_config: { tone: "bad", label: "Configuración no válida" },
+type Texts = Messages["searchConsole"];
+
+const STATUS_TONE: Record<SearchConsoleState, Tone> = {
+  ok: "good",
+  no_data: "neutral",
+  error: "bad",
+  not_configured: "neutral",
+  invalid_config: "bad",
 };
 
-const num = (n: number) => Math.round(n).toLocaleString("es-ES");
-const pos = (n: number) => n.toLocaleString("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-const pct = (r: number) => `${(r * 100).toLocaleString("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
-
-function Setup({ config }: { config: SearchConsoleConfig }) {
+function Setup({ config, t }: { config: SearchConsoleConfig; t: Texts }) {
   return (
     <ol className="flex max-w-3xl list-decimal flex-col gap-1 pl-5 text-sm text-muted-foreground">
       {config.state !== "ready" ? (
         <li>
-          Crea una cuenta de servicio en Google Cloud, activa la API «Google Search Console API», descarga su clave JSON y guárdala en la variable
-          de entorno <code className="font-mono text-foreground">GSC_SERVICE_ACCOUNT_JSON</code>.
+          {t.setup.createKeyBefore}
+          <code className="font-mono text-foreground">GSC_SERVICE_ACCOUNT_JSON</code>
+          {t.setup.createKeyAfter}
         </li>
       ) : null}
       <li>
-        En Search Console, abre la propiedad de la web, ve a Configuración › Usuarios y permisos y añade{" "}
-        {config.state === "ready" ? <span className="font-mono text-foreground break-all">{config.clientEmail}</span> : "el email de esa cuenta"} con
-        permiso completo o restringido.
+        {t.setup.addUserBefore}
+        {config.state === "ready" ? <span className="font-mono text-foreground break-all">{config.clientEmail}</span> : t.setup.addUserFallback}
+        {t.setup.addUserAfter}
       </li>
-      <li>Vuelve aquí y pulsa «Traer datos de Search Console».</li>
+      <li>{t.setup.run(t.button.fetch)}</li>
     </ol>
   );
 }
 
 type Row = { key: string; label: string; clicks: number; impressions: number; ctr: number; position: number };
 
-function Table({ caption, head, rows }: { caption: string; head: string; rows: Row[] }) {
+function Table({ caption, head, rows, t, locale }: { caption: string; head: string; rows: Row[]; t: Texts; locale: Locale }) {
+  const num = (n: number) => formatNumber(Math.round(n), locale, { maximumFractionDigits: 0 });
+  const pos = (n: number) => formatNumber(n, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const pct = (r: number) => t.percent(pos(r * 100));
   return (
     <div className="overflow-x-auto rounded-2xl border border-border/80 bg-card shadow-card">
       <table className="w-full text-sm">
@@ -52,16 +57,16 @@ function Table({ caption, head, rows }: { caption: string; head: string; rows: R
               {head}
             </th>
             <th scope="col" className="px-3 py-2 text-right font-medium">
-              Clics
+              {t.tables.clicks}
             </th>
             <th scope="col" className="px-3 py-2 text-right font-medium">
-              Impresiones
+              {t.tables.impressions}
             </th>
             <th scope="col" className="hidden px-3 py-2 text-right font-medium sm:table-cell">
-              CTR
+              {t.tables.ctr}
             </th>
             <th scope="col" className="px-4 py-2 text-right font-medium">
-              Posición
+              {t.tables.position}
             </th>
           </tr>
         </thead>
@@ -82,25 +87,23 @@ function Table({ caption, head, rows }: { caption: string; head: string; rows: R
   );
 }
 
-const METRICS = [
-  ["clicks", "Clics", "Veces que alguien entró en tu web desde Google"],
-  ["impressions", "Impresiones", "Veces que apareciste en los resultados"],
-  ["ctr", "CTR", "Porcentaje de impresiones que acabaron en clic"],
-  ["position", "Posición media", "Cuanto más baja, más arriba apareces"],
-] as const;
+const METRICS = ["clicks", "impressions", "ctr", "position"] as const;
 
 export function SearchConsoleSection({
   s,
   config,
   action,
+  locale,
 }: {
   s: SearchConsoleSummary;
   config: SearchConsoleConfig;
   action: (state: RefreshSearchConsoleState) => Promise<RefreshSearchConsoleState>;
+  locale: Locale;
 }) {
-  const status = STATUS[s.state];
+  const t = getMessages(locale).searchConsole;
   const canRun = config.state !== "not_configured";
-  const notices = s.state === "ok" && s.lastFailure ? [{ kind: "failed" as const, text: `El último intento (${displayDate(s.lastFailure.at)}) falló: ${s.lastFailure.text}` }] : [];
+  const notices =
+    s.state === "ok" && s.lastFailure ? [{ kind: "failed" as const, text: t.failures.lastAttempt(displayDate(s.lastFailure.at, locale), s.lastFailure.text) }] : [];
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-4 rounded-2xl border border-border/80 bg-card p-5 shadow-card">
@@ -109,36 +112,39 @@ export function SearchConsoleSection({
             <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand ring-1 ring-brand/15">
               <Search className="size-4" />
             </span>
-            <span className="text-sm font-medium">Google Search Console</span>
-            <StatusPill tone={status.tone}>{status.label}</StatusPill>
+            <span className="text-sm font-medium">{t.name}</span>
+            <StatusPill tone={STATUS_TONE[s.state]}>{t.status[s.state]}</StatusPill>
           </div>
-          {canRun ? <RefreshSearchConsoleButton label={s.state === "ok" ? "Actualizar datos" : "Traer datos de Search Console"} action={action} /> : null}
+          {canRun ? (
+            <RefreshSearchConsoleButton labels={{ idle: s.state === "ok" ? t.button.update : t.button.fetch, pending: t.button.pending }} action={action} />
+          ) : null}
         </div>
 
         {s.metrics && s.period ? (
           <>
             <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              {METRICS.map(([key, label, hint]) => (
+              {METRICS.map((key) => (
                 <div key={key} className="flex flex-col gap-1 rounded-lg bg-muted/50 p-3">
-                  <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+                  <dt className="text-xs font-medium text-muted-foreground">{t.metrics[key].label}</dt>
                   <dd className="text-2xl font-semibold tabular-nums">{s.metrics![key].value}</dd>
                   <dd>
-                    <ChangeLine change={s.metrics![key].change} note={s.metrics![key].previous === null ? "Sin datos del periodo anterior" : null} className="text-xs" />
+                    <ChangeLine change={s.metrics![key].change} note={s.metrics![key].previous === null ? t.metrics.noPrevious : null} className="text-xs" />
                   </dd>
-                  <dd className="hidden text-xs text-muted-foreground sm:block">{hint}</dd>
+                  <dd className="hidden text-xs text-muted-foreground sm:block">{t.metrics[key].hint}</dd>
                 </div>
               ))}
             </dl>
             <NoticeList notices={notices} />
             <p className="text-xs text-muted-foreground">
-              Google Search Console · propiedad <span className="font-mono break-all">{s.property}</span> · del {displayDay(s.period.start)} al{" "}
-              {displayDay(s.period.end)}, comparado con los 28 días anteriores · consultado {s.capturedAt ? displayDate(s.capturedAt) : ""}
+              {t.source.prefix}
+              <span className="font-mono break-all">{s.property}</span>
+              {t.source.period(displayDay(s.period.start, locale), displayDay(s.period.end, locale), s.capturedAt ? displayDate(s.capturedAt, locale) : "")}
             </p>
           </>
         ) : (
           <>
             {s.reason ? <p className="max-w-3xl text-sm text-muted-foreground">{s.reason}</p> : null}
-            {s.state === "not_configured" || s.state === "invalid_config" || s.state === "error" ? <Setup config={config} /> : null}
+            {s.state === "not_configured" || s.state === "invalid_config" || s.state === "error" ? <Setup config={config} t={t} /> : null}
           </>
         )}
       </div>
@@ -147,20 +153,19 @@ export function SearchConsoleSection({
         <>
           {s.queries.length > 0 ? (
             <Table
-              caption="Búsquedas por las que te encuentran"
-              head="Búsqueda"
+              caption={t.tables.queries}
+              head={t.tables.query}
               rows={s.queries.map((q, i) => ({ key: `q${i}`, label: q.query, ...q }))}
+              t={t}
+              locale={locale}
             />
           ) : (
-            <p className="text-sm text-muted-foreground">Sin búsquedas en este periodo.</p>
+            <p className="text-sm text-muted-foreground">{t.noQueries}</p>
           )}
           {s.pages.length > 0 ? (
-            <Table caption="Tus páginas más visibles" head="Página" rows={s.pages.map((p, i) => ({ key: `p${i}`, label: p.page, ...p }))} />
+            <Table caption={t.tables.pages} head={t.tables.page} rows={s.pages.map((p, i) => ({ key: `p${i}`, label: p.page, ...p }))} t={t} locale={locale} />
           ) : null}
-          <p className="max-w-3xl text-xs text-muted-foreground">
-            Las búsquedas que se hacen pocas veces no aparecen en la lista porque Google las oculta para proteger la privacidad, así que la suma de
-            la tabla puede ser menor que el total. La posición es una media de todas las apariciones, no un puesto fijo.
-          </p>
+          <p className="max-w-3xl text-xs text-muted-foreground">{t.privacyNote}</p>
         </>
       ) : null}
     </div>

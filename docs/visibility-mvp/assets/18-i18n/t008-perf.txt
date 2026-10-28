@@ -1,0 +1,6 @@
+/                  before  n=40  TTFB p50=   3.1 p90=   3.8  total p50=  95.8 p90= 108.3
+/                  after   n=40  TTFB p50=   3.1 p90=   3.5  total p50= 102.5 p90= 116.7
+/workspaces        before  n=40  TTFB p50=   2.7 p90=   3.3  total p50=  51.8 p90=  55.3
+/workspaces        after   n=40  TTFB p50=   2.8 p90=   3.2  total p50=  55.0 p90=  62.5
+/workspaces/new    before  n=40  TTFB p50=   1.9 p90=   2.1  total p50=   1.9 p90=   2.2
+/workspaces/new    after   n=40  TTFB p50=   2.2 p90=   2.4  total p50=   8.1 p90=   9.3

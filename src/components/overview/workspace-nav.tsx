@@ -1,19 +1,22 @@
 import Link from "next/link";
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
+import { getMessages } from "@/i18n/messages";
 import { cn } from "@/lib/utils";
 
 export type WorkspaceSection = "overview" | "performance" | "seo" | "geo";
 
-const ITEMS: { key: WorkspaceSection; label: string; short?: string; path: string }[] = [
-  { key: "overview", label: "Resumen", path: "" },
-  { key: "performance", label: "Rendimiento", path: "/performance" },
-  { key: "seo", label: "Google", path: "/seo" },
-  { key: "geo", label: "Presencia en IA", short: "IA", path: "/geo" },
+const ITEMS: { key: WorkspaceSection; path: string }[] = [
+  { key: "overview", path: "" },
+  { key: "performance", path: "/performance" },
+  { key: "seo", path: "/seo" },
+  { key: "geo", path: "/geo" },
 ];
 
 /** Section tabs of a workspace. Same order and labels everywhere; the current one is marked for assistive tech. */
-export function WorkspaceNav({ workspaceId, current }: { workspaceId: string; current: WorkspaceSection }) {
+export function WorkspaceNav({ workspaceId, current, locale = DEFAULT_LOCALE }: { workspaceId: string; current: WorkspaceSection; locale?: Locale }) {
+  const t = getMessages(locale).overview.nav;
   return (
-    <nav aria-label="Secciones de la empresa" className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
+    <nav aria-label={t.label} className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
       <ul className="flex min-w-max gap-1 border-b">
         {ITEMS.map((item) => {
           const active = item.key === current;
@@ -27,13 +30,13 @@ export function WorkspaceNav({ workspaceId, current }: { workspaceId: string; cu
                   active && "text-foreground after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:rounded-full after:bg-brand",
                 )}
               >
-                {item.short ? (
+                {item.key === "geo" ? (
                   <>
-                    <span className="sm:hidden">{item.short}</span>
-                    <span className="hidden sm:inline">{item.label}</span>
+                    <span className="sm:hidden">{t.geoShort}</span>
+                    <span className="hidden sm:inline">{t.geo}</span>
                   </>
                 ) : (
-                  item.label
+                  t[item.key]
                 )}
               </Link>
             </li>

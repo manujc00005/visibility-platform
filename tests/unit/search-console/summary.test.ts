@@ -102,14 +102,74 @@ describe("summarizeSearchConsole", () => {
     expect(s.lastFailure?.text).toMatch(/Vuelve a intentarlo/);
   });
 
-  it("reports an invalid configuration", () => {
-    const s = summarizeSearchConsole({ latest: null, latestCompleted: null }, { state: "invalid", reason: "No es JSON" }, "olessium.com");
+  it("reports an invalid configuration with a translated reason", () => {
+    const s = summarizeSearchConsole({ latest: null, latestCompleted: null }, { state: "invalid", reason: "not_json" }, "olessium.com");
     expect(s.state).toBe("invalid_config");
+    expect(s.reason).toBe("GSC_SERVICE_ACCOUNT_JSON no es un JSON válido, ni en crudo ni en base64.");
+  });
+
+  it("explains failures from their kind, not from the stored diagnostic", () => {
+    const f = failed("quota_exceeded", { errorMessage: "Search Console respondió 429" });
+    const s = summarizeSearchConsole({ latest: f, latestCompleted: null }, READY, "olessium.com");
+    expect(s.reason).toBe("La cuota de la API de Search Console está agotada. Vuelve a intentarlo más tarde.");
+  });
+});
+
+describe("summarizeSearchConsole in English", () => {
+  it("translates metrics, changes and the card line with en-GB numbers", () => {
+    const snapshot = completed({ totals: { clicks: 1234, impressions: 40_000, ctr: 0.03085, position: 9.4 }, previousTotals: { clicks: 1500, impressions: 39_000, ctr: 0.0385, position: 8.1 } });
+    const s = summarizeSearchConsole({ latest: snapshot, latestCompleted: snapshot }, READY, "olessium.com", "en");
+    expect(s.metrics?.clicks).toEqual({ value: "1,234", previous: "1,500", change: { direction: "worse", text: "Before: 1,500 clicks (−18%)" } });
+    expect(s.metrics?.impressions.change?.text).toBe("Before: 39,000 impressions (no noticeable change)");
+    expect(s.metrics?.ctr).toMatchObject({ value: "3.1%", change: { direction: "worse", text: "Before: 3.9% (−0.8 points)" } });
+    expect(s.metrics?.position.change).toEqual({ direction: "worse", text: "Before: 8.1 (down 1.3 places)" });
+    expect(s.cardLine).toBe("On Google: 1,234 clicks and 40,000 impressions in the last 28 days, average position 9.4 (Search Console).");
+  });
+
+  it("translates setup and failure reasons", () => {
+    expect(summarizeSearchConsole({ latest: null, latestCompleted: null }, { state: "not_configured" }, "olessium.com", "en").reason).toBe(
+      "Search Console is not set up on the platform.",
+    );
+    expect(summarizeSearchConsole({ latest: null, latestCompleted: null }, READY, "olessium.com", "en").reason).toBe(
+      "Press “Get Search Console data” to see how people find you on Google.",
+    );
+    const noAccess = summarizeSearchConsole({ latest: failed("no_access", { accessibleProperties: 1 }), latestCompleted: null }, READY, "olessium.com", "en");
+    expect(noAccess.reason).toBe(
+      "Add visibility@demo.iam.gserviceaccount.com as a user of the olessium.com property in Search Console (Settings › Users and permissions) and try again. Right now the account can read 1 property.",
+    );
   });
 });
 
 describe("displayDay", () => {
-  it("formats a calendar date without shifting it", () => {
+  it("formats a calendar date without shifting it, in both languages", () => {
     expect(displayDay("2026-10-24")).toMatch(/24 oct.* 2026/);
+    expect(displayDay("2026-10-24", "en")).toBe("24 Oct 2026");
+  });
+});
+
+describe("summarizeSearchConsole keeps the Spanish output of acba536 (D007, D020)", () => {
+  it("writes decreases with a hyphen and the raw integer percent, and CTR points with a minus sign", () => {
+    const snapshot = completed({
+      totals: { clicks: 15, impressions: 1234, ctr: 0.03, position: 9.4 },
+      previousTotals: { clicks: 20, impressions: 1500, ctr: 0.04, position: 12.1 },
+    });
+    const s = summarizeSearchConsole({ latest: snapshot, latestCompleted: snapshot }, READY, "olessium.com");
+    expect(s.metrics?.clicks.change?.text).toBe("Antes: 20 clics (-25 %)");
+    expect(s.metrics?.impressions).toMatchObject({ value: "1234", change: { direction: "worse", text: "Antes: 1500 impresiones (-18 %)" } });
+    expect(s.metrics?.ctr.change?.text).toBe("Antes: 4,0 % (−1,0 puntos)");
+    expect(s.metrics?.position.change?.text).toBe("Antes: 12,1 (sube 2,7 puestos)");
+  });
+
+  it("does not group a large percent change, as the original template did", () => {
+    const snapshot = completed({ totals: { clicks: 200, impressions: 400, ctr: 0.5, position: 9.4 }, previousTotals: { clicks: 1, impressions: 400, ctr: 0.5, position: 9.4 } });
+    const s = summarizeSearchConsole({ latest: snapshot, latestCompleted: snapshot }, READY, "olessium.com");
+    expect(s.metrics?.clicks.change?.text).toBe("Antes: 1 clic (+19900 %)");
+  });
+
+  it("groups Spanish numbers from five digits only", () => {
+    const snapshot = completed({ totals: { clicks: 12345, impressions: 40000, ctr: 0.3, position: 9.4 }, previousTotals: { clicks: 12000, impressions: 40000, ctr: 0.3, position: 9.4 } });
+    const s = summarizeSearchConsole({ latest: snapshot, latestCompleted: snapshot }, READY, "olessium.com");
+    expect(s.metrics?.clicks.value).toBe("12.345");
+    expect(s.cardLine).toContain("12.345 clics");
   });
 });

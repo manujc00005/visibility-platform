@@ -1,0 +1,16 @@
+cookie=none      path=/                                                GET=200 lang="es"  data-locale="es"  h1="Visibility Platform" | HEAD: HTTP/1.1 200 OK
+cookie=none      path=/workspaces                                      GET=200 lang="es"  data-locale="es"  h1="Empresas" | HEAD: HTTP/1.1 200 OK
+cookie=none      path=/workspaces/new                                  GET=200 lang="es"  data-locale="es"  h1="Nueva empresa" | HEAD: HTTP/1.1 200 OK
+cookie=none      path=/workspaces/00000000-0000-4000-8000-000000000000 GET=404 lang="es"  data-locale="es"  h1="Página no encontrada" | HEAD: HTTP/1.1 404 Not Found
+cookie=locale=es path=/                                                GET=200 lang="es"  data-locale="es"  h1="Visibility Platform" | HEAD: HTTP/1.1 200 OK
+cookie=locale=es path=/workspaces                                      GET=200 lang="es"  data-locale="es"  h1="Empresas" | HEAD: HTTP/1.1 200 OK
+cookie=locale=es path=/workspaces/new                                  GET=200 lang="es"  data-locale="es"  h1="Nueva empresa" | HEAD: HTTP/1.1 200 OK
+cookie=locale=es path=/workspaces/00000000-0000-4000-8000-000000000000 GET=404 lang="es"  data-locale="es"  h1="Página no encontrada" | HEAD: HTTP/1.1 404 Not Found
+cookie=locale=en path=/                                                GET=200 lang="en"  data-locale="en"  h1="Visibility Platform" | HEAD: HTTP/1.1 200 OK
+cookie=locale=en path=/workspaces                                      GET=200 lang="en"  data-locale="en"  h1="Empresas" | HEAD: HTTP/1.1 200 OK
+cookie=locale=en path=/workspaces/new                                  GET=200 lang="en"  data-locale="en"  h1="Nueva empresa" | HEAD: HTTP/1.1 200 OK
+cookie=locale=en path=/workspaces/00000000-0000-4000-8000-000000000000 GET=404 lang="en"  data-locale="en"  h1="Página no encontrada" | HEAD: HTTP/1.1 404 Not Found
+cookie=locale=xx path=/                                                GET=200 lang="es"  data-locale="es"  h1="Visibility Platform" | HEAD: HTTP/1.1 200 OK
+cookie=locale=xx path=/workspaces                                      GET=200 lang="es"  data-locale="es"  h1="Empresas" | HEAD: HTTP/1.1 200 OK
+cookie=locale=xx path=/workspaces/new                                  GET=200 lang="es"  data-locale="es"  h1="Nueva empresa" | HEAD: HTTP/1.1 200 OK
+cookie=locale=xx path=/workspaces/00000000-0000-4000-8000-000000000000 GET=404 lang="es"  data-locale="es"  h1="Página no encontrada" | HEAD: HTTP/1.1 404 Not Found

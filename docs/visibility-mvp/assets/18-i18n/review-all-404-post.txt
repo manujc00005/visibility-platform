@@ -1,0 +1,12 @@
+# /review-all — cambio de idioma sin JavaScript en una 404 de empresa (next start, build del árbol actual), 2026-10-28 09:28
+POST locale=en → HTTP/1.1 404 Not Found | Set-Cookie: locale=en; Path=/; Expires=Thu, 28 Oct 2027 08:2 | html  | h1: 
+POST locale=es → HTTP/1.1 404 Not Found | Set-Cookie: locale=es; Path=/; Expires=Thu, 28 Oct 2027 08:2 | html  | h1: 
+GET tras el cambio (cookie en) → 404
+
+## 404 general (/no-existe)
+POST locale=en → HTTP/1.1 404 Not Found | <html lang="en" class="_7725RG_variable _8Li5zG_variable h-f
+Visible text of the response for /no-existe: full 404 page in English (header, «Page not found»).
+
+## Conclusion
+404 inside a company (/workspaces/<id inexistente>): the no-JS POST returns 404 and saves the cookie, but the body is Next's error shell (<html id="__next_error__">, no lang) with no visible text; «Company not found» only exists in the RSC payload, so without JavaScript the page is blank. A later GET renders the 404 in the new language (404).
+Site-wide 404 (/no-existe): correct, 404 with the full page in the new language.

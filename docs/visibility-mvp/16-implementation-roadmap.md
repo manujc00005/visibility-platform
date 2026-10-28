@@ -390,6 +390,20 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 
 **Incidencia durante la migración:** un patrón `LIKE 'geo_competitor_%'` usado para limpiar un intento fallido coincidió también con `geo_competitors` y la tabla se borró en `test` y `dev`. Se recreó con el SQL de `0004_geo` y en `dev` se restauró su única fila (el competidor de ejemplo de Olessium) desde el panel congelado en `geo_runs.config`. `production` no se tocó. Deuda: D-25.
 
+### Interfaz bilingüe y cabecera fija (spec `specs/features/003-i18n-sticky-header`) — 2026-10-28, hecha
+
+**Alcance:** toda la interfaz en español o inglés, elegible desde una cabecera fija nueva (enlace de salto, navegación con estado activo y selector ES/EN por formulario que funciona sin JavaScript). El idioma se guarda en la cookie `locale`, la lee el layout raíz y, sin cookie, se negocia con `Accept-Language`. El español sigue siendo el idioma por defecto y de referencia. Los hallazgos guardados se traducen al mostrarlos con los facts de su propia auditoría; la evidencia, el contenido del usuario, el del proveedor y las preguntas del mercado se muestran como se registraron, con un aviso. El informe PDF sigue en español (D006).
+
+**Archivos:** `src/i18n/` nuevo (resolución, catálogos tipados `es`/`en`, formatos, interpolador cliente, contrato de hallazgos y server action); `layout.tsx` y la cabecera; todas las páginas y componentes de empresas, auditoría, resumen, rendimiento, SEO (incluida la sección de Search Console, D019) y GEO; los módulos puros aceptan `locale` con `es` por defecto y los esquemas zod se construyen por fábrica. `rules.ts` toma sus textos del catálogo sin cambiar salida ni `RULES_VERSION`. Sin migraciones, sin dependencias nuevas y sin cambios en informes, proxy ni URLs.
+
+**Pruebas:** 565 unitarias y 81 de integración sobre el árbol con Search Console fusionado, más un corpus de regresión de hallazgos que cubre los 43 ids. Las aserciones españolas previas siguen intactas salvo dos de Search Console, adaptadas al motivo por código y al texto de fallo por tipo (enmienda de D019). Lint, typecheck y build en verde (ESLint ignora ahora `.claude/**`, donde viven los worktrees locales de agentes).
+
+**Coste conocido:** `/`, `/workspaces` y `/workspaces/new` pasan a renderizarse por petición. En local, entre 3 y 7 ms más de tiempo total, sin cambio en el primer byte.
+
+**Estado:** cerrada el 2026-10-28 tras `/spec-review`, `/qa-review` y `/review-all`. Límite conocido: sin JavaScript, el cambio de idioma en la 404 de una empresa llega en blanco (D021). Seguimientos en doc 18 §14.
+
+**Estado:** las ocho tareas están hechas y el propietario dio su conformidad con la copia inglesa el 2026-10-27. Faltan las revisiones de cierre (`/spec-review` y siguientes). Detalle completo en la doc 18.
+
 ## 9. Backlog (aparcado por decisión del owner, 2026-10-26)
 
 Primero todo lo gratuito; lo siguiente queda aparcado.

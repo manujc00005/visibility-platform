@@ -1,5 +1,7 @@
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
+import { getMessages } from "@/i18n/messages";
 import type { Fraction, GeoMetrics } from "@/modules/geo/metrics";
-import { PROVIDER_LABELS } from "@/modules/geo/presentation";
+import { geoLabels, PROVIDER_LABELS } from "@/modules/geo/presentation";
 import { staleInfo, type BlockState, type Change, type Stale } from "@/modules/overview/types";
 
 /**
@@ -9,7 +11,8 @@ import { staleInfo, type BlockState, type Change, type Stale } from "@/modules/o
  * - citations are ANSWERS (`citationRate`).
  * `completed` means collection ended, not success: a run with no completed observation is
  * a failed attempt, not a result. Comparison only with the completed run immediately
- * before, under the rules of D012.
+ * before, under the rules of D012. Texts come from the catalog of `locale`, Spanish by
+ * default (D007).
  */
 export interface RunLike {
   id: string;
@@ -87,37 +90,40 @@ export function isCompleteResult(m: GeoMetrics): boolean {
 }
 
 /** Comparison between a result and the completed run immediately before it. */
-export function compareRuns(latest: RunLike, previous: RunLike): { change: Change | null; note: string | null } {
+export function compareRuns(latest: RunLike, previous: RunLike, locale: Locale = DEFAULT_LOCALE): { change: Change | null; note: string | null } {
+  const t = getMessages(locale).overview.ai;
   if (latest.methodologyKey !== previous.methodologyKey) {
-    return { change: null, note: "Sin comparación: la medición anterior usó otra configuración." };
+    return { change: null, note: t.noComparisonConfig };
   }
   if (!isCompleteResult(latest.metrics) || !isCompleteResult(previous.metrics)) {
-    return { change: null, note: "Sin comparación: alguna de las dos mediciones no está completa." };
+    return { change: null, note: t.noComparisonIncomplete };
   }
   const a = latest.metrics.promptCoverage;
   const b = previous.metrics.promptCoverage;
   const sameSet = evaluatedIds(latest.metrics).join("|") === evaluatedIds(previous.metrics).join("|");
   if (!sameSet) {
-    return { change: null, note: "Sin comparación: las preguntas evaluadas no coinciden." };
+    return { change: null, note: t.noComparisonQuestions };
   }
-  const text = `Antes: ${b.k} de ${b.n}`;
+  const text = t.before(b.k, b.n);
   const diff = a.k / a.n - b.k / b.n;
   return { change: { direction: diff > 0 ? "better" : diff < 0 ? "worse" : "same", text }, note: null };
 }
 
-function attemptOf(run: RunLike): AiAttempt {
+function attemptOf(run: RunLike, locale: Locale): AiAttempt {
+  const t = getMessages(locale).overview.ai.attempt;
   return run.status === "collecting"
-    ? { status: "running", startedAt: run.createdAt, runId: run.id, text: "Recogiendo respuestas de una medición nueva." }
-    : { status: "failed", startedAt: run.createdAt, runId: run.id, text: "La última medición no pudo recoger ninguna respuesta." };
+    ? { status: "running", startedAt: run.createdAt, runId: run.id, text: t.running }
+    : { status: "failed", startedAt: run.createdAt, runId: run.id, text: t.failed };
 }
 
 /** Runs in any order. `activePrompts`: questions active today (does not change past denominators). */
-export function summarizeAi(runs: RunLike[], activePrompts: number, now: Date): AiSummary {
+export function summarizeAi(runs: RunLike[], activePrompts: number, now: Date, locale: Locale = DEFAULT_LOCALE): AiSummary {
+  const t = getMessages(locale).overview.ai;
   const sorted = [...runs].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   const resultIndex = sorted.findIndex(usable);
   const result = resultIndex >= 0 ? sorted[resultIndex]! : null;
   const newerAttempts = result ? sorted.slice(0, resultIndex) : sorted;
-  const attempt = newerAttempts[0] ? attemptOf(newerAttempts[0]) : null;
+  const attempt = newerAttempts[0] ? attemptOf(newerAttempts[0], locale) : null;
   const base: AiSummary = {
     state: "no_data",
     coverage: null,
@@ -141,10 +147,10 @@ export function summarizeAi(runs: RunLike[], activePrompts: number, now: Date): 
   };
 
   if (!result) {
-    if (attempt?.status === "running") return { ...base, state: "analyzing", runId: attempt.runId, reason: "Recogiendo respuestas de la primera medición." };
-    if (attempt?.status === "failed") return { ...base, state: "error", runId: attempt.runId, reason: "La medición no pudo recoger ninguna respuesta. Revisa el proveedor y vuelve a medir." };
-    if (activePrompts === 0) return { ...base, state: "not_configured", reason: "Añade preguntas que podrían hacer tus clientes para empezar a medir." };
-    return { ...base, reason: "Lanza la primera medición para saber si ChatGPT te menciona." };
+    if (attempt?.status === "running") return { ...base, state: "analyzing", runId: attempt.runId, reason: t.firstRunning };
+    if (attempt?.status === "failed") return { ...base, state: "error", runId: attempt.runId, reason: t.firstFailed };
+    if (activePrompts === 0) return { ...base, state: "not_configured", reason: t.notConfigured };
+    return { ...base, reason: t.firstRun };
   }
 
   const m = result.metrics;
@@ -154,18 +160,14 @@ export function summarizeAi(runs: RunLike[], activePrompts: number, now: Date): 
   const brandedPrompts = m.perPrompt.filter((p) => p.intent === "branded");
   const complete = isCompleteResult(m);
   const previous = sorted.slice(resultIndex + 1).find((r) => r.status === "completed") ?? null;
-  const comparison = previous ? compareRuns(result, previous) : { change: null, note: null };
+  const comparison = previous ? compareRuns(result, previous, locale) : { change: null, note: null };
   const measuredAt = result.completedAt ?? result.createdAt;
 
   let reason: string | null = null;
-  if (m.promptCoverage.n === 0) reason = "Ninguna pregunta sin tu marca obtuvo respuesta válida: no podemos decir si te recomiendan.";
-  else if (!captureComplete(m)) reason = "Resultado parcial: algunas respuestas no se pudieron recoger.";
-  else if (unanswered.length > 0) {
-    reason = `Resultado parcial: ${unanswered.length} ${unanswered.length === 1 ? "pregunta no obtuvo" : "preguntas no obtuvieron"} respuesta válida.`;
-  } else if (!complete) {
-    const empty = m.answers.n - m.answers.k;
-    reason = `Resultado parcial: ${empty} ${empty === 1 ? "respuesta recogida no tenía" : "respuestas recogidas no tenían"} contenido válido.`;
-  }
+  if (m.promptCoverage.n === 0) reason = t.noValid;
+  else if (!captureComplete(m)) reason = t.partialCapture;
+  else if (unanswered.length > 0) reason = t.partialUnanswered(unanswered.length);
+  else if (!complete) reason = t.partialEmpty(m.answers.n - m.answers.k);
 
   return {
     ...base,
@@ -181,11 +183,11 @@ export function summarizeAi(runs: RunLike[], activePrompts: number, now: Date): 
     change: comparison.change,
     comparisonNote: comparison.note,
     measuredAt,
-    provider: PROVIDER_LABELS[result.provider],
+    provider: geoLabels(locale).provider[result.provider],
     runId: result.id,
     attempt,
-    setupNotice: activePrompts === 0 ? "No hay preguntas activas: añade preguntas para preparar una nueva medición." : null,
+    setupNotice: activePrompts === 0 ? t.setupNotice : null,
     reason,
-    stale: staleInfo(measuredAt, now),
+    stale: staleInfo(measuredAt, now, locale),
   };
 }

@@ -12,7 +12,11 @@ import { ChangeLine, NoticeList, type Notice } from "@/components/overview/overv
 import { PageHeader } from "@/components/overview/page-header";
 import { WorkspaceNav } from "@/components/overview/workspace-nav";
 import { getDb } from "@/db/client";
-import { AUDIT_STATUS_LABELS, CATEGORY_LABELS, SEVERITY_LABELS } from "@/modules/audits/presentation";
+import { findingText } from "@/i18n/findings";
+import { DEFAULT_LOCALE } from "@/i18n/locale";
+import { getMessages } from "@/i18n/messages";
+import { getLocale } from "@/i18n/server";
+import { auditLabels } from "@/modules/audits/presentation";
 import type { Category } from "@/modules/audits/rules";
 import { getAudit, listAudits } from "@/modules/audits/service";
 import { SEVERITY_TONE } from "@/modules/audits/status";
@@ -25,7 +29,9 @@ import { getWorkspace } from "@/modules/workspaces/service";
 import { runAuditAction } from "../audits/actions";
 import { refreshSearchConsoleAction } from "./actions";
 
-export const metadata: Metadata = { title: "Visibilidad en Google" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: getMessages(await getLocale()).seoPage.metaTitle };
+}
 
 /** Blocking route so an unknown workspace returns a real 404 (same reason as the overview). */
 export const instant = false;
@@ -47,28 +53,36 @@ function Section({ id, title, description, children }: { id: string; title: stri
   );
 }
 
-function plural(n: number, one: string, many: string): string {
-  return `${n} ${n === 1 ? one : many}`;
-}
-
 export default async function SeoPage({ params }: PageProps<"/workspaces/[id]/seo">) {
   await connection();
   const { id } = await params;
+  const locale = await getLocale();
   const db = getDb();
   const workspace = await getWorkspace(db, id);
   if (!workspace) notFound();
+  const m = getMessages(locale);
+  const t = m.seoPage;
+  const L = auditLabels(locale);
 
   const [audits, stored] = await Promise.all([listAudits(db, workspace.id), latestSearchConsole(db, workspace.id)]);
   const gscConfig = searchConsoleConfig();
-  const gsc = summarizeSearchConsole(stored, gscConfig, workspace.domain);
+  const gsc = summarizeSearchConsole(stored, gscConfig, workspace.domain, locale);
   const recent = audits.slice(0, HISTORY_LIMIT);
   const { result, previous } = splitAudits(audits);
   const toLoad = new Set([...recent.filter((a) => a.status === "completed").map((a) => a.id), ...[result, previous].flatMap((a) => (a ? [a.id] : []))]);
   const loaded = await Promise.all([...toLoad].map((auditId) => getAudit(db, workspace.id, auditId)));
   const findingsByAudit: FindingsByAudit = Object.fromEntries(loaded.filter((r) => r !== null).map((r) => [r.audit.id, r.findings]));
 
-  const s = summarizeSeo(audits, findingsByAudit, new Date());
-  const problems = result ? seoFindings(findingsByAudit[result.id] ?? []) : [];
+  const s = summarizeSeo(audits, findingsByAudit, new Date(), locale);
+  // Findings are translated with the facts and rules version of the audit they belong to.
+  const context = result ? { facts: result.facts, rulesVersion: result.rulesVersion } : undefined;
+  const problems = result ? seoFindings(findingsByAudit[result.id] ?? []).map((f) => ({ finding: f, text: findingText(f, locale, context) })) : [];
+  const problemsNotice =
+    locale !== DEFAULT_LOCALE && problems.length > 0
+      ? [problems.some((p) => p.finding.evidence.length > 0) ? t.problems.originalNotice : null, problems.some((p) => p.text.fallback) ? t.problems.fallbackNotice : null]
+          .filter(Boolean)
+          .join(" ")
+      : null;
   const points = seoHistoryPoints(recent, findingsByAudit);
 
   const notices: Notice[] = [];
@@ -79,30 +93,27 @@ export default async function SeoPage({ params }: PageProps<"/workspaces/[id]/se
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-6">
         <PageHeader
+          locale={locale}
           breadcrumbs={[
-            { href: "/workspaces", label: "Empresas" },
+            { href: "/workspaces", label: m.workspaces.list.title },
             { href: `/workspaces/${workspace.id}`, label: workspace.name },
           ]}
-          title="Visibilidad en Google"
-          description="Si los clientes encuentran tu empresa cuando buscan tus servicios, y si Google puede leer y entender tu web."
-          actions={<RunAuditButton workspaceId={workspace.id} action={runAuditAction.bind(null, workspace.id)} />}
+          title={t.title}
+          description={t.description}
+          actions={<RunAuditButton workspaceId={workspace.id} action={runAuditAction.bind(null, workspace.id)} labels={m.audits.runButton} />}
         />
-        <WorkspaceNav workspaceId={workspace.id} current="seo" />
+        <WorkspaceNav workspaceId={workspace.id} current="seo" locale={locale} />
       </div>
 
       <Section
         id="ranking-title"
-        title="Posicionamiento en Google"
-        description="Cuántas veces apareces en Google, cuántas personas entran en tu web y con qué búsquedas, según Search Console, la herramienta gratuita de Google para propietarios de webs."
+        title={t.ranking.title}
+        description={t.ranking.description}
       >
-        <SearchConsoleSection s={gsc} config={gscConfig} action={refreshSearchConsoleAction.bind(null, workspace.id)} />
+        <SearchConsoleSection s={gsc} config={gscConfig} action={refreshSearchConsoleAction.bind(null, workspace.id)} locale={locale} />
       </Section>
 
-      <Section
-        id="health-title"
-        title="Salud técnica de tu portada"
-        description="Comprobamos si Google puede acceder, leer y entender tu portada, su robots.txt y su sitemap. Es salud técnica, no tu posición en Google, y no rastreamos el resto de la web."
-      >
+      <Section id="health-title" title={t.health.title} description={t.health.description}>
         {s.headline ? (
           <div className="flex flex-col gap-5 rounded-2xl border border-border/80 bg-card shadow-card p-5">
             <div className="flex items-start gap-3">
@@ -113,27 +124,21 @@ export default async function SeoPage({ params }: PageProps<"/workspaces/[id]/se
               </div>
             </div>
             <dl className="grid grid-cols-3 gap-3">
-              {(
-                [
-                  ["critical", "Críticos", "Bloquean o dañan la visibilidad"],
-                  ["warning", "Importantes", "Conviene corregirlos pronto"],
-                  ["info", "Mejoras", "Opcionales"],
-                ] as const
-              ).map(([severity, label, hint]) => (
+              {(["critical", "warning", "info"] as const).map((severity) => (
                 <div key={severity} className="flex flex-col gap-0.5 rounded-lg bg-muted/50 p-3">
-                  <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
+                  <dt className="text-xs font-medium text-muted-foreground">{t.health.counts[severity].label}</dt>
                   <dd className="text-2xl font-semibold tabular-nums">{s.counts[severity]}</dd>
-                  <dd className="hidden text-xs text-muted-foreground sm:block">{hint}</dd>
+                  <dd className="hidden text-xs text-muted-foreground sm:block">{t.health.counts[severity].hint}</dd>
                 </div>
               ))}
             </dl>
             <ChangeLine change={s.change} note={s.comparisonNote} />
             <NoticeList notices={notices} />
-            <p className="text-xs text-muted-foreground">Auditoría técnica de la portada · {s.auditedAt ? displayDate(s.auditedAt) : ""}</p>
+            <p className="text-xs text-muted-foreground">{t.health.source(s.auditedAt ? displayDate(s.auditedAt, locale) : "")}</p>
           </div>
         ) : (
           <div className="flex flex-col items-start gap-2 rounded-2xl border border-dashed bg-card/60 p-6">
-            <p className="font-medium">{s.state === "analyzing" ? "Analizando la web" : s.state === "error" ? "La auditoría no terminó" : "Todavía no hay auditorías"}</p>
+            <p className="font-medium">{s.state === "analyzing" ? t.health.analyzing : s.state === "error" ? t.health.failed : t.health.none}</p>
             <p className="max-w-2xl text-sm text-muted-foreground">{s.reason}</p>
           </div>
         )}
@@ -141,7 +146,7 @@ export default async function SeoPage({ params }: PageProps<"/workspaces/[id]/se
 
       {s.headline ? (
         <>
-          <Section id="areas-title" title="Estado por área" description="«No comprobado» significa que esta auditoría no pudo revisar esa parte; no es un aprobado.">
+          <Section id="areas-title" title={t.areas.title} description={t.areas.description}>
             <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {s.areas.map((area) => {
                 const body = (
@@ -172,24 +177,31 @@ export default async function SeoPage({ params }: PageProps<"/workspaces/[id]/se
             </ul>
           </Section>
 
-          <Section id="problems-title" title="Problemas y recomendaciones" description="Ordenados de más a menos urgente. Los problemas de velocidad están en Rendimiento.">
+          <Section id="problems-title" title={t.problems.title} description={t.problems.description}>
+            {problemsNotice ? (
+              <p role="note" className="rounded-md border border-border/80 bg-muted/60 p-2.5 text-xs text-muted-foreground">
+                {problemsNotice}
+              </p>
+            ) : null}
             {problems.length > 0 ? (
               <ol className="flex flex-col gap-3">
-                {problems.map((f) => (
+                {problems.map(({ finding: f, text }) => (
                   <li key={f.id} id={`finding-${f.id}`} className="flex scroll-mt-6 flex-col gap-2 rounded-2xl border border-border/80 bg-card shadow-card p-5">
                     <div className="flex flex-wrap items-center gap-2">
-                      <StatusPill tone={SEVERITY_TONE[f.severity]}>{SEVERITY_LABELS[f.severity]}</StatusPill>
-                      <span className="text-xs text-muted-foreground">{CATEGORY_LABELS[f.category as Category] ?? f.category}</span>
+                      <StatusPill tone={SEVERITY_TONE[f.severity]}>{L.severity[f.severity]}</StatusPill>
+                      <span className="text-xs text-muted-foreground">{L.category[f.category as Category] ?? f.category}</span>
                     </div>
-                    <h3 className="text-base font-semibold tracking-tight">{f.title}</h3>
-                    <p className="text-sm">
-                      <span className="font-medium">Qué recomendamos: </span>
-                      {f.recommendation}
+                    <h3 className="text-base font-semibold tracking-tight" lang={text.fallback ? DEFAULT_LOCALE : undefined}>
+                      {text.title}
+                    </h3>
+                    <p className="text-sm" lang={text.fallback ? DEFAULT_LOCALE : undefined}>
+                      <span className="font-medium">{t.problems.recommend} </span>
+                      {text.recommendation}
                     </p>
                     {f.evidence.length > 0 ? (
                       <div className="rounded-lg bg-muted/60 p-3">
-                        <p className="text-xs font-medium text-muted-foreground">Evidencia</p>
-                        <ul className="mt-1 flex flex-col gap-0.5">
+                        <p className="text-xs font-medium text-muted-foreground">{t.problems.evidence}</p>
+                        <ul className="mt-1 flex flex-col gap-0.5" lang={DEFAULT_LOCALE}>
                           {f.evidence.map((line, i) => (
                             <li key={i} className="font-mono text-xs break-all">
                               {line}
@@ -202,26 +214,18 @@ export default async function SeoPage({ params }: PageProps<"/workspaces/[id]/se
                 ))}
               </ol>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                {s.state === "partial"
-                  ? "No hay problemas en lo que pudimos comprobar, pero la portada no se pudo leer: el resultado es incompleto."
-                  : "No hemos detectado problemas de SEO técnico en las comprobaciones realizadas."}
-              </p>
+              <p className="text-sm text-muted-foreground">{s.state === "partial" ? t.problems.nonePartial : t.problems.none}</p>
             )}
           </Section>
         </>
       ) : null}
 
-      <Section
-        id="history-title"
-        title="Histórico de auditorías"
-        description="Problemas de SEO técnico en cada auditoría, sin contar los de velocidad. Compara auditorías concretas, no es una tendencia del negocio."
-      >
+      <Section id="history-title" title={t.history.title} description={t.history.description}>
         {points.length > 0 ? (
           <div className="flex flex-col gap-3 rounded-2xl border border-border/80 bg-card shadow-card p-5">
-            <ProblemsLegend />
-            <ProblemsChart points={points} />
-            <ChartDataTable points={points} kind="problems" />
+            <ProblemsLegend locale={locale} />
+            <ProblemsChart points={points} locale={locale} />
+            <ChartDataTable points={points} kind="problems" locale={locale} />
           </div>
         ) : null}
         {recent.length > 0 ? (
@@ -237,13 +241,13 @@ export default async function SeoPage({ params }: PageProps<"/workspaces/[id]/se
                     className="flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-foreground/60 focus-visible:outline-none"
                   >
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3">
-                      <span className="font-medium">{displayDate(audit.startedAt)}</span>
+                      <span className="font-medium">{displayDate(audit.startedAt, locale)}</span>
                       <span className="text-xs text-muted-foreground">
                         {audit.status !== "completed"
-                          ? AUDIT_STATUS_LABELS[audit.status]
+                          ? L.status[audit.status]
                           : counts
-                            ? `${plural(counts.critical, "crítico", "críticos")} · ${plural(counts.warning, "importante", "importantes")} · ${plural(counts.info, "mejora", "mejoras")}${read ? "" : " · portada no leída"}`
-                            : "Completada"}
+                            ? t.history.summary(counts.critical, counts.warning, counts.info, read)
+                            : t.history.completed}
                       </span>
                     </span>
                     <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-brand" />
@@ -253,13 +257,9 @@ export default async function SeoPage({ params }: PageProps<"/workspaces/[id]/se
             })}
           </ul>
         ) : (
-          <p className="text-sm text-muted-foreground">Todavía no hay auditorías.</p>
+          <p className="text-sm text-muted-foreground">{t.history.none}</p>
         )}
-        {audits.length > HISTORY_LIMIT ? (
-          <p className="text-xs text-muted-foreground">
-            Se muestran las {HISTORY_LIMIT} auditorías más recientes de {audits.length}.
-          </p>
-        ) : null}
+        {audits.length > HISTORY_LIMIT ? <p className="text-xs text-muted-foreground">{t.history.showing(HISTORY_LIMIT, audits.length)}</p> : null}
       </Section>
     </div>
   );

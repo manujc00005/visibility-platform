@@ -1,0 +1,10 @@
+
+ RUN  v5.0.5 /Users/manu/Proyectos/visibility-platform
+
+
+ Test Files  9 passed (9)
+      Tests  81 passed (81)
+   Start at  20:12:49
+   Duration  115.74s (tests 97%, import 3%)
+
+INTEGRATION_EXIT=0

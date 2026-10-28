@@ -1,51 +1,42 @@
 import { Suspense } from "react";
 import { SystemStatus } from "@/components/system-status";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getMessages } from "@/i18n/messages";
+import { getLocale } from "@/i18n/server";
 
-const PHASES = [
-  { id: "0", title: "Base del proyecto", state: "Hecha" },
-  { id: "1", title: "Empresas y dominios", state: "Hecha" },
-  { id: "2", title: "Auditoría SEO técnica", state: "Hecha" },
-  { id: "3", title: "Informe PDF", state: "Hecha" },
-  { id: "4", title: "Visibilidad GEO / AEO", state: "Hecha (DataForSEO sin verificar)" },
-  { id: "5", title: "Acceso y auditorías de pago", state: "Siguiente" },
-];
-
-export default function HomePage() {
+export default async function HomePage() {
+  const locale = await getLocale();
+  const { common, home } = getMessages(locale);
   return (
     <div className="flex flex-col gap-8">
       <section className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Visibility Platform</h1>
-        <p className="max-w-2xl text-muted-foreground">
-          Diagnóstico SEO y de visibilidad en buscadores con IA para pymes. Entorno privado de desarrollo.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{common.brand}</h1>
+        <p className="max-w-2xl text-muted-foreground">{home.description}</p>
       </section>
 
       <Suspense
         fallback={
           <Card>
             <CardHeader>
-              <CardTitle>Estado del sistema</CardTitle>
-              <CardDescription>Comprobando…</CardDescription>
+              <CardTitle>{home.systemStatus.title}</CardTitle>
+              <CardDescription>{home.systemStatus.checking}</CardDescription>
             </CardHeader>
           </Card>
         }
       >
-        <SystemStatus />
+        <SystemStatus locale={locale} />
       </Suspense>
 
       <Card>
         <CardHeader>
-          <CardTitle>Hoja de ruta</CardTitle>
-          <CardDescription>Detalle en docs/visibility-mvp/16-implementation-roadmap.md</CardDescription>
+          <CardTitle>{home.roadmap.title}</CardTitle>
+          <CardDescription>{home.roadmap.description}</CardDescription>
         </CardHeader>
         <CardContent>
           <ol className="flex flex-col gap-1 text-sm">
-            {PHASES.map((phase) => (
-              <li key={phase.id} className="flex justify-between gap-4">
-                <span>
-                  Fase {phase.id} · {phase.title}
-                </span>
+            {home.roadmap.phases.map((phase) => (
+              <li key={phase.label} className="flex justify-between gap-4">
+                <span>{phase.label}</span>
                 <span className="text-muted-foreground">{phase.state}</span>
               </li>
             ))}

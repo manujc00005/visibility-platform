@@ -2,6 +2,8 @@ import { createHash, randomUUID } from "node:crypto";
 import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { Database } from "@/db/client";
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
+import { getMessages, type Messages } from "@/i18n/messages";
 import { logger } from "@/lib/logger";
 import {
   BudgetExceededError,
@@ -27,7 +29,7 @@ import {
   type GeoRun,
   type GeoRunConfig,
 } from "@/modules/geo/schema";
-import { normalizeWebsite, WEBSITE_ERROR_MESSAGES } from "@/modules/workspaces/domain";
+import { normalizeWebsite } from "@/modules/workspaces/domain";
 import { workspaces } from "@/modules/workspaces/schema";
 import { getWorkspace } from "@/modules/workspaces/service";
 
@@ -53,17 +55,57 @@ export function fieldErrorsOf(error: z.ZodError): FieldErrors {
   return out;
 }
 
-const lines = (max: number, maxLength: number, label: string) =>
+type GeoValidation = Messages["geo"]["validation"];
+
+const lines = (max: number, maxLength: number, label: string, t: GeoValidation) =>
   z
     .string()
     .default("")
     .transform((value) => [...new Set(value.split(/\r?\n/).map((v) => v.trim()).filter(Boolean))])
-    .pipe(z.array(z.string().max(maxLength, `Cada ${label} admite como máximo ${maxLength} caracteres.`)).max(max, `Como máximo ${max} ${label}s.`));
+    .pipe(z.array(z.string().max(maxLength, t.lineMax(label, maxLength))).max(max, t.linesMax(label, max)));
+
+/** Validation schemas with messages in one language (D007); built once per language. */
+function buildSchemas(locale: Locale) {
+  const t = getMessages(locale).geo.validation;
+  return {
+    aliases: z.object({ aliases: lines(10, 80, t.aliasLabel, t) }),
+    competitor: z.object({
+      name: z.string({ error: t.nameRequired }).trim().min(1, t.nameRequired).max(120, t.maxChars(120)),
+      website: z.string().default(""),
+      aliases: lines(10, 80, t.aliasLabel, t),
+    }),
+    prompt: z.object({
+      text: z.string({ error: t.promptRequired }).trim().min(5, t.promptTooShort).max(400, t.maxChars(400)),
+      intent: z.enum(["discovery", "recommendation", "comparison", "branded"], { error: t.intentInvalid }),
+    }),
+    manual: z.object({
+      answer: z.string().default("").transform((v) => v.trim()).pipe(z.string().max(20_000, t.answerMax)),
+      sources: lines(30, 2_000, t.sourceLabel, t),
+      noAnswer: z.coerce.boolean().default(false),
+    }),
+  };
+}
+
+const schemaCache = new Map<Locale, ReturnType<typeof buildSchemas>>();
+
+export function geoSchemasFor(locale: Locale = DEFAULT_LOCALE): ReturnType<typeof buildSchemas> {
+  let schemas = schemaCache.get(locale);
+  if (!schemas) {
+    schemas = buildSchemas(locale);
+    schemaCache.set(locale, schemas);
+  }
+  return schemas;
+}
 
 // --- Brand and competitors ------------------------------------------------------------
 
-export async function updateBrandAliases(db: Database, workspaceId: string, raw: unknown): Promise<Result<string[], "not_found" | "validation">> {
-  const parsed = z.object({ aliases: lines(10, 80, "alias") }).safeParse(raw);
+export async function updateBrandAliases(
+  db: Database,
+  workspaceId: string,
+  raw: unknown,
+  locale: Locale = DEFAULT_LOCALE,
+): Promise<Result<string[], "not_found" | "validation">> {
+  const parsed = geoSchemasFor(locale).aliases.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "validation", fieldErrors: fieldErrorsOf(parsed.error) };
   if (!isUuid(workspaceId)) return { ok: false, error: "not_found" };
   const [row] = await db
@@ -74,11 +116,6 @@ export async function updateBrandAliases(db: Database, workspaceId: string, raw:
   return row ? { ok: true, value: row.aliases } : { ok: false, error: "not_found" };
 }
 
-const competitorSchema = z.object({
-  name: z.string({ error: "Indica el nombre." }).trim().min(1, "Indica el nombre.").max(120, "Máximo 120 caracteres."),
-  website: z.string().default(""),
-  aliases: lines(10, 80, "alias"),
-});
 
 /**
  * Row lock on the company: every writer of competitors takes it first, so counts and duplicate
@@ -121,13 +158,13 @@ export async function insertCompetitorLocked(
   return { ok: true, value: row! };
 }
 
-export function parseCompetitorInput(raw: unknown): Result<CompetitorInsert, "validation"> {
-  const parsed = competitorSchema.safeParse(raw);
+export function parseCompetitorInput(raw: unknown, locale: Locale = DEFAULT_LOCALE): Result<CompetitorInsert, "validation"> {
+  const parsed = geoSchemasFor(locale).competitor.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "validation", fieldErrors: fieldErrorsOf(parsed.error) };
   let domain: string | null = null;
   if (parsed.data.website.trim()) {
     const website = normalizeWebsite(parsed.data.website);
-    if (!website.ok) return { ok: false, error: "validation", fieldErrors: { website: [WEBSITE_ERROR_MESSAGES[website.error]] } };
+    if (!website.ok) return { ok: false, error: "validation", fieldErrors: { website: [getMessages(locale).validation.website[website.error]] } };
     domain = website.value.domain;
   }
   return { ok: true, value: { name: parsed.data.name, domain, aliases: parsed.data.aliases } };
@@ -137,8 +174,9 @@ export async function addCompetitor(
   db: Database,
   workspaceId: string,
   raw: unknown,
+  locale: Locale = DEFAULT_LOCALE,
 ): Promise<Result<GeoCompetitor, "not_found" | "validation" | "limit" | "already_exists">> {
-  const input = parseCompetitorInput(raw);
+  const input = parseCompetitorInput(raw, locale);
   if (!input.ok) return input;
   return db.transaction(async (tx) => {
     if (!(await lockWorkspace(tx, workspaceId))) return { ok: false, error: "not_found" as const };
@@ -171,13 +209,13 @@ export async function listCompetitors(db: Database, workspaceId: string): Promis
 
 // --- Prompts ----------------------------------------------------------------------------
 
-const promptSchema = z.object({
-  text: z.string({ error: "Escribe la pregunta." }).trim().min(5, "La pregunta es demasiado corta.").max(400, "Máximo 400 caracteres."),
-  intent: z.enum(["discovery", "recommendation", "comparison", "branded"], { error: "Tipo de pregunta no válido." }),
-});
-
-export async function addPrompt(db: Database, workspaceId: string, raw: unknown): Promise<Result<GeoPrompt, "not_found" | "validation" | "limit" | "duplicate">> {
-  const parsed = promptSchema.safeParse(raw);
+export async function addPrompt(
+  db: Database,
+  workspaceId: string,
+  raw: unknown,
+  locale: Locale = DEFAULT_LOCALE,
+): Promise<Result<GeoPrompt, "not_found" | "validation" | "limit" | "duplicate">> {
+  const parsed = geoSchemasFor(locale).prompt.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "validation", fieldErrors: fieldErrorsOf(parsed.error) };
   if (!(await getWorkspace(db, workspaceId))) return { ok: false, error: "not_found" };
   const active = await listPrompts(db, workspaceId);
@@ -392,11 +430,31 @@ async function updateRunCompletion(db: Database, runId: string): Promise<void> {
   }
 }
 
-const manualSchema = z.object({
-  answer: z.string().default("").transform((v) => v.trim()).pipe(z.string().max(20_000, "Máximo 20.000 caracteres.")),
-  sources: lines(30, 2_000, "fuente"),
-  noAnswer: z.coerce.boolean().default(false),
-});
+export interface ManualObservationInput {
+  answer: string;
+  sources: string[];
+  noAnswer: boolean;
+}
+
+/**
+ * Validates an assisted-capture answer without touching the database: an empty or blank
+ * answer needs «Sin respuesta», and every source must be an http(s) URL.
+ */
+export function parseManualObservation(raw: unknown, locale: Locale = DEFAULT_LOCALE): Result<ManualObservationInput, "validation"> {
+  const t = getMessages(locale).geo.validation;
+  const parsed = geoSchemasFor(locale).manual.safeParse(raw);
+  if (!parsed.success) return { ok: false, error: "validation", fieldErrors: fieldErrorsOf(parsed.error) };
+  if (!parsed.data.noAnswer && !parsed.data.answer) return { ok: false, error: "validation", fieldErrors: { answer: [t.answerOrNoAnswer] } };
+  const invalidSource = parsed.data.sources.find((s) => {
+    try {
+      return !["http:", "https:"].includes(new URL(s).protocol);
+    } catch {
+      return true;
+    }
+  });
+  if (invalidSource) return { ok: false, error: "validation", fieldErrors: { sources: [t.invalidUrl(invalidSource.slice(0, 80))] } };
+  return { ok: true, value: parsed.data };
+}
 
 /** Stores an answer the operator observed in ChatGPT's web interface (assisted capture, no cost). */
 export async function recordManualObservation(
@@ -406,27 +464,17 @@ export async function recordManualObservation(
   observationId: string,
   raw: unknown,
   now: () => Date = () => new Date(),
+  locale: Locale = DEFAULT_LOCALE,
 ): Promise<Result<GeoObservation, "not_found" | "validation" | "not_pending">> {
-  const parsed = manualSchema.safeParse(raw);
-  if (!parsed.success) return { ok: false, error: "validation", fieldErrors: fieldErrorsOf(parsed.error) };
-  if (!parsed.data.noAnswer && !parsed.data.answer) {
-    return { ok: false, error: "validation", fieldErrors: { answer: ["Pega la respuesta o marca «Sin respuesta»."] } };
-  }
-  const invalidSource = parsed.data.sources.find((s) => {
-    try {
-      return !["http:", "https:"].includes(new URL(s).protocol);
-    } catch {
-      return true;
-    }
-  });
-  if (invalidSource) return { ok: false, error: "validation", fieldErrors: { sources: [`URL no válida: ${invalidSource.slice(0, 80)}`] } };
+  const parsed = parseManualObservation(raw, locale);
+  if (!parsed.ok) return parsed;
 
   const run = await getRunRow(db, workspaceId, runId);
   if (!run || run.provider !== "manual" || !isUuid(observationId)) return { ok: false, error: "not_found" };
   const fields = completedFields(
     run.config,
-    parsed.data.noAnswer ? "" : parsed.data.answer,
-    parsed.data.sources.map((url) => ({ url, title: null })),
+    parsed.value.noAnswer ? "" : parsed.value.answer,
+    parsed.value.sources.map((url) => ({ url, title: null })),
     now(),
   );
   const [row] = await db

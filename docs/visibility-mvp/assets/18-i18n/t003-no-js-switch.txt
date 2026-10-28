@@ -1,0 +1,23 @@
+# T003 — cambio de idioma sin JavaScript (curl contra next start, puerto 3105, 2026-10-27)
+
+## Formulario servido (GET /workspaces, sin cookie)
+<form class="ml-auto flex items-center" action="" encType="multipart/form-data" method="POST">
+campos ocultos: ['$ACTION_ID_40e2554fdd93407450b43c04323c7e531bdf60d628']
+
+## POST multipart con los campos ocultos + locale=en
+HTTP/1.1 200 OK
+Set-Cookie: locale=en; Path=/; Expires=Wed, 27 Oct 2027 13:48:51 GMT; Max-Age=31536000; Secure; HttpOnly; SameSite=lax
+Content-Type: text/html; charset=utf-8
+html lang: lang="en"; skip link: >Skip to content<
+
+## GET siguiente con la cookie
+html lang: lang="en"; nav: aria-label="Main"
+
+## POST locale=es
+HTTP/1.1 200 OK
+Set-Cookie: locale=es; Path=/; Expires=Wed, 27 Oct 2027 13:48:51 GMT; Max-Age=31536000; Secure; HttpOnly; SameSite=lax
+html lang: lang="es"
+
+## POST locale=xx
+HTTP/1.1 200 OK
+set-cookie: 0 cabeceras

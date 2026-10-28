@@ -7,80 +7,103 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ManualObservationForm, RefreshRunButton } from "@/components/geo/geo-forms";
 import { PageHeader } from "@/components/overview/page-header";
 import { getDb } from "@/db/client";
-import { fraction, INTENT_LABELS, OBSERVATION_STATUS_LABELS, PROVIDER_LABELS, RUN_STATUS_LABELS } from "@/modules/geo/presentation";
+import { DEFAULT_LOCALE } from "@/i18n/locale";
+import { getMessages } from "@/i18n/messages";
+import { getLocale } from "@/i18n/server";
+import { fraction, geoLabels } from "@/modules/geo/presentation";
 import { getGeoRun } from "@/modules/geo/service";
 import { displayDate, displayDomain } from "@/modules/workspaces/presentation";
 import { getWorkspace } from "@/modules/workspaces/service";
 import { recordObservationAction, refreshRunAction } from "../../actions";
 
-export const metadata: Metadata = { title: "Medición de visibilidad en IA" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: getMessages(await getLocale()).geo.run.metaTitle };
+}
 export const instant = false;
 
 export default async function GeoRunPage({ params }: PageProps<"/workspaces/[id]/geo/runs/[runId]">) {
   await connection();
   const { id, runId } = await params;
+  const locale = await getLocale();
   const db = getDb();
   const workspace = await getWorkspace(db, id);
   if (!workspace) notFound();
   const view = await getGeoRun(db, workspace.id, runId);
   if (!view) notFound();
+  const m = getMessages(locale);
+  const t = m.geo.run;
+  const L = geoLabels(locale);
   const { run, observations, metrics } = view;
   const config = run.config;
   const promptText = new Map(config.prompts.map((p) => [p.id, p]));
   const competitorName = new Map(config.panel.competitors.map((c) => [c.id, c.name]));
+  // Captured answers, sources and provider messages are stored content: one notice per view outside Spanish.
+  const showNotice = locale !== DEFAULT_LOCALE && observations.some((o) => o.responseText || o.sources?.length || o.error);
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
+        locale={locale}
         breadcrumbs={[
-          { href: "/workspaces", label: "Empresas" },
+          { href: "/workspaces", label: m.workspaces.list.title },
           { href: `/workspaces/${workspace.id}`, label: workspace.name },
-          { href: `/workspaces/${workspace.id}/geo`, label: "Presencia en IA" },
+          { href: `/workspaces/${workspace.id}/geo`, label: m.geo.page.title },
         ]}
-        title={`Medición de ${workspace.name}`}
-        meta={`${displayDomain(workspace.domain)} · ${displayDate(run.createdAt)} · ${PROVIDER_LABELS[run.provider]} · ${RUN_STATUS_LABELS[run.status]} · ${config.location.locationName}, ${config.location.languageCode} · ${config.repetitions} repetición(es) · metodología ${config.methodologyVersion}`}
+        title={t.title(workspace.name)}
+        meta={t.meta({
+          domain: displayDomain(workspace.domain),
+          when: displayDate(run.createdAt, locale),
+          provider: L.provider[run.provider],
+          status: L.runStatus[run.status],
+          location: config.location.locationName,
+          language: config.location.languageCode,
+          repetitions: config.repetitions,
+          methodology: config.methodologyVersion,
+        })}
       />
 
       {run.provider === "dataforseo_chatgpt" && run.status === "collecting" ? (
-        <RefreshRunButton action={refreshRunAction.bind(null, workspace.id, run.id)} />
+        <RefreshRunButton action={refreshRunAction.bind(null, workspace.id, run.id)} labels={m.geo.forms} />
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          ["Te menciona", metrics.brandPresence, "Respuestas que nombran tu marca (sin contar preguntas sobre tu marca)"],
-          ["Cita tu web", metrics.citationRate, "Respuestas que enlazan a tu dominio como fuente"],
-          ["Preguntas con presencia", metrics.promptCoverage, "Preguntas en las que apareces al menos una vez"],
-          ["Respuestas recogidas", metrics.capture, "Observaciones completadas sobre las previstas"],
-        ].map(([title, value, hint]) => (
-          <Card key={title as string} size="sm">
+        {(
+          [
+            ["mentions", metrics.brandPresence],
+            ["cites", metrics.citationRate],
+            ["coverage", metrics.promptCoverage],
+            ["capture", metrics.capture],
+          ] as const
+        ).map(([key, value]) => (
+          <Card key={key} size="sm">
             <CardHeader>
-              <CardDescription>{title as string}</CardDescription>
-              <CardTitle className="text-lg">{fraction(value as { k: number; n: number })}</CardTitle>
+              <CardDescription>{t.metrics[key].title}</CardDescription>
+              <CardTitle className="text-lg">{fraction(value, locale)}</CardTitle>
             </CardHeader>
-            <CardContent className="text-xs text-muted-foreground">{hint as string}</CardContent>
+            <CardContent className="text-xs text-muted-foreground">{t.metrics[key].hint}</CardContent>
           </Card>
         ))}
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Comparación con competidores</CardTitle>
-          <CardDescription>Menciones en respuestas a preguntas que no nombran tu marca (cada marca cuenta una vez por respuesta).</CardDescription>
+          <CardTitle>{t.comparison.title}</CardTitle>
+          <CardDescription>{t.comparison.description}</CardDescription>
         </CardHeader>
         <CardContent>
           {metrics.shareOfVoice ? (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Marca</TableHead>
-                  <TableHead>Menciones</TableHead>
-                  <TableHead>Cuota</TableHead>
+                  <TableHead>{t.comparison.brand}</TableHead>
+                  <TableHead>{t.comparison.mentions}</TableHead>
+                  <TableHead>{t.comparison.share}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {metrics.shareOfVoice.entries.map((e) => (
                   <TableRow key={e.id}>
-                    <TableCell>{e.id === "brand" ? `${config.panel.brand.name} (tu marca)` : e.name}</TableCell>
+                    <TableCell>{e.id === "brand" ? t.comparison.yourBrand(config.panel.brand.name) : e.name}</TableCell>
                     <TableCell>{e.k}</TableCell>
                     <TableCell>{Math.round((e.k / metrics.shareOfVoice!.total) * 100)} %</TableCell>
                   </TableRow>
@@ -88,18 +111,21 @@ export default async function GeoRunPage({ params }: PageProps<"/workspaces/[id]
               </TableBody>
             </Table>
           ) : (
-            <p className="text-sm text-muted-foreground">Sin datos: ninguna marca del panel aparece en las respuestas recogidas.</p>
+            <p className="text-sm text-muted-foreground">{t.comparison.none}</p>
           )}
-          {metrics.branded.n > 0 ? (
-            <p className="mt-3 text-sm text-muted-foreground">Preguntas sobre tu marca: te nombra en {fraction(metrics.branded)}.</p>
-          ) : null}
+          {metrics.branded.n > 0 ? <p className="mt-3 text-sm text-muted-foreground">{t.comparison.branded(fraction(metrics.branded, locale))}</p> : null}
         </CardContent>
       </Card>
 
       <section className="flex flex-col gap-3" aria-labelledby="answers-title">
         <h2 id="answers-title" className="text-lg font-semibold">
-          Respuestas
+          {t.answers.title}
         </h2>
+        {showNotice ? (
+          <p role="note" className="rounded-md border border-border/80 bg-muted/60 p-2.5 text-xs text-muted-foreground">
+            {t.answers.originalNotice}
+          </p>
+        ) : null}
         {observations.map((o) => {
           const prompt = promptText.get(o.promptId);
           const competitorsMentioned = Object.entries(o.mentions?.competitors ?? {})
@@ -109,11 +135,11 @@ export default async function GeoRunPage({ params }: PageProps<"/workspaces/[id]
             <Card key={o.id} size="sm">
               <CardHeader>
                 <CardTitle className="flex flex-wrap items-center gap-2 text-sm">
-                  <span>{prompt?.text}</span>
-                  {prompt ? <Badge variant="outline">{INTENT_LABELS[prompt.intent]}</Badge> : null}
+                  <span lang="es">{prompt?.text}</span>
+                  {prompt ? <Badge variant="outline">{L.intent[prompt.intent]}</Badge> : null}
                   {config.repetitions > 1 ? <Badge variant="secondary">#{o.repetition}</Badge> : null}
                   <Badge variant={o.status === "completed" ? "secondary" : o.status === "failed" || o.status === "uncertain" ? "destructive" : "outline"}>
-                    {OBSERVATION_STATUS_LABELS[o.status]}
+                    {L.observationStatus[o.status]}
                   </Badge>
                 </CardTitle>
               </CardHeader>
@@ -123,17 +149,17 @@ export default async function GeoRunPage({ params }: PageProps<"/workspaces/[id]
                     <p>
                       {o.answerPresent ? (
                         <>
-                          Tu marca: <strong>{o.mentions?.brand ? "mencionada" : "no mencionada"}</strong>
-                          {competitorsMentioned.length ? ` · competidores: ${competitorsMentioned.join(", ")}` : ""}
-                          {o.ownCited ? " · cita tu web" : ""}
+                          {t.answers.brand} <strong>{o.mentions?.brand ? t.answers.mentioned : t.answers.notMentioned}</strong>
+                          {competitorsMentioned.length ? t.answers.competitors(competitorsMentioned.join(", ")) : ""}
+                          {o.ownCited ? t.answers.citesYou : ""}
                         </>
                       ) : (
-                        "Sin respuesta."
+                        t.answers.noAnswer
                       )}
                     </p>
                     {o.responseText ? (
                       <details>
-                        <summary className="cursor-pointer text-muted-foreground">Ver respuesta</summary>
+                        <summary className="cursor-pointer text-muted-foreground">{t.answers.viewAnswer}</summary>
                         <p className="mt-2 whitespace-pre-wrap break-words rounded bg-muted p-2 text-xs">{o.responseText}</p>
                       </details>
                     ) : null}
@@ -141,18 +167,20 @@ export default async function GeoRunPage({ params }: PageProps<"/workspaces/[id]
                       <ul className="flex flex-col gap-0.5">
                         {o.sources.map((s, i) => (
                           <li key={i} className="font-mono text-xs break-all">
-                            [{s.kind === "own" ? "tu web" : s.kind === "competitor" ? "competidor" : "otra"}] {s.url}
+                            [{t.answers.sourceKind[s.kind === "own" ? "own" : s.kind === "competitor" ? "competitor" : "other"]}] {s.url}
                           </li>
                         ))}
                       </ul>
                     ) : o.answerPresent ? (
-                      <p className="text-xs text-muted-foreground">Sin fuentes citadas.</p>
+                      <p className="text-xs text-muted-foreground">{t.answers.noSources}</p>
                     ) : null}
                   </>
                 ) : o.status === "pending" && run.provider === "manual" ? (
-                  <ManualObservationForm action={recordObservationAction.bind(null, workspace.id, run.id, o.id)} />
+                  <ManualObservationForm action={recordObservationAction.bind(null, workspace.id, run.id, o.id)} labels={m.geo.forms} />
                 ) : o.error ? (
-                  <p className="text-xs text-muted-foreground">{o.error}</p>
+                  <p className="text-xs text-muted-foreground" lang="es">
+                    {o.error}
+                  </p>
                 ) : null}
               </CardContent>
             </Card>

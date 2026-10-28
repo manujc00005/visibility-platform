@@ -1,0 +1,6 @@
+# T008 — cambio de idioma sin JavaScript (curl contra next start, 2026-10-27)
+POST locale=en → HTTP/1.1 200 OK | Set-Cookie: locale=en; Path=/; Max-Age=31536000; Secure; HttpOnly; SameSite=lax | Location: 0 | html lang="en"
+POST locale=es → HTTP/1.1 200 OK | Set-Cookie: locale=es; Path=/; Max-Age=31536000; Secure; HttpOnly; SameSite=lax | Location: 0 | html lang="es"
+POST locale=xx → HTTP/1.1 200 OK | Set-Cookie:  | Location: 0 | html lang="es"
+POST locale=../../evil → HTTP/1.1 200 OK | Set-Cookie:  | Location: 0 | html lang="es"
+POST locale=https://evil.example → HTTP/1.1 200 OK | Set-Cookie:  | Location: 0 | html lang="es"

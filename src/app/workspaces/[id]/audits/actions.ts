@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
+import { getMessages } from "@/i18n/messages";
+import { getLocale } from "@/i18n/server";
 import { createAuditDeps } from "@/modules/audits/deps";
 import { runAudit } from "@/modules/audits/service";
 
@@ -16,10 +18,11 @@ export interface RunAuditState {
 export async function runAuditAction(workspaceId: string): Promise<RunAuditState> {
   const result = await runAudit(getDb(), workspaceId, createAuditDeps());
   if (!result.ok) {
+    const t = getMessages(await getLocale()).audits.runErrors;
     if (result.error.kind === "already_running") {
-      return { error: "Ya hay una auditoría en curso para esta empresa.", runningAuditId: result.error.auditId };
+      return { error: t.alreadyRunning, runningAuditId: result.error.auditId };
     }
-    return { error: "Esta empresa ya no existe.", runningAuditId: null };
+    return { error: t.workspaceGone, runningAuditId: null };
   }
   // The overview and both detail pages read audits.
   revalidatePath(`/workspaces/${workspaceId}`);

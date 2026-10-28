@@ -7,14 +7,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { WorkspaceFormState } from "@/app/workspaces/actions";
+import type { Messages } from "@/i18n/messages";
 import type { WorkspaceField, WorkspaceFormValues } from "@/modules/workspaces/validation";
 
 type Action = (state: WorkspaceFormState, formData: FormData) => Promise<WorkspaceFormState>;
+
+/** Labels of the form: a serializable fragment of the catalog (strings only), passed by the page. */
+export type WorkspaceFormLabels = Messages["workspaces"]["form"];
 
 interface Props {
   action: Action;
   initialValues: WorkspaceFormValues;
   countries: { code: string; name: string }[];
+  labels: WorkspaceFormLabels;
   submitLabel: string;
   cancelHref: string;
 }
@@ -28,7 +33,7 @@ function FieldError({ id, messages }: { id: string; messages?: string[] }) {
   );
 }
 
-export function WorkspaceForm({ action, initialValues, countries, submitLabel, cancelHref }: Props) {
+export function WorkspaceForm({ action, initialValues, countries, labels, submitLabel, cancelHref }: Props) {
   const [state, formAction, pending] = useActionState(action, {
     values: initialValues,
     fieldErrors: {},
@@ -48,12 +53,12 @@ export function WorkspaceForm({ action, initialValues, countries, submitLabel, c
     <form key={state.attempt} action={formAction} noValidate className="flex max-w-2xl flex-col gap-5">
       {hasErrors ? (
         <div role="alert" className="rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
-          {state.formError ?? "Revisa los campos marcados."}
+          {state.formError ?? labels.reviewFields}
           {state.duplicateOf ? (
             <>
               {" "}
               <Link href={`/workspaces/${state.duplicateOf}`} className="underline">
-                Ver la empresa existente
+                {labels.viewExisting}
               </Link>
             </>
           ) : null}
@@ -61,13 +66,13 @@ export function WorkspaceForm({ action, initialValues, countries, submitLabel, c
       ) : null}
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="name">Nombre comercial</Label>
+        <Label htmlFor="name">{labels.name}</Label>
         <Input id="name" name="name" defaultValue={values.name} required maxLength={120} aria-invalid={invalid("name")} aria-describedby={describedBy("name")} />
         <FieldError id="name-error" messages={fieldErrors.name} />
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="website">Web</Label>
+        <Label htmlFor="website">{labels.website}</Label>
         <Input
           id="website"
           name="website"
@@ -76,25 +81,25 @@ export function WorkspaceForm({ action, initialValues, countries, submitLabel, c
           inputMode="url"
           autoCapitalize="none"
           spellCheck={false}
-          placeholder="ejemplo.es o https://www.ejemplo.es"
+          placeholder={labels.websitePlaceholder}
           aria-invalid={invalid("website")}
           aria-describedby={describedBy("website", "website-hint")}
         />
         <p id="website-hint" className="text-sm text-muted-foreground">
-          Dominio o URL completa. No se visita la web en este paso.
+          {labels.websiteHint}
         </p>
         <FieldError id="website-error" messages={fieldErrors.website} />
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="sector">Sector o actividad</Label>
-        <Input id="sector" name="sector" defaultValue={values.sector} required maxLength={80} placeholder="Clínica dental" aria-invalid={invalid("sector")} aria-describedby={describedBy("sector")} />
+        <Label htmlFor="sector">{labels.sector}</Label>
+        <Input id="sector" name="sector" defaultValue={values.sector} required maxLength={80} placeholder={labels.sectorPlaceholder} aria-invalid={invalid("sector")} aria-describedby={describedBy("sector")} />
         <FieldError id="sector-error" messages={fieldErrors.sector} />
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
-          <Label htmlFor="country">País</Label>
+          <Label htmlFor="country">{labels.country}</Label>
           <select
             id="country"
             name="country"
@@ -116,7 +121,7 @@ export function WorkspaceForm({ action, initialValues, countries, submitLabel, c
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="city">
-            Ciudad <span className="font-normal text-muted-foreground">(opcional)</span>
+            {labels.city} <span className="font-normal text-muted-foreground">{labels.optional}</span>
           </Label>
           <Input id="city" name="city" defaultValue={values.city} maxLength={120} aria-invalid={invalid("city")} aria-describedby={describedBy("city")} />
           <FieldError id="city-error" messages={fieldErrors.city} />
@@ -124,29 +129,29 @@ export function WorkspaceForm({ action, initialValues, countries, submitLabel, c
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="services">Servicios principales</Label>
+        <Label htmlFor="services">{labels.services}</Label>
         <Textarea
           id="services"
           name="services"
           defaultValue={values.services}
           required
           rows={4}
-          placeholder={"Implantes\nOrtodoncia invisible"}
+          placeholder={labels.servicesPlaceholder}
           aria-invalid={invalid("services")}
           aria-describedby={describedBy("services", "services-hint")}
         />
         <p id="services-hint" className="text-sm text-muted-foreground">
-          Uno por línea, entre 1 y 10.
+          {labels.servicesHint}
         </p>
         <FieldError id="services-error" messages={fieldErrors.services} />
       </div>
 
       <div className="flex items-center gap-3">
         <Button type="submit" disabled={pending}>
-          {pending ? "Guardando…" : submitLabel}
+          {pending ? labels.saving : submitLabel}
         </Button>
         <Link href={cancelHref} className={buttonVariants({ variant: "ghost" })}>
-          Cancelar
+          {labels.cancel}
         </Link>
       </div>
     </form>

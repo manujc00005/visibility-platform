@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
+import { getMessages, type Messages } from "@/i18n/messages";
+import { getLocale } from "@/i18n/server";
 import { createWorkspace, updateWorkspace, type WorkspaceResult } from "@/modules/workspaces/service";
 import { formValuesFrom, type FieldErrors, type WorkspaceFormValues } from "@/modules/workspaces/validation";
 
@@ -21,7 +23,12 @@ export interface WorkspaceFormState {
   attempt: number;
 }
 
-function failure(previous: WorkspaceFormState, values: WorkspaceFormValues, result: WorkspaceResult): WorkspaceFormState {
+function failure(
+  previous: WorkspaceFormState,
+  values: WorkspaceFormValues,
+  result: WorkspaceResult,
+  messages: Messages["workspaces"]["errors"],
+): WorkspaceFormState {
   const base = { values, fieldErrors: {}, duplicateOf: null, formError: null, attempt: previous.attempt + 1 };
   if (result.ok) return base;
   switch (result.error.kind) {
@@ -30,18 +37,19 @@ function failure(previous: WorkspaceFormState, values: WorkspaceFormValues, resu
     case "duplicate_domain":
       return {
         ...base,
-        fieldErrors: { website: [`Ya existe una empresa con el dominio ${result.error.domain}.`] },
+        fieldErrors: { website: [messages.duplicateDomain(result.error.domain)] },
         duplicateOf: result.error.existingId,
       };
     case "not_found":
-      return { ...base, formError: "Esta empresa ya no existe." };
+      return { ...base, formError: messages.notFound };
   }
 }
 
 export async function createWorkspaceAction(previous: WorkspaceFormState, formData: FormData): Promise<WorkspaceFormState> {
+  const locale = await getLocale();
   const values = formValuesFrom(formData);
-  const result = await createWorkspace(getDb(), values);
-  if (!result.ok) return failure(previous, values, result);
+  const result = await createWorkspace(getDb(), values, locale);
+  if (!result.ok) return failure(previous, values, result, getMessages(locale).workspaces.errors);
   revalidatePath("/workspaces");
   redirect(`/workspaces/${result.workspace.id}`);
 }
@@ -51,9 +59,10 @@ export async function updateWorkspaceAction(
   previous: WorkspaceFormState,
   formData: FormData,
 ): Promise<WorkspaceFormState> {
+  const locale = await getLocale();
   const values = formValuesFrom(formData);
-  const result = await updateWorkspace(getDb(), id, values);
-  if (!result.ok) return failure(previous, values, result);
+  const result = await updateWorkspace(getDb(), id, values, locale);
+  if (!result.ok) return failure(previous, values, result, getMessages(locale).workspaces.errors);
   revalidatePath("/workspaces");
   revalidatePath(`/workspaces/${id}`);
   redirect(`/workspaces/${id}`);

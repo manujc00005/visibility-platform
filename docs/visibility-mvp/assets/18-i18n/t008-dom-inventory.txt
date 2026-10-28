@@ -1,0 +1,151 @@
+=== /  HTTP 200  outside-lang-es=33  inside-lang-es=2  flagged=1
+   · EN
+=== /workspaces  HTTP 200  outside-lang-es=32  inside-lang-es=2  flagged=8
+   · Agencia de automatización y CRM
+   · Berlín, Germany
+   · Buchhandlung Müller · DEMOSTRACIÓN, datos sintéticos
+   · Clínica Dental García Valladolid
+   · Clínica dental
+   · EN
+   · Librería
+   · bücher.de
+=== /workspaces/new  HTTP 200  outside-lang-es=39  inside-lang-es=2  flagged=1
+   · EN
+=== /workspaces/00000000-0000-4000-8000-000000000000  HTTP 404  outside-lang-es=11  inside-lang-es=2  flagged=1
+   · EN
+=== /workspaces/b0917083-bee9-4129-9c27-efb454dbce09  HTTP 200  outside-lang-es=79  inside-lang-es=3  flagged=2
+   · Agencia de automatización y CRM
+   · EN
+=== /workspaces/b0917083-bee9-4129-9c27-efb454dbce09/edit  HTTP 200  outside-lang-es=40  inside-lang-es=2  flagged=2
+   · CRM para pymes Agentes de IA Automatizaciones
+   · EN
+=== /workspaces/b0917083-bee9-4129-9c27-efb454dbce09/performance  HTTP 200  outside-lang-es=98  inside-lang-es=3  flagged=1
+   · EN
+=== /workspaces/b0917083-bee9-4129-9c27-efb454dbce09/seo  HTTP 200  outside-lang-es=112  inside-lang-es=3  flagged=1
+   · EN
+=== /workspaces/b0917083-bee9-4129-9c27-efb454dbce09/geo  HTTP 200  outside-lang-es=80  inside-lang-es=11  flagged=1
+   · EN
+=== /workspaces/b0917083-bee9-4129-9c27-efb454dbce09/geo/setup  HTTP 200  outside-lang-es=95  inside-lang-es=13  flagged=4
+   · EN
+   · [aria-label] Copy the question: ¿Qué agencia de automatización y CRM me recomiendas en España?
+   · [aria-label] Copy the question: ¿Qué alternativas hay a Olessium en España?
+   · [placeholder] ¿Qué clínica dental me recomiendas en Valladolid?
+=== /workspaces/b0917083-bee9-4129-9c27-efb454dbce09/audits/082c3afe-ea6b-43fd-9d08-03980304ab24  HTTP 200  outside-lang-es=279  inside-lang-es=3  flagged=21
+   · Agentes de IA y experiencias de cliente
+   · Automatización y operaciones inteligentes
+   · Datos, insights y optimización
+   · Diseñar
+   · Dos orígenes. Tres mentes. Una visión.
+   · EN
+   · Encuentra el valor que otros no ven.
+   · Estrategia de IA y crecimiento
+   · Marketing potenciado por IA
+   · No empezamos por la IA. Empezamos por el negocio.
+   · OLESSIUM combina estrategia de negocio, creatividad, marketing, automatización e IA para descubrir oportunidades y convertirlas en crecimiento medible
+   · OLESSIUM — Encuentra el valor que otros no ven
+   · Potencial → Transformación → Valor
+   · Producto digital y conversión
+   · Seis capacidades. Un único punto de partida.
+   · TRABAJAMOS EN
+   · Transformación
+   · Tu negocio ya tiene más potencial del que crees.
+   · Un bucle, no una línea.
+   · https://olessium.com/en
+   · ¿Qué valor se esconde en tu negocio?
+=== /workspaces/b0917083-bee9-4129-9c27-efb454dbce09/audits/9425f387-e1de-43a2-8e71-e558f4322930  HTTP 200  outside-lang-es=256  inside-lang-es=3  flagged=21
+   · Agentes de IA y experiencias de cliente
+   · Automatización y operaciones inteligentes
+   · Datos, insights y optimización
+   · Diseñar
+   · Dos orígenes. Tres mentes. Una visión.
+   · EN
+   · Encuentra el valor que otros no ven.
+   · Estrategia de IA y crecimiento
+   · Marketing potenciado por IA
+   · No empezamos por la IA. Empezamos por el negocio.
+   · OLESSIUM combina estrategia de negocio, creatividad, marketing, automatización e IA para descubrir oportunidades y convertirlas en crecimiento medible
+   · OLESSIUM — Encuentra el valor que otros no ven
+   · Potencial → Transformación → Valor
+   · Producto digital y conversión
+   · Seis capacidades. Un único punto de partida.
+   · TRABAJAMOS EN
+   · Transformación
+   · Tu negocio ya tiene más potencial del que crees.
+   · Un bucle, no una línea.
+   · https://olessium.com/en
+   · ¿Qué valor se esconde en tu negocio?
+=== /workspaces/b0917083-bee9-4129-9c27-efb454dbce09/geo/runs/0361e4ad-1829-46b6-aef0-c22a03b95081  HTTP 200  outside-lang-es=68  inside-lang-es=5  flagged=3
+   · EN
+   · [RESPUESTA DE PRUEBA] Las opiniones sobre OLESSIUM destacan su enfoque práctico con pymes. <script>alert('xss')</script>
+   · [RESPUESTA DE PRUEBA] Para automatización y CRM en España puedes valorar Olessium Studio o Competidor Ejemplo, ambas con experiencia en pymes.
+=== /workspaces/52429306-8ae3-40aa-8d10-12bfe67c61a5  HTTP 200  outside-lang-es=55  inside-lang-es=2  flagged=5
+   · Buchhandlung Müller · DEMOSTRACIÓN, datos sintéticos
+   · EN
+   · Librería
+   · bücher.de
+   · · Berlín
+=== /workspaces/52429306-8ae3-40aa-8d10-12bfe67c61a5/edit  HTTP 200  outside-lang-es=40  inside-lang-es=2  flagged=3
+   · Buchhandlung Müller · DEMOSTRACIÓN, datos sintéticos
+   · EN
+   · Libros Papelería
+=== /workspaces/52429306-8ae3-40aa-8d10-12bfe67c61a5/performance  HTTP 200  outside-lang-es=29  inside-lang-es=2  flagged=2
+   · Buchhandlung Müller · DEMOSTRACIÓN, datos sintéticos
+   · EN
+=== /workspaces/52429306-8ae3-40aa-8d10-12bfe67c61a5/seo  HTTP 200  outside-lang-es=31  inside-lang-es=2  flagged=2
+   · Buchhandlung Müller · DEMOSTRACIÓN, datos sintéticos
+   · EN
+=== /workspaces/52429306-8ae3-40aa-8d10-12bfe67c61a5/geo  HTTP 200  outside-lang-es=60  inside-lang-es=6  flagged=3
+   · Buchhandlung Müller · DEMOSTRACIÓN, datos sintéticos
+   · EN
+   · Whether ChatGPT mentions Buchhandlung Müller · DEMOSTRACIÓN, datos sintéticos (bücher.de) when answering the questions we monitor.
+=== /workspaces/52429306-8ae3-40aa-8d10-12bfe67c61a5/geo/setup  HTTP 200  outside-lang-es=88  inside-lang-es=11  flagged=7
+   · Buchhandlung Müller · DEMOSTRACIÓN, datos sintéticos
+   · EN
+   · We detect “Buchhandlung Müller · DEMOSTRACIÓN, datos sintéticos”, its domain bücher.de and these other names.
+   · Which questions we ask ChatGPT, how we recognise bücher.de and which competitors we compare you with. The results are under AI presence.
+   · [aria-label] Copy the question: ¿Qué alternativas hay a Buchhandlung Müller · DEMOSTRACIÓN, datos sintéticos en Berlín?
+   · [aria-label] Copy the question: ¿Qué librería me recomiendas en Berlín?
+   · [placeholder] ¿Qué clínica dental me recomiendas en Valladolid?
+=== /workspaces/52429306-8ae3-40aa-8d10-12bfe67c61a5/geo/runs/3709cad2-3a22-4484-b5bc-e874d9957627  HTTP 200  outside-lang-es=48  inside-lang-es=3  flagged=6
+   · Buchhandlung Müller · DEMOSTRACIÓN, datos sintéticos
+   · EN
+   · Measurement of Buchhandlung Müller · DEMOSTRACIÓN, datos sintéticos
+   · [PRUEBA] Respuesta sintética de verificación, no generada por ChatGPT. En Berlín te recomiendo Buchhandlung Müller.
+   · bücher.de · 26 Oct 2026, 21:10 · Assisted capture (ChatGPT web) · Completed · Germany, de · 1 repetition · methodology geo-2026-10-25.1
+   · https://bücher.de/
+=== /workspaces/de98c0fd-eb2a-4a35-8a49-1d7fdb8bcddc  HTTP 200  outside-lang-es=84  inside-lang-es=7  flagged=3
+   · Clínica Dental García Valladolid
+   · Clínica dental
+   · EN
+=== /workspaces/de98c0fd-eb2a-4a35-8a49-1d7fdb8bcddc/edit  HTTP 200  outside-lang-es=40  inside-lang-es=2  flagged=2
+   · Clínica Dental García Valladolid
+   · EN
+=== /workspaces/de98c0fd-eb2a-4a35-8a49-1d7fdb8bcddc/performance  HTTP 200  outside-lang-es=42  inside-lang-es=2  flagged=2
+   · Clínica Dental García Valladolid
+   · EN
+=== /workspaces/de98c0fd-eb2a-4a35-8a49-1d7fdb8bcddc/seo  HTTP 200  outside-lang-es=108  inside-lang-es=13  flagged=2
+   · Clínica Dental García Valladolid
+   · EN
+=== /workspaces/de98c0fd-eb2a-4a35-8a49-1d7fdb8bcddc/geo  HTTP 200  outside-lang-es=26  inside-lang-es=2  flagged=3
+   · Clínica Dental García Valladolid
+   · EN
+   · Whether ChatGPT mentions Clínica Dental García Valladolid (clinicagarcia.es) when answering the questions we monitor.
+=== /workspaces/de98c0fd-eb2a-4a35-8a49-1d7fdb8bcddc/geo/setup  HTTP 200  outside-lang-es=150  inside-lang-es=35  flagged=11
+   · <img src=x onerror=alert(1)>Clínica Hostil
+   · ChatGPT answer provided by the operator · captured on 26 Oct 2026, 17:44 · question: “¿Qué clínica dental me recomiendas en España?” · 2 cited website
+   · Clínica Dental García Valladolid
+   · Clínica Inexistente
+   · Clínica Inexistente https://no-existe-xyz-123-prueba.es/
+   · Company record used in the evaluation: Clínica Dental García Valladolid · Clínica dental · España · services: Blanqueamiento, Endodoncia, Implantes, O
+   · EN
+   · We detect “Clínica Dental García Valladolid”, its domain clinicagarcia.es and these other names.
+   · [aria-label] Copy the question: ¿Qué alternativas hay a Clínica Dental García Valladolid en España?
+   · [aria-label] Copy the question: ¿Qué clínica dental me recomiendas en España?
+   · [placeholder] ¿Qué clínica dental me recomiendas en Valladolid?
+=== /workspaces/de98c0fd-eb2a-4a35-8a49-1d7fdb8bcddc/audits/cf44bd6d-f5df-4323-820c-17d27c52c7d6  HTTP 200  outside-lang-es=199  inside-lang-es=20  flagged=3
+   · Add a <title> with your brand and what you offer, for example “García Dental Clinic | Implants in Valladolid”.
+   · Clínica Dental García Valladolid
+   · EN
+=== /workspaces/de98c0fd-eb2a-4a35-8a49-1d7fdb8bcddc/audits/d0b379af-3899-4261-98f0-839415d902e6  HTTP 200  outside-lang-es=147  inside-lang-es=13  flagged=2
+   · Clínica Dental García Valladolid
+   · EN

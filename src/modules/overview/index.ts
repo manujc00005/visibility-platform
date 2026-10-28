@@ -11,7 +11,7 @@ export {
   type FindingsByAudit,
 } from "@/modules/overview/seo";
 export { summarizeAi, compareRuns, isCompleteResult, type AiSummary, type RunLike, type AiAttempt } from "@/modules/overview/ai";
-export { buildOpportunities, MAX_OPPORTUNITIES, PRIORITY_LABELS, type Opportunity, type OpportunityList, type Priority } from "@/modules/overview/opportunities";
+export { buildOpportunities, MAX_OPPORTUNITIES, overviewOriginalText, type Opportunity, type OpportunityList, type Priority } from "@/modules/overview/opportunities";
 export {
   isStale,
   staleInfo,

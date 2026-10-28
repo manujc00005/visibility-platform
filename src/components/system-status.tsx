@@ -3,6 +3,9 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { env } from "@/config/env";
 import { getPool } from "@/db/client";
+import { formatTimestamp } from "@/i18n/format";
+import type { Locale } from "@/i18n/locale";
+import { getMessages } from "@/i18n/messages";
 import { checkHealth, type HealthReport } from "@/modules/system/health";
 
 async function loadReport(): Promise<HealthReport | { configError: string }> {
@@ -16,17 +19,19 @@ async function loadReport(): Promise<HealthReport | { configError: string }> {
 }
 
 /** Operator-only status card (private development environment, Phase 0). */
-export async function SystemStatus() {
+export async function SystemStatus({ locale }: { locale: Locale }) {
+  const t = getMessages(locale).home.systemStatus;
   const report = await loadReport();
 
   if ("configError" in report) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Estado del sistema</CardTitle>
-          <CardDescription>Configuración incompleta</CardDescription>
+          <CardTitle>{t.title}</CardTitle>
+          <CardDescription>{t.configIncomplete}</CardDescription>
         </CardHeader>
         <CardContent>
+          {/* Technical error text from the environment validation: not localized (D017). */}
           <pre className="text-sm whitespace-pre-wrap text-destructive">{report.configError}</pre>
         </CardContent>
       </Card>
@@ -38,22 +43,22 @@ export async function SystemStatus() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          Estado del sistema
+          {t.title}
           <Badge variant={report.status === "ok" ? "secondary" : "destructive"}>
-            {report.status === "ok" ? "Operativo" : "Degradado"}
+            {report.status === "ok" ? t.operational : t.degraded}
           </Badge>
         </CardTitle>
-        <CardDescription>Comprobado {new Date(report.checkedAt).toLocaleString("es-ES")}</CardDescription>
+        <CardDescription>{t.checkedAt(formatTimestamp(new Date(report.checkedAt), locale))}</CardDescription>
       </CardHeader>
       <CardContent>
         <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-1 text-sm">
-          <dt className="text-muted-foreground">Base de datos</dt>
-          <dd>{database.reachable ? `Conectada (${database.latencyMs} ms)` : "Sin conexión"}</dd>
-          <dt className="text-muted-foreground">Migraciones aplicadas</dt>
+          <dt className="text-muted-foreground">{t.database}</dt>
+          <dd>{database.reachable ? t.connected(database.latencyMs) : t.noConnection}</dd>
+          <dt className="text-muted-foreground">{t.migrations}</dt>
           <dd>{database.appliedMigrations ?? "—"}</dd>
           {database.error ? (
             <>
-              <dt className="text-muted-foreground">Detalle</dt>
+              <dt className="text-muted-foreground">{t.detail}</dt>
               <dd className="text-destructive">{database.error}</dd>
             </>
           ) : null}

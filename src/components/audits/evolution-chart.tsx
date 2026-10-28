@@ -1,38 +1,25 @@
+import { formatDate, formatDateTime } from "@/i18n/format";
+import type { Locale } from "@/i18n/locale";
+import { getMessages } from "@/i18n/messages";
 import { speedSegments, type EvolutionPoint } from "@/modules/audits/evolution";
-import { METRIC_THRESHOLDS } from "@/modules/audits/status";
+import { METRIC_THRESHOLDS } from "@/modules/audits/thresholds";
 
 /**
  * Evolution across audits as inline SVG (no chart library, no client JavaScript):
  * stacked bars of problems by severity and a line with Google's mobile speed score.
  * Values are labelled directly, bars carry distinct patterns besides colour, and the
- * same data is available as a visually hidden table for screen readers.
+ * same data is available as a visually hidden table for screen readers. Server component:
+ * labels and date formats follow the interface language.
  */
-const shortDate = new Intl.DateTimeFormat("es-ES", {
-  day: "numeric",
-  month: "short",
-  timeZone: "Europe/Madrid",
-});
-const shortDateTime = new Intl.DateTimeFormat("es-ES", {
-  day: "numeric",
-  month: "short",
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: "Europe/Madrid",
-});
+const SHORT_DATE: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", timeZone: "Europe/Madrid" };
+const SHORT_DATE_TIME: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Madrid" };
 
 /** Day labels, with the time added when two audits share a day. */
-function axisLabels(points: EvolutionPoint[]): string[] {
-  const days = points.map((p) => shortDate.format(p.date));
+function axisLabels(points: EvolutionPoint[], locale: Locale): string[] {
+  const days = points.map((p) => formatDate(p.date, locale, SHORT_DATE));
   const repeated = new Set(days).size < days.length;
-  return points.map((p, i) =>
-    repeated ? shortDateTime.format(p.date) : days[i]!,
-  );
+  return points.map((p, i) => (repeated ? formatDate(p.date, locale, SHORT_DATE_TIME) : days[i]!));
 }
-const fullDate = new Intl.DateTimeFormat("es-ES", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "Europe/Madrid",
-});
 
 const W = 640;
 const H = 180;
@@ -43,8 +30,9 @@ function xOf(index: number, count: number): number {
   return PAD.left + (inner / count) * (index + 0.5);
 }
 
-export function ProblemsChart({ points }: { points: EvolutionPoint[] }) {
-  const labels = axisLabels(points);
+export function ProblemsChart({ points, locale }: { points: EvolutionPoint[]; locale: Locale }) {
+  const t = getMessages(locale).chart;
+  const labels = axisLabels(points, locale);
   const maxTotal = Math.max(
     1,
     ...points.map((p) => p.counts.critical + p.counts.warning + p.counts.info),
@@ -63,9 +51,7 @@ export function ProblemsChart({ points }: { points: EvolutionPoint[] }) {
       aria-labelledby="problems-chart-title"
       className="h-auto w-full text-xs"
     >
-      <title id="problems-chart-title">
-        Problemas por auditoría, de la más antigua a la más reciente
-      </title>
+      <title id="problems-chart-title">{t.problemsTitle}</title>
       <defs>
         <pattern
           id="hatch-warning"
@@ -129,7 +115,7 @@ export function ProblemsChart({ points }: { points: EvolutionPoint[] }) {
         let acc = 0;
         return (
           <g key={p.id}>
-            <title>{`${fullDate.format(p.date)}: ${p.counts.critical} críticos, ${p.counts.warning} importantes, ${p.counts.info} mejoras`}</title>
+            <title>{t.bar(formatDateTime(p.date, locale), p.counts.critical, p.counts.warning, p.counts.info)}</title>
             {segments.map((s) => {
               if (s.value === 0) return null;
               const y1 = yOf(acc + s.value);
@@ -182,8 +168,9 @@ export function ProblemsChart({ points }: { points: EvolutionPoint[] }) {
   );
 }
 
-export function SpeedChart({ points }: { points: EvolutionPoint[] }) {
-  const labels = axisLabels(points);
+export function SpeedChart({ points, locale }: { points: EvolutionPoint[]; locale: Locale }) {
+  const t = getMessages(locale).chart;
+  const labels = axisLabels(points, locale);
   const innerH = H - PAD.top - PAD.bottom;
   const yOf = (score: number) => PAD.top + innerH - (score / 100) * innerH;
   const [good, poor] = METRIC_THRESHOLDS.score;
@@ -206,9 +193,7 @@ export function SpeedChart({ points }: { points: EvolutionPoint[] }) {
       aria-labelledby="speed-chart-title"
       className="h-auto w-full text-xs"
     >
-      <title id="speed-chart-title">
-        Puntuación de velocidad en móvil por auditoría, de 0 a 100
-      </title>
+      <title id="speed-chart-title">{t.speedTitle}</title>
       <rect
         x={PAD.left}
         y={yOf(100)}
@@ -320,48 +305,48 @@ function Swatch({ className, label }: { className: string; label: string }) {
   );
 }
 
-export function ProblemsLegend() {
+export function ProblemsLegend({ locale }: { locale: Locale }) {
+  const t = getMessages(locale).chart.legend;
   return (
     <p className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-      <Swatch className="bg-bad-line" label="Críticos" />
-      <Swatch
-        className="bg-[repeating-linear-gradient(45deg,var(--fair-line)_0_2px,var(--background)_2px_3px)]"
-        label="Importantes"
-      />
-      <Swatch className="bg-info-line" label="Mejoras" />
+      <Swatch className="bg-bad-line" label={t.critical} />
+      <Swatch className="bg-[repeating-linear-gradient(45deg,var(--fair-line)_0_2px,var(--background)_2px_3px)]" label={t.warning} />
+      <Swatch className="bg-info-line" label={t.info} />
     </p>
   );
 }
 
-export function SpeedLegend() {
+export function SpeedLegend({ locale }: { locale: Locale }) {
+  const t = getMessages(locale).chart.legend;
   return (
     <p className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-      <Swatch className="bg-good-soft ring-1 ring-good-line" label="Bueno ≥ 90" />
-      <Swatch className="bg-fair-soft ring-1 ring-fair-line" label="Mejorable" />
-      <Swatch className="bg-bad-soft ring-1 ring-bad-line" label="Malo < 50" />
+      <Swatch className="bg-good-soft ring-1 ring-good-line" label={t.good} />
+      <Swatch className="bg-fair-soft ring-1 ring-fair-line" label={t.fair} />
+      <Swatch className="bg-bad-soft ring-1 ring-bad-line" label={t.poor} />
     </p>
   );
 }
 
 /** The chart data as a visually hidden table for screen readers (charts are images to them). */
-export function ChartDataTable({ points, kind }: { points: EvolutionPoint[]; kind: "problems" | "speed" }) {
+export function ChartDataTable({ points, kind, locale }: { points: EvolutionPoint[]; kind: "problems" | "speed"; locale: Locale }) {
+  const t = getMessages(locale).chart;
   return (
     <div className="sr-only">
       <table>
-        <caption>{kind === "problems" ? "Problemas por auditoría" : "Puntuación de velocidad en móvil por auditoría"}</caption>
+        <caption>{kind === "problems" ? t.table.problems : t.table.speed}</caption>
         <thead>
           <tr>
-            <th>Fecha</th>
+            <th>{t.table.date}</th>
             {kind === "problems" ? (
               <>
-                <th>Críticos</th>
-                <th>Importantes</th>
-                <th>Mejoras</th>
+                <th>{t.legend.critical}</th>
+                <th>{t.legend.warning}</th>
+                <th>{t.legend.info}</th>
               </>
             ) : (
               <>
-                <th>Velocidad</th>
-                <th>Prueba</th>
+                <th>{t.table.speedColumn}</th>
+                <th>{t.table.test}</th>
               </>
             )}
           </tr>
@@ -369,7 +354,7 @@ export function ChartDataTable({ points, kind }: { points: EvolutionPoint[]; kin
         <tbody>
           {points.map((p) => (
             <tr key={p.id}>
-              <td>{fullDate.format(p.date)}</td>
+              <td>{formatDateTime(p.date, locale)}</td>
               {kind === "problems" ? (
                 <>
                   <td>{p.counts.critical}</td>
@@ -378,8 +363,8 @@ export function ChartDataTable({ points, kind }: { points: EvolutionPoint[]; kin
                 </>
               ) : (
                 <>
-                  <td>{p.score ?? "no medida"}</td>
-                  <td>{p.score === null ? "—" : p.methodology ? `Lighthouse ${p.methodology.major}` : "versión desconocida"}</td>
+                  <td>{p.score ?? t.table.notMeasured}</td>
+                  <td>{p.score === null ? "—" : p.methodology ? `Lighthouse ${p.methodology.major}` : t.table.unknownVersion}</td>
                 </>
               )}
             </tr>

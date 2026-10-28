@@ -11,68 +11,29 @@ import { ChangeLine, NoticeList, type Notice } from "@/components/overview/overv
 import { PageHeader } from "@/components/overview/page-header";
 import { WorkspaceNav } from "@/components/overview/workspace-nav";
 import { getDb } from "@/db/client";
+import { findingText } from "@/i18n/findings";
+import { formatMs, formatNumber } from "@/i18n/format";
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
+import { getMessages, type Messages } from "@/i18n/messages";
+import { getLocale } from "@/i18n/server";
 import { speedBreaks, toPoint } from "@/modules/audits/evolution";
-import { formatMs, SEVERITY_LABELS } from "@/modules/audits/presentation";
+import { auditLabels } from "@/modules/audits/presentation";
 import { getAudit, listAudits } from "@/modules/audits/service";
-import { rateMetric, RATING_LABELS, RATING_TONE, SEVERITY_TONE, type MetricName } from "@/modules/audits/status";
+import { rateMetric, RATING_TONE, SEVERITY_TONE, type MetricName } from "@/modules/audits/status";
 import { fieldPeriod, splitAudits, summarizePerformance } from "@/modules/overview";
 import { displayDate } from "@/modules/workspaces/presentation";
 import { getWorkspace } from "@/modules/workspaces/service";
 import { runAuditAction } from "../audits/actions";
 
-export const metadata: Metadata = { title: "Rendimiento de tu web" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: getMessages(await getLocale()).performancePage.metaTitle };
+}
 
 /** Blocking route so an unknown workspace returns a real 404 (same reason as the overview). */
 export const instant = false;
 
-const decimal = (v: number) => v.toLocaleString("es-ES", { maximumFractionDigits: 2 });
-
-/** Plain-words meaning of each metric and Google's "good" reference. */
-const METRICS: Record<"lcp" | "cls" | "tbt" | "fcp" | "inp", { label: string; meaning: string; format: (v: number) => string; good: string }> = {
-  lcp: {
-    label: "Contenido principal (LCP)",
-    meaning: "Tiempo hasta que se ve lo más importante de la página, como la foto o el titular principal.",
-    format: formatMs,
-    good: "2,5 s o menos",
-  },
-  fcp: { label: "Primer contenido (FCP)", meaning: "Tiempo hasta que aparece algo en pantalla.", format: formatMs, good: "1,8 s o menos" },
-  tbt: {
-    label: "Bloqueo mientras carga (TBT)",
-    meaning: "Tiempo en que la página no responde porque el navegador está ocupado ejecutando código.",
-    format: formatMs,
-    good: "200 ms o menos",
-  },
-  cls: {
-    label: "Estabilidad visual (CLS)",
-    meaning: "Cuánto se mueven los elementos mientras carga. Si saltan, el visitante pulsa donde no quería.",
-    format: decimal,
-    good: "0,1 o menos",
-  },
-  inp: {
-    label: "Respuesta al tocar o hacer clic (INP)",
-    meaning: "Lo que tarda la página en reaccionar cuando el visitante interactúa con ella.",
-    format: formatMs,
-    good: "200 ms o menos",
-  },
-};
-
-/** What each speed problem means for the visitor, beyond its technical title. */
-const PROBLEM_MEANING: Record<string, string> = {
-  lcp_slow: "Hasta que aparece el contenido principal, quien visita la página la ve incompleta.",
-  cls_high: "Los elementos cambian de sitio mientras la página carga, y el visitante pulsa donde no quería.",
-  tbt_high: "El navegador está ocupado ejecutando código y la página tarda en responder a toques y clics.",
-  field_cwv_failed: "Los datos de visitantes reales muestran que la experiencia no llega al nivel que Google considera bueno.",
-  performance_unavailable: "Esta vez no se pudo medir la velocidad, así que no sabemos si hay problemas.",
-};
-
-/** Real-user availability in owner words (the audit screen keeps the operator messages). */
-const FIELD_UNAVAILABLE = {
-  no_data: "Tu web aún no tiene suficientes visitas en Chrome para que Google publique datos reales. Es habitual en webs pequeñas.",
-  not_configured: "Los datos de visitantes reales no están disponibles en esta medición.",
-  quota_exceeded: "Los datos de visitantes reales no se pudieron consultar en esta medición.",
-  error: "Los datos de visitantes reales no se pudieron consultar en esta medición.",
-  skipped: "No se consultaron porque la portada no se pudo leer.",
-} as const;
+type PerformanceTexts = Messages["performancePage"];
+type MetricKey = keyof PerformanceTexts["metrics"];
 
 function Section({ id, title, description, children }: { id: string; title: string; description?: ReactNode; children: ReactNode }) {
   return (
@@ -92,22 +53,26 @@ function Panel({ children }: { children: ReactNode }) {
   return <div className="rounded-2xl border border-border/80 bg-card shadow-card p-5">{children}</div>;
 }
 
-function MetricList({ rows }: { rows: { metric: keyof typeof METRICS; value: number | null }[] }) {
+/** Plain-words meaning of each metric and Google's "good" reference, in the interface language. */
+function MetricList({ rows, locale }: { rows: { metric: MetricKey; value: number | null }[]; locale: Locale }) {
+  const t = getMessages(locale).performancePage;
+  const rating = auditLabels(locale).rating;
+  const format = (metric: MetricKey, v: number) => (metric === "cls" ? formatNumber(v, locale, { maximumFractionDigits: 2 }) : formatMs(v, locale));
   return (
     <ul className="divide-y rounded-2xl border border-border/80 bg-card shadow-card">
       {rows.map(({ metric, value }) => {
-        const m = METRICS[metric];
-        const rating = value === null ? null : rateMetric(metric as MetricName, value);
+        const m = t.metrics[metric];
+        const rated = value === null ? null : rateMetric(metric as MetricName, value);
         return (
           <li key={metric} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
             <div className="flex min-w-0 flex-col gap-0.5">
               <span className="text-sm font-medium">{m.label}</span>
               <span className="text-sm text-muted-foreground">{m.meaning}</span>
-              <span className="text-xs text-muted-foreground">Bueno: {m.good}</span>
+              <span className="text-xs text-muted-foreground">{t.goodLabel(m.good)}</span>
             </div>
             <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:items-end sm:gap-1">
-              <span className="text-xl font-semibold tabular-nums">{value === null ? "—" : m.format(value)}</span>
-              {rating ? <StatusPill tone={RATING_TONE[rating]}>{RATING_LABELS[rating]}</StatusPill> : <StatusPill tone="neutral">Sin dato</StatusPill>}
+              <span className="text-xl font-semibold tabular-nums">{value === null ? "—" : format(metric, value)}</span>
+              {rated ? <StatusPill tone={RATING_TONE[rated]}>{rating[rated]}</StatusPill> : <StatusPill tone="neutral">{t.noValue}</StatusPill>}
             </div>
           </li>
         );
@@ -119,18 +84,28 @@ function MetricList({ rows }: { rows: { metric: keyof typeof METRICS; value: num
 export default async function PerformancePage({ params }: PageProps<"/workspaces/[id]/performance">) {
   await connection();
   const { id } = await params;
+  const locale = await getLocale();
   const db = getDb();
   const workspace = await getWorkspace(db, id);
   if (!workspace) notFound();
+  const m = getMessages(locale);
+  const t = m.performancePage;
 
   const audits = await listAudits(db, workspace.id);
   const { result } = splitAudits(audits);
   const detail = result ? await getAudit(db, workspace.id, result.id) : null;
   const findings = detail?.findings ?? [];
-  const s = summarizePerformance(audits, findings, new Date());
+  const s = summarizePerformance(audits, findings, new Date(), locale);
   const perf = result?.facts?.performance;
   const field = result?.facts?.fieldData;
-  const problems = findings.filter((f) => f.category === "performance");
+  // Findings are translated with the facts and rules version of the audit they belong to.
+  const context = result ? { facts: result.facts, rulesVersion: result.rulesVersion } : undefined;
+  const problems = findings.filter((f) => f.category === "performance").map((f) => ({ finding: f, text: findingText(f, locale, context) }));
+  const anyFallback = problems.some((p) => p.text.fallback);
+  const problemsNotice =
+    locale !== DEFAULT_LOCALE && problems.length > 0
+      ? [problems.some((p) => p.finding.evidence.length > 0) ? t.problems.originalNotice : null, anyFallback ? t.problems.fallbackNotice : null].filter(Boolean).join(" ")
+      : null;
   const points = audits
     .filter((a) => a.status === "completed")
     .sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime())
@@ -140,9 +115,9 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
   const measuredPoints = shown.filter((p) => p.score !== null).length;
   const breaks = speedBreaks(shown);
   const breakReasons = [
-    breaks.differentVersion ? "versiones distintas de la prueba de Google" : null,
-    breaks.unknownVersion ? "mediciones cuya versión de la prueba no consta" : null,
-    breaks.gap ? "auditorías que no midieron la velocidad" : null,
+    breaks.differentVersion ? t.history.breakVersion : null,
+    breaks.unknownVersion ? t.history.breakUnknown : null,
+    breaks.gap ? t.history.breakGap : null,
   ].filter((r) => r !== null);
 
   const notices: Notice[] = [];
@@ -153,21 +128,22 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-6">
         <PageHeader
+          locale={locale}
           breadcrumbs={[
-            { href: "/workspaces", label: "Empresas" },
+            { href: "/workspaces", label: m.workspaces.list.title },
             { href: `/workspaces/${workspace.id}`, label: workspace.name },
           ]}
-          title="Rendimiento de tu web"
-          description="Cómo de rápida y cómoda es tu página para los visitantes, según las mediciones de Google."
-          actions={<RunAuditButton workspaceId={workspace.id} action={runAuditAction.bind(null, workspace.id)} />}
+          title={t.title}
+          description={t.description}
+          actions={<RunAuditButton workspaceId={workspace.id} action={runAuditAction.bind(null, workspace.id)} labels={m.audits.runButton} />}
         />
-        <WorkspaceNav workspaceId={workspace.id} current="performance" />
+        <WorkspaceNav workspaceId={workspace.id} current="performance" locale={locale} />
       </div>
 
       <Panel>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
-            <span className="text-sm font-medium text-muted-foreground">Móvil</span>
+            <span className="text-sm font-medium text-muted-foreground">{t.mobile}</span>
             {s.score !== null ? (
               <>
                 <span className="text-4xl font-semibold tracking-tight tabular-nums">
@@ -178,46 +154,38 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
               </>
             ) : (
               <span className="text-2xl font-medium text-muted-foreground">
-                {s.state === "analyzing" ? "Analizando…" : s.state === "error" ? "Sin resultado" : "No medida"}
+                {s.state === "analyzing" ? t.analyzing : s.state === "error" ? t.noResult : t.notMeasured}
               </span>
             )}
             {s.reason ? <p className="text-sm text-muted-foreground">{s.reason}</p> : null}
             <ChangeLine change={s.change} note={s.comparisonNote} />
             {s.measuredAt ? (
-              <p className="text-xs text-muted-foreground">
-                PageSpeed Insights · {displayDate(s.measuredAt)}
-                {perf?.status === "ok" && perf.lighthouseVersion ? ` · Lighthouse ${perf.lighthouseVersion}` : ""}
-              </p>
+              <p className="text-xs text-muted-foreground">{t.source(displayDate(s.measuredAt, locale), perf?.status === "ok" ? perf.lighthouseVersion : null)}</p>
             ) : null}
           </div>
           <div className="flex flex-col gap-2 sm:border-l sm:pl-6">
-            <span className="text-sm font-medium text-muted-foreground">Escritorio</span>
-            <span className="text-2xl font-medium text-muted-foreground">No disponible</span>
-            <p className="text-sm text-muted-foreground">Nuestra medición usa solo el perfil móvil de PageSpeed Insights; no medimos el escritorio.</p>
+            <span className="text-sm font-medium text-muted-foreground">{t.desktop}</span>
+            <span className="text-2xl font-medium text-muted-foreground">{t.notAvailable}</span>
+            <p className="text-sm text-muted-foreground">{t.desktopNote}</p>
           </div>
         </div>
         <div className="mt-5 flex flex-col gap-3 border-t pt-4">
           <NoticeList notices={notices} />
-          <p className="text-sm text-muted-foreground">
-            La puntuación es una prueba de laboratorio: Google carga tu portada en un móvil simulado con conexión lenta. Sirve para detectar
-            problemas, pero no es la experiencia de todos tus visitantes. Entre dos pruebas idénticas puede variar varios puntos; solo
-            consideramos cambio una diferencia de 10 puntos o más.
-          </p>
+          <p className="text-sm text-muted-foreground">{t.labNote}</p>
         </div>
       </Panel>
 
       {result === null ? (
         <div className="flex flex-col items-start gap-3 rounded-2xl border border-dashed bg-card/60 p-6">
-          <p className="font-medium">Todavía no hay mediciones de velocidad</p>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            Ejecuta una auditoría: leemos tu portada y pedimos a Google que mida su velocidad en móvil. Tarda menos de un minuto.
-          </p>
+          <p className="font-medium">{t.noMeasurementsTitle}</p>
+          <p className="max-w-2xl text-sm text-muted-foreground">{t.noMeasurementsBody}</p>
         </div>
       ) : (
         <>
-          <Section id="lab-title" title="Prueba de laboratorio" description="Medida por PageSpeed Insights en un móvil simulado. No son visitantes reales.">
+          <Section id="lab-title" title={t.lab.title} description={t.lab.description}>
             {perf?.status === "ok" && perf.metrics ? (
               <MetricList
+                locale={locale}
                 rows={[
                   { metric: "lcp", value: perf.metrics.lcpMs },
                   { metric: "fcp", value: perf.metrics.fcpMs },
@@ -226,18 +194,15 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
                 ]}
               />
             ) : (
-              <p className="text-sm text-muted-foreground">{s.reason ?? "No se midió en la última auditoría."}</p>
+              <p className="text-sm text-muted-foreground">{s.reason ?? t.lab.notMeasured}</p>
             )}
           </Section>
 
-          <Section
-            id="field-title"
-            title="Visitantes reales"
-            description="Chrome UX Report: visitas reales con Chrome en el móvil durante 28 días, valor que cumple el 75 % de las visitas."
-          >
+          <Section id="field-title" title={t.field.title} description={t.field.description}>
             {field?.status === "ok" && field.metrics ? (
               <>
                 <MetricList
+                  locale={locale}
                   rows={[
                     { metric: "lcp", value: field.metrics.lcpMs },
                     // INP only exists as real-user data: it is shown only with valid field data.
@@ -246,34 +211,39 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
                   ]}
                 />
                 <p className="text-xs text-muted-foreground">
-                  {field.scope === "url" ? "Datos de esta página" : field.scope === "origin" ? "Datos de todo el sitio: la portada no tiene datos propios" : "Alcance no indicado"}
-                  {` · ${fieldPeriod(field.collectionPeriod) ?? "periodo no indicado"}`}.
+                  {t.field.line(field.scope ? t.field.scope[field.scope] : t.field.scope.unknown, fieldPeriod(field.collectionPeriod, locale) ?? t.field.periodUnknown)}
                 </p>
               </>
             ) : (
               <Panel>
                 <p className="text-sm text-muted-foreground">
-                  {field && field.status !== "ok" ? FIELD_UNAVAILABLE[field.status] : "Esta medición no incluye datos de visitantes reales."} Sin
-                  estos datos solo conocemos la prueba de laboratorio.
+                  {t.field.withLabOnly(field && field.status !== "ok" ? t.field.unavailable[field.status] : t.field.none)}
                 </p>
               </Panel>
             )}
           </Section>
 
-          <Section id="problems-title" title="Problemas de velocidad" description="Ordenados de más a menos importante, con lo que recomendamos hacer.">
+          <Section id="problems-title" title={t.problems.title} description={t.problems.description}>
+            {problemsNotice ? (
+              <p role="note" className="rounded-md border border-border/80 bg-muted/60 p-2.5 text-xs text-muted-foreground">
+                {problemsNotice}
+              </p>
+            ) : null}
             {problems.length > 0 ? (
               <ol className="flex flex-col gap-3">
-                {problems.map((f) => (
+                {problems.map(({ finding: f, text }) => (
                   <li key={f.id} className="flex flex-col gap-2 rounded-2xl border border-border/80 bg-card shadow-card p-5">
-                    <StatusPill tone={SEVERITY_TONE[f.severity]}>{SEVERITY_LABELS[f.severity]}</StatusPill>
-                    <h3 className="text-base font-semibold tracking-tight">{f.title}</h3>
-                    {PROBLEM_MEANING[f.ruleId] ? <p className="text-sm text-muted-foreground">{PROBLEM_MEANING[f.ruleId]}</p> : null}
-                    <p className="text-sm">
-                      <span className="font-medium">Qué recomendamos: </span>
-                      {f.recommendation}
+                    <StatusPill tone={SEVERITY_TONE[f.severity]}>{auditLabels(locale).severity[f.severity]}</StatusPill>
+                    <h3 className="text-base font-semibold tracking-tight" lang={text.fallback ? DEFAULT_LOCALE : undefined}>
+                      {text.title}
+                    </h3>
+                    {f.ruleId in t.problems.meaning ? <p className="text-sm text-muted-foreground">{t.problems.meaning[f.ruleId as keyof typeof t.problems.meaning]}</p> : null}
+                    <p className="text-sm" lang={text.fallback ? DEFAULT_LOCALE : undefined}>
+                      <span className="font-medium">{t.problems.recommend} </span>
+                      {text.recommendation}
                     </p>
                     {f.evidence.length > 0 ? (
-                      <ul className="flex flex-col gap-0.5 rounded-lg bg-muted/60 p-3 text-xs">
+                      <ul className="flex flex-col gap-0.5 rounded-lg bg-muted/60 p-3 text-xs" lang={DEFAULT_LOCALE}>
                         {f.evidence.map((line) => (
                           <li key={line} className="break-words">
                             {line}
@@ -285,33 +255,23 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
                 ))}
               </ol>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                {s.score !== null ? "No hemos detectado problemas de velocidad en la última medición." : "Sin medición no podemos detectar problemas de velocidad."}
-              </p>
+              <p className="text-sm text-muted-foreground">{s.score !== null ? t.problems.none : t.problems.noMeasurement}</p>
             )}
           </Section>
 
-          <Section
-            id="history-title"
-            title="Histórico de mediciones"
-            description="Puntuación móvil en cada auditoría. Compara mediciones concretas, no es una tendencia del negocio."
-          >
+          <Section id="history-title" title={t.history.title} description={t.history.description}>
             {measuredPoints > 0 ? (
               <Panel>
                 <div className="flex flex-col gap-3">
-                  <SpeedLegend />
-                  <SpeedChart points={shown} />
-                  <ChartDataTable points={shown} kind="speed" />
-                  {points.length > 12 ? <p className="text-xs text-muted-foreground">Se muestran las 12 auditorías más recientes de {points.length}.</p> : null}
-                  {breakReasons.length > 0 ? (
-                    <p className="text-xs text-muted-foreground">
-                      La línea solo une mediciones comparables. Se interrumpe por {breakReasons.join(" y ")}.
-                    </p>
-                  ) : null}
+                  <SpeedLegend locale={locale} />
+                  <SpeedChart points={shown} locale={locale} />
+                  <ChartDataTable points={shown} kind="speed" locale={locale} />
+                  {points.length > 12 ? <p className="text-xs text-muted-foreground">{t.history.showing(12, points.length)}</p> : null}
+                  {breakReasons.length > 0 ? <p className="text-xs text-muted-foreground">{t.history.breaks(breakReasons.join(t.history.and))}</p> : null}
                 </div>
               </Panel>
             ) : (
-              <p className="text-sm text-muted-foreground">Ninguna auditoría ha medido todavía la velocidad.</p>
+              <p className="text-sm text-muted-foreground">{t.history.none}</p>
             )}
           </Section>
 
@@ -319,7 +279,7 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
             href={`/workspaces/${workspace.id}/audits/${result.id}`}
             className="inline-flex w-fit items-center gap-1 rounded-sm text-sm font-medium text-brand hover:underline focus-visible:ring-2 focus-visible:ring-foreground/60 focus-visible:outline-none"
           >
-            Ver la auditoría técnica completa del {displayDate(result.startedAt)}
+            {t.fullAudit(displayDate(result.startedAt, locale))}
             <ChevronRight aria-hidden="true" className="size-4" />
           </Link>
         </>

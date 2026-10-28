@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
+import { formatNumber } from "@/i18n/format";
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
+import { getMessages } from "@/i18n/messages";
 import type { Database } from "@/db/client";
 import { logger } from "@/lib/logger";
 import { createBudget, type SafeFetcher } from "@/modules/audits/fetcher/safe-fetch";
@@ -20,7 +23,7 @@ import {
 import { nameKey } from "@/modules/geo/detection";
 import { geoCompetitors, type GeoCompetitor } from "@/modules/geo/schema";
 import { fieldErrorsOf, insertCompetitorLocked, lockWorkspace, type FieldErrors, type Result, type Tx } from "@/modules/geo/service";
-import { normalizeWebsite, WEBSITE_ERROR_MESSAGES } from "@/modules/workspaces/domain";
+import { normalizeWebsite } from "@/modules/workspaces/domain";
 import { displayCountry } from "@/modules/workspaces/presentation";
 import { workspaces, type Workspace } from "@/modules/workspaces/schema";
 import { getWorkspace } from "@/modules/workspaces/service";
@@ -53,32 +56,50 @@ export interface CompetitorDeps {
 
 const normalizeAnswer = (value: string) => value.replace(/\r\n?/g, "\n").trim();
 
-const inputSchema = z.object({
-  question: z.string({ error: "Indica la pregunta que hiciste." }).trim().min(1, "Indica la pregunta que hiciste.").max(MAX_QUESTION, `La pregunta admite ${MAX_QUESTION} caracteres.`),
-  answer: z
-    .string({ error: "Pega la respuesta." })
-    .transform(normalizeAnswer)
-    .pipe(z.string().min(1, "Pega la respuesta.").max(MAX_ANSWER, `La respuesta admite ${MAX_ANSWER.toLocaleString("es-ES")} caracteres.`)),
-  sources: z
-    .string()
-    .default("")
-    .transform((value) => [...new Set(value.split(/\r?\n/).map((v) => v.trim()).filter(Boolean))])
-    .pipe(z.array(z.string().max(MAX_SOURCE_LENGTH, `Cada fuente admite ${MAX_SOURCE_LENGTH} caracteres.`)).max(MAX_SOURCES, `Como máximo ${MAX_SOURCES} fuentes.`)),
-});
+function buildInputSchema(locale: Locale) {
+  const t = getMessages(locale).geo.validation;
+  return z.object({
+    question: z.string({ error: t.questionRequired }).trim().min(1, t.questionRequired).max(MAX_QUESTION, t.questionMax(MAX_QUESTION)),
+    answer: z
+      .string({ error: t.pasteAnswer })
+      .transform(normalizeAnswer)
+      .pipe(z.string().min(1, t.pasteAnswer).max(MAX_ANSWER, t.answerMaxChars(formatNumber(MAX_ANSWER, locale)))),
+    sources: z
+      .string()
+      .default("")
+      .transform((value) => [...new Set(value.split(/\r?\n/).map((v) => v.trim()).filter(Boolean))])
+      .pipe(z.array(z.string().max(MAX_SOURCE_LENGTH, t.sourceMax(MAX_SOURCE_LENGTH))).max(MAX_SOURCES, t.sourcesMax(MAX_SOURCES))),
+  });
+}
+
+const inputSchemas = new Map<Locale, ReturnType<typeof buildInputSchema>>();
+
+/** Schema factory for the capture form (D007): messages in the requested language. */
+export function extractionInputSchemaFor(locale: Locale = DEFAULT_LOCALE): ReturnType<typeof buildInputSchema> {
+  let schema = inputSchemas.get(locale);
+  if (!schema) {
+    schema = buildInputSchema(locale);
+    inputSchemas.set(locale, schema);
+  }
+  return schema;
+}
 
 /** WHATWG serialization without fragment; rejects anything that is not a plain public web URL. */
-function canonicalSource(raw: string): { ok: true; url: string } | { ok: false; message: string } {
+function canonicalSource(raw: string, locale: Locale): { ok: true; url: string } | { ok: false; message: string } {
+  const m = getMessages(locale);
+  const t = m.geo.validation;
+  const shown = raw.slice(0, 80);
   let url: URL;
   try {
     url = new URL(raw);
   } catch {
-    return { ok: false, message: `URL no válida: ${raw.slice(0, 80)}` };
+    return { ok: false, message: t.invalidUrl(shown) };
   }
-  if (url.protocol !== "http:" && url.protocol !== "https:") return { ok: false, message: `Solo se admiten direcciones http(s): ${raw.slice(0, 80)}` };
-  if (url.username || url.password) return { ok: false, message: `La fuente no puede incluir credenciales: ${raw.slice(0, 80)}` };
-  if (url.port !== "") return { ok: false, message: `No se admiten puertos no estándar: ${raw.slice(0, 80)}` };
+  if (url.protocol !== "http:" && url.protocol !== "https:") return { ok: false, message: t.sourceScheme(shown) };
+  if (url.username || url.password) return { ok: false, message: t.sourceCredentials(shown) };
+  if (url.port !== "") return { ok: false, message: t.sourcePort(shown) };
   const host = normalizeWebsite(url.hostname);
-  if (!host.ok) return { ok: false, message: `${WEBSITE_ERROR_MESSAGES[host.error]} (${raw.slice(0, 80)})` };
+  if (!host.ok) return { ok: false, message: t.sourceHost(m.validation.website[host.error], shown) };
   url.hash = "";
   return { ok: true, url: url.href };
 }
@@ -193,14 +214,25 @@ function exclusionWarnings(excluded: Exclusion[]): string[] {
   return [...counts].map(([reason, n]) => `${n} ${n === 1 ? "candidato excluido" : "candidatos excluidos"}: ${EXCLUSION_LABELS[reason]}.`);
 }
 
-export async function extractCompetitors(db: Database, workspaceId: string, raw: unknown, deps: CompetitorDeps): Promise<Result<ExtractionView, ExtractError>> {
+/**
+ * `locale` only selects the language of the validation messages. The warnings, factor reasons
+ * and review notes stored with the extraction stay in Spanish: they are the record of what
+ * the evaluation observed and are shown as recorded (SPEC «Límites de localización»).
+ */
+export async function extractCompetitors(
+  db: Database,
+  workspaceId: string,
+  raw: unknown,
+  deps: CompetitorDeps,
+  locale: Locale = DEFAULT_LOCALE,
+): Promise<Result<ExtractionView, ExtractError>> {
   // 1. Validate everything before any network.
-  const parsed = inputSchema.safeParse(raw);
+  const parsed = extractionInputSchemaFor(locale).safeParse(raw);
   if (!parsed.success) return { ok: false, error: "validation", fieldErrors: fieldErrorsOf(parsed.error) };
   const sources: string[] = [];
   const sourceErrors: string[] = [];
   for (const rawUrl of parsed.data.sources) {
-    const c = canonicalSource(rawUrl);
+    const c = canonicalSource(rawUrl, locale);
     if (c.ok) sources.push(c.url);
     else sourceErrors.push(c.message);
   }
@@ -375,11 +407,25 @@ export async function listSuggestions(db: Database, workspaceId: string): Promis
 
 // --- Decisions ---------------------------------------------------------------------------
 
-const acceptSchema = z.object({
-  name: z.string({ error: "Indica el nombre." }).trim().min(1, "Indica el nombre.").max(120, "Máximo 120 caracteres."),
-  website: z.string().default(""),
-  reviewConfirmed: z.string().default("").transform((v) => v === "true" || v === "on"),
-});
+function buildAcceptSchema(locale: Locale) {
+  const t = getMessages(locale).geo.validation;
+  return z.object({
+    name: z.string({ error: t.nameRequired }).trim().min(1, t.nameRequired).max(120, t.maxChars(120)),
+    website: z.string().default(""),
+    reviewConfirmed: z.string().default("").transform((v) => v === "true" || v === "on"),
+  });
+}
+
+const acceptSchemas = new Map<Locale, ReturnType<typeof buildAcceptSchema>>();
+
+function acceptSchemaFor(locale: Locale): ReturnType<typeof buildAcceptSchema> {
+  let schema = acceptSchemas.get(locale);
+  if (!schema) {
+    schema = buildAcceptSchema(locale);
+    acceptSchemas.set(locale, schema);
+  }
+  return schema;
+}
 
 export type AcceptError = "not_found" | "validation" | "limit" | "already_exists" | "conflict" | "stale";
 
@@ -388,15 +434,23 @@ export type AcceptError = "not_found" | "validation" | "limit" | "already_exists
  * an accepted suggestion returns its competitor; dismissed → conflict; superseded → stale.
  * Corrections are a manual decision: a corrected website inherits no evidence.
  */
-export async function acceptSuggestion(db: Database, workspaceId: string, suggestionId: string, raw: unknown): Promise<Result<GeoCompetitor, AcceptError>> {
+export async function acceptSuggestion(
+  db: Database,
+  workspaceId: string,
+  suggestionId: string,
+  raw: unknown,
+  locale: Locale = DEFAULT_LOCALE,
+): Promise<Result<GeoCompetitor, AcceptError>> {
   if (!isUuid(workspaceId) || !isUuid(suggestionId)) return { ok: false, error: "not_found" };
-  const parsed = acceptSchema.safeParse(raw);
+  const m = getMessages(locale);
+  const t = m.geo.validation;
+  const parsed = acceptSchemaFor(locale).safeParse(raw);
   if (!parsed.success) return { ok: false, error: "validation", fieldErrors: fieldErrorsOf(parsed.error) };
-  if (!parsed.data.reviewConfirmed) return { ok: false, error: "validation", fieldErrors: { reviewConfirmed: ["Confirma que has revisado el candidato."] } };
+  if (!parsed.data.reviewConfirmed) return { ok: false, error: "validation", fieldErrors: { reviewConfirmed: [t.reviewConfirmed] } };
   let domain: string | null = null;
   if (parsed.data.website.trim()) {
     const website = normalizeWebsite(parsed.data.website);
-    if (!website.ok) return { ok: false, error: "validation", fieldErrors: { website: [WEBSITE_ERROR_MESSAGES[website.error]] } };
+    if (!website.ok) return { ok: false, error: "validation", fieldErrors: { website: [m.validation.website[website.error]] } };
     domain = website.value.domain;
   }
 
@@ -421,8 +475,8 @@ export async function acceptSuggestion(db: Database, workspaceId: string, sugges
     if (!current) return { ok: false, error: "not_found" };
     const context = contextOf(current);
     const fieldErrors: FieldErrors = {};
-    if (isOwnBusiness({ nameKey: nameKey(parsed.data.name), host: domain }, context)) fieldErrors.name = ["Ese nombre o web corresponde a la propia empresa."];
-    if (domain && isKnownNonBusinessHost(domain)) fieldErrors.website = ["Esa web es un directorio, red social o buscador, no un competidor."];
+    if (isOwnBusiness({ nameKey: nameKey(parsed.data.name), host: domain }, context)) fieldErrors.name = [t.ownBusiness];
+    if (domain && isKnownNonBusinessHost(domain)) fieldErrors.website = [t.nonBusinessHost];
     if (Object.keys(fieldErrors).length > 0) return { ok: false, error: "validation", fieldErrors };
 
     const inserted = await insertCompetitorLocked(tx, workspaceId, { name: parsed.data.name, domain, aliases: [] }, "all");

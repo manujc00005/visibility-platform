@@ -1,0 +1,208 @@
+=== /  HTTP 200
+   · Skip to content
+   · Visibility Platform
+   · [aria-label] Main
+   · Home
+   · Companies
+   · [aria-label] Language
+   · [aria-label] English
+   · EN
+   · SEO and AI search visibility diagnostics for small businesses. Private development environment.
+   · System status
+   · Checking…
+   · Roadmap
+   · Details in docs/visibility-mvp/16-implementation-roadmap.md
+   · Phase 0 · Project foundation
+   · Done
+   · Phase 1 · Companies and domains
+   · Phase 2 · Technical SEO audit
+   · Phase 3 · PDF report
+   · Phase 4 · GEO / AEO visibility
+   · Done (DataForSEO unverified)
+   · Phase 5 · Access and paid audits
+   · Next
+   · Operational
+   · Checked 27 Oct 2026, 16:18
+   · Database
+   · Connected (47 ms)
+   · Applied migrations
+   · 7
+=== /workspaces  HTTP 200
+   · Skip to content
+   · Visibility Platform
+   · [aria-label] Main
+   · Home
+   · Companies
+   · [aria-label] Language
+   · [aria-label] English
+   · EN
+   · Loading…
+   · Websites registered for auditing.
+   · New company
+   · Company
+   · Domain
+   · Sector
+   · Location
+   · Added
+   · Olessium
+   · olessium.com
+   · Agencia de automatización y CRM
+   · Spain
+   · 25 Oct 2026, 21:18
+   · Buchhandlung Müller · DEMOSTRACIÓN, datos sintéticos
+   · bücher.de
+   · Librería
+   · Berlín, Germany
+   · 25 Oct 2026, 20:43
+   · Clínica Dental García Valladolid
+   · clinicagarcia.es
+   · Clínica dental
+   · 25 Oct 2026, 20:41
+=== /workspaces/b0917083-bee9-4129-9c27-efb454dbce09  HTTP 200
+   · Skip to content
+   · Visibility Platform
+   · [aria-label] Main
+   · Home
+   · Companies
+   · [aria-label] Language
+   · [aria-label] English
+   · EN
+   · [aria-label] Breadcrumb
+   · Olessium
+   · olessium.com
+   · ·
+   · Agencia de automatización y CRM
+   · Run audit
+   · Edit
+   · [aria-label] Company sections
+   · Overview
+   · Performance
+   · Google
+   · AI
+   · AI presence
+   · [aria-label] Status of your online presence
+   · Your website's performance
+   · Needs improvement
+   · Find out how fast and comfortable your page is for visitors.
+   · 86
+   · /100
+   · Google's score on a simulated mobile device, not the experience of all your visitors.
+   · No noticeable change compared with the previous measurement
+   · Main problem:
+   · The main content takes 3.9 s to appear on mobile
+   · Chrome UX Report does not have enough data for this website.
+   · PageSpeed Insights · 26 Oct 2026, 15:41
+   · View report
+   · Visibility on Google
+   · Good
+   · Find out whether customers find your company when they search for your services.
+   · 0
+   · critical
+   · important
+   · Good: no critical or important problems
+   · Same as in the previous audit
+   · Rankings not measured yet: Google Search Console is not connected. This is the technical health of your home page, not your position on Google.
+   · Technical audit of the home page · 26 Oct 2026, 15:41
+   · Partial
+   · Find out whether tools like ChatGPT mention or recommend your company.
+   · 1
+   · of 1 question
+   · Monitored questions in which ChatGPT mentioned you, among those that got a valid answer. It is a sample, not the total of AI searches.
+   · Your website is cited as a source in 1 of 1 answer.
+   · 3 questions measured · 1 without a valid answer · 1 about your brand (named in 1 of 1 answer)
+   · .
+   · Only evaluated questions that do not name your brand count above.
+   · ChatGPT measurement · Assisted capture (ChatGPT web) · 25 Oct 2026, 22:01
+   · Your next opportunities
+   · The first things worth improving, according to what we measured.
+   · Recommendations are based on the data available.
+   · The AI measurement is incomplete.
+   · Evidence is shown as it was recorded, in Spanish.
+   · Medium priority
+   · Improve mobile speed
+   · What is happening
+   · Why it matters
+   · Google's test measures a slow load on mobile, and Google takes page experience into account.
+   · What we recommend
+   · Optimise the size of the main image or block and the server response time.
+   · Evidence
+   · Mobile performance: 86/100 (needs improvement)
+   · PageSpeed Insights · mobile lab test
+   · 26 Oct 2026, 15:41
+   · View details
+=== /workspaces/b0917083-bee9-4129-9c27-efb454dbce09/seo  HTTP 200
+   · Skip to content
+   · Visibility Platform
+   · [aria-label] Main
+   · Home
+   · Companies
+   · [aria-label] Language
+   · [aria-label] English
+   · EN
+   · [aria-label] Breadcrumb
+   · Olessium
+   · Visibility on Google
+   · Whether customers find your company when they search for your services, and whether Google can read and understand your website.
+   · Run audit
+   · [aria-label] Company sections
+   · Overview
+   · Performance
+   · Google
+   · AI
+   · AI presence
+   · Rankings on Google
+   · Google Search Console
+   · Not available yet
+   · To know how many people find you on Google we need to connect Search Console, Google's free tool for website owners. With it we will be able to show you clicks and how often you appear in the results, the searches that lead people to you, your most visible pages and their evolution. This connection is not available on the platform yet: in the meantime we show no traffic figures.
+   · Technical health of your home page
+   · We check whether Google can access, read and understand your home page, its robots.txt and its sitemap. This is technical health, not your position on Google, and we do not crawl the rest of the website.
+   · Good: no critical or important problems
+   · 1 optional improvement remains.
+   · Critical
+   · 0
+   · Block or harm visibility
+   · Important
+   · Should be fixed soon
+   · Improvements
+   · 1
+   · Optional
+   · Same as in the previous audit
+   · Technical audit of the home page · 26 Oct 2026, 15:41
+   · Status by area
+   · “Not checked” means this audit could not review that part; it is not a pass.
+   · Indexability
+   · Good
+   · Metadata
+   · Structure
+   · Could improve
+   · · 1
+   · Sitemap and crawling
+   · Canonicals
+   · Structured data
+   · Problems and recommendations
+   · Ordered from most to least urgent. Speed problems are under Performance.
+   · Evidence is shown as it was recorded, in Spanish.
+   · Improvement
+   · Headings
+   · The heading hierarchy skips levels
+   · What we recommend:
+   · Order the headings without gaps (H1 → H2 → H3) so the structure is clear.
+   · Evidence
+   · Audit history
+   · Technical SEO problems in each audit, not counting speed. It compares specific audits; it is not a business trend.
+   · Problems per audit, from oldest to most recent
+   · 25 Oct 2026, 21:18: 0 critical, 0 important, 1 improvements
+   · 25 Oct, 21:18
+   · 26 Oct 2026, 08:26: 0 critical, 0 important, 1 improvements
+   · 26 Oct, 08:26
+   · 26 Oct 2026, 13:37: 0 critical, 0 important, 1 improvements
+   · 26 Oct, 13:37
+   · 26 Oct 2026, 15:41: 0 critical, 0 important, 1 improvements
+   · 26 Oct, 15:41
+   · Problems per audit
+   · Date
+   · 25 Oct 2026, 21:18
+   · 26 Oct 2026, 08:26
+   · 26 Oct 2026, 13:37
+   · 26 Oct 2026, 15:41
+   · 0 critical · 0 important · 1 improvement

@@ -1,3 +1,6 @@
+import { formatDate, formatNumber } from "@/i18n/format";
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
+import { getMessages, type Messages } from "@/i18n/messages";
 import type { Change } from "@/modules/overview/types";
 import type { PageRow, Period, QueryRow, Totals } from "@/modules/search-console/collect";
 import type { SearchConsoleConfig } from "@/modules/search-console/deps";
@@ -5,7 +8,9 @@ import type { LatestSearchConsole } from "@/modules/search-console/service";
 
 /**
  * What the Google tab and the overview card show about Search Console. Pure: it reads stored
- * captures and the configuration state, never Google.
+ * captures and the configuration state, never Google. Texts follow `locale`, Spanish by
+ * default (i18n D007). Failures are explained from their kind, not from the stored message,
+ * which stays as a diagnostic.
  */
 
 export type SearchConsoleState = "not_configured" | "invalid_config" | "no_data" | "error" | "ok";
@@ -32,80 +37,99 @@ export interface SearchConsoleSummary {
   cardLine: string | null;
 }
 
-const integer = (n: number) => Math.round(n).toLocaleString("es-ES");
-const decimal = (n: number) => n.toLocaleString("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-const percent = (ratio: number) => `${decimal(ratio * 100)} %`;
+type Texts = Messages["searchConsole"];
 
 /** Below this relative change, a difference is noise for a 28-day window. */
 const SAME_THRESHOLD = 0.05;
 const POSITION_SAME = 0.5;
 
-function countChange(current: number, previous: number, unit: [string, string]): Change {
-  const word = (n: number) => (Math.round(n) === 1 ? unit[0] : unit[1]);
-  if (previous === 0) return current === 0 ? { direction: "same", text: "Igual que los 28 días anteriores" } : { direction: "better", text: `Antes: 0 ${unit[1]}` };
+function formatters(locale: Locale, t: Texts) {
+  const integer = (n: number) => formatNumber(Math.round(n), locale, { maximumFractionDigits: 0 });
+  const decimal = (n: number) => formatNumber(n, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const percent = (ratio: number) => t.percent(decimal(ratio * 100));
+  const signed = (n: number, text: string) => `${n > 0 ? "+" : "−"}${text}`;
+  return { integer, decimal, percent, signed };
+}
+type Format = ReturnType<typeof formatters>;
+
+function countChange(current: number, previous: number, unit: (count: number) => string, t: Texts, f: Format): Change {
+  const before = `${f.integer(previous)} ${unit(Math.round(previous))}`;
+  if (previous === 0) return current === 0 ? { direction: "same", text: t.changes.sameAsBefore } : { direction: "better", text: t.changes.before(before) };
   const ratio = (current - previous) / previous;
-  const text = `Antes: ${integer(previous)} ${word(previous)}`;
-  if (Math.abs(ratio) < SAME_THRESHOLD) return { direction: "same", text: `${text} (sin cambio apreciable)` };
+  if (Math.abs(ratio) < SAME_THRESHOLD) return { direction: "same", text: t.changes.same(before) };
   const pct = Math.round(ratio * 100);
-  return { direction: ratio > 0 ? "better" : "worse", text: `${text} (${pct > 0 ? "+" : ""}${pct} %)` };
+  return { direction: ratio > 0 ? "better" : "worse", text: t.changes.changed(before, t.changes.signedPercent(pct, f.integer(Math.abs(pct)))) };
 }
 
 /** Lower is better: moving from 12 to 8 is going up four places. */
-function positionChange(current: number, previous: number): Change {
+function positionChange(current: number, previous: number, t: Texts, f: Format): Change {
   const delta = current - previous;
-  const text = `Antes: ${decimal(previous)}`;
-  if (Math.abs(delta) < POSITION_SAME) return { direction: "same", text: `${text} (sin cambio apreciable)` };
+  const before = f.decimal(previous);
+  if (Math.abs(delta) < POSITION_SAME) return { direction: "same", text: t.changes.same(before) };
   return delta < 0
-    ? { direction: "better", text: `${text} (sube ${decimal(-delta)} puestos)` }
-    : { direction: "worse", text: `${text} (baja ${decimal(delta)} puestos)` };
+    ? { direction: "better", text: t.changes.positionUp(before, f.decimal(-delta)) }
+    : { direction: "worse", text: t.changes.positionDown(before, f.decimal(delta)) };
 }
 
-function ctrChange(current: number, previous: number): Change {
+function ctrChange(current: number, previous: number, t: Texts, f: Format): Change {
   const delta = (current - previous) * 100;
-  const text = `Antes: ${percent(previous)}`;
-  if (Math.abs(delta) < 0.1) return { direction: "same", text: `${text} (sin cambio apreciable)` };
-  return { direction: delta > 0 ? "better" : "worse", text: `${text} (${delta > 0 ? "+" : "−"}${decimal(Math.abs(delta))} puntos)` };
+  const before = f.percent(previous);
+  if (Math.abs(delta) < 0.1) return { direction: "same", text: t.changes.same(before) };
+  return { direction: delta > 0 ? "better" : "worse", text: t.changes.ctrChanged(before, f.signed(delta, f.decimal(Math.abs(delta)))) };
 }
 
-function metricsOf(totals: Totals, previous: Totals): NonNullable<SearchConsoleSummary["metrics"]> {
+function metricsOf(totals: Totals, previous: Totals, t: Texts, f: Format): NonNullable<SearchConsoleSummary["metrics"]> {
   // FR-008: without impressions before, there is nothing to compare against.
   const comparable = previous.impressions > 0;
   const hasPosition = totals.impressions > 0;
   return {
-    clicks: { value: integer(totals.clicks), previous: comparable ? integer(previous.clicks) : null, change: comparable ? countChange(totals.clicks, previous.clicks, ["clic", "clics"]) : null },
-    impressions: {
-      value: integer(totals.impressions),
-      previous: comparable ? integer(previous.impressions) : null,
-      change: comparable ? countChange(totals.impressions, previous.impressions, ["impresión", "impresiones"]) : null,
+    clicks: {
+      value: f.integer(totals.clicks),
+      previous: comparable ? f.integer(previous.clicks) : null,
+      change: comparable ? countChange(totals.clicks, previous.clicks, t.units.clicks, t, f) : null,
     },
-    ctr: { value: hasPosition ? percent(totals.ctr) : "—", previous: comparable ? percent(previous.ctr) : null, change: comparable && hasPosition ? ctrChange(totals.ctr, previous.ctr) : null },
+    impressions: {
+      value: f.integer(totals.impressions),
+      previous: comparable ? f.integer(previous.impressions) : null,
+      change: comparable ? countChange(totals.impressions, previous.impressions, t.units.impressions, t, f) : null,
+    },
+    ctr: {
+      value: hasPosition ? f.percent(totals.ctr) : "—",
+      previous: comparable ? f.percent(previous.ctr) : null,
+      change: comparable && hasPosition ? ctrChange(totals.ctr, previous.ctr, t, f) : null,
+    },
     position: {
-      value: hasPosition ? decimal(totals.position) : "—",
-      previous: comparable ? decimal(previous.position) : null,
-      change: comparable && hasPosition ? positionChange(totals.position, previous.position) : null,
+      value: hasPosition ? f.decimal(totals.position) : "—",
+      previous: comparable ? f.decimal(previous.position) : null,
+      change: comparable && hasPosition ? positionChange(totals.position, previous.position, t, f) : null,
     },
   };
 }
 
-function failureText(s: NonNullable<LatestSearchConsole["latest"]>, config: SearchConsoleConfig, domain: string): string {
-  const email = config.state === "ready" ? config.clientEmail : "la cuenta de servicio";
+function failureText(s: NonNullable<LatestSearchConsole["latest"]>, config: SearchConsoleConfig, domain: string, t: Texts): string {
+  const email = config.state === "ready" ? config.clientEmail : t.failures.thisAccount;
   switch (s.errorKind) {
     case "no_access": {
-      const seen = s.accessibleProperties === null ? "" : ` Ahora mismo la cuenta puede leer ${s.accessibleProperties} ${s.accessibleProperties === 1 ? "propiedad" : "propiedades"}.`;
-      return `Añade ${email} como usuario en la propiedad de ${domain} en Search Console (Configuración › Usuarios y permisos) y vuelve a intentarlo.${seen}`;
+      const text = t.failures.no_access(email, domain);
+      return s.accessibleProperties === null ? text : `${text} ${t.failures.visibleProperties(s.accessibleProperties)}`;
     }
     case "api_disabled":
-      return `${s.errorMessage}. Actívala en Google Cloud (APIs y servicios) y vuelve a intentarlo.`;
     case "invalid_credentials":
-      return `${s.errorMessage}. Revisa GSC_SERVICE_ACCOUNT_JSON.`;
+    case "quota_exceeded":
+      return t.failures[s.errorKind];
     default:
-      return `${s.errorMessage ?? "No se pudieron leer los datos"}. Vuelve a intentarlo.`;
+      return t.failures.error;
   }
 }
 
-const NO_DATA_REASON = "Pulsa «Traer datos de Search Console» para ver cómo te encuentran en Google.";
-
-export function summarizeSearchConsole(stored: LatestSearchConsole, config: SearchConsoleConfig, domain: string): SearchConsoleSummary {
+export function summarizeSearchConsole(
+  stored: LatestSearchConsole,
+  config: SearchConsoleConfig,
+  domain: string,
+  locale: Locale = DEFAULT_LOCALE,
+): SearchConsoleSummary {
+  const t = getMessages(locale).searchConsole;
+  const f = formatters(locale, t);
   const { latest, latestCompleted } = stored;
   const base: SearchConsoleSummary = {
     state: "no_data",
@@ -119,39 +143,34 @@ export function summarizeSearchConsole(stored: LatestSearchConsole, config: Sear
     lastFailure: null,
     cardLine: null,
   };
-  const failed = latest && latest.status === "failed" ? { text: failureText(latest, config, domain), at: latest.createdAt } : null;
+  const failed = latest && latest.status === "failed" ? { text: failureText(latest, config, domain, t), at: latest.createdAt } : null;
 
   if (latestCompleted?.totals && latestCompleted.previousTotals && latestCompleted.currentStart && latestCompleted.currentEnd) {
-    const t = latestCompleted.totals;
-    const clicks = `${integer(t.clicks)} ${Math.round(t.clicks) === 1 ? "clic" : "clics"}`;
-    const impressions = `${integer(t.impressions)} ${Math.round(t.impressions) === 1 ? "impresión" : "impresiones"}`;
+    const totals = latestCompleted.totals;
+    const clicks = `${f.integer(totals.clicks)} ${t.units.clicks(Math.round(totals.clicks))}`;
+    const impressions = `${f.integer(totals.impressions)} ${t.units.impressions(Math.round(totals.impressions))}`;
     return {
       ...base,
       state: "ok",
       property: latestCompleted.property,
       period: { start: latestCompleted.currentStart, end: latestCompleted.currentEnd },
       capturedAt: latestCompleted.createdAt,
-      metrics: metricsOf(t, latestCompleted.previousTotals),
+      metrics: metricsOf(totals, latestCompleted.previousTotals, t, f),
       queries: latestCompleted.queries,
       pages: latestCompleted.pages,
       lastFailure: failed,
-      cardLine:
-        t.impressions > 0
-          ? `En Google: ${clicks} y ${impressions} en los últimos 28 días, posición media ${decimal(t.position)} (Search Console).`
-          : "En Google: sin impresiones en los últimos 28 días (Search Console).",
+      cardLine: totals.impressions > 0 ? t.card.line(clicks, impressions, f.decimal(totals.position)) : t.card.noImpressions,
     };
   }
 
-  if (config.state === "not_configured") {
-    return { ...base, state: "not_configured", reason: "Search Console no está configurado en la plataforma.", lastFailure: failed };
-  }
-  if (config.state === "invalid") return { ...base, state: "invalid_config", reason: `${config.reason}.`, lastFailure: failed };
+  if (config.state === "not_configured") return { ...base, state: "not_configured", reason: t.reasons.notConfigured, lastFailure: failed };
+  if (config.state === "invalid") return { ...base, state: "invalid_config", reason: t.reasons.invalidConfig[config.reason], lastFailure: failed };
   if (failed) return { ...base, state: "error", reason: failed.text, lastFailure: failed };
-  return { ...base, reason: NO_DATA_REASON };
+  return { ...base, reason: t.reasons.noData(t.button.fetch) };
 }
 
-/** Human date for a YYYY-MM-DD string, without time zone shifts. */
-export function displayDay(isoDay: string): string {
+/** Calendar date for a YYYY-MM-DD string, read in UTC so it never shifts a day. */
+export function displayDay(isoDay: string, locale: Locale = DEFAULT_LOCALE): string {
   const [y, m, d] = isoDay.split("-").map(Number);
-  return new Date(Date.UTC(y!, m! - 1, d!)).toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  return formatDate(new Date(Date.UTC(y!, m! - 1, d!)), locale, { dateStyle: "medium", timeZone: "UTC" });
 }

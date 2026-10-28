@@ -1,9 +1,13 @@
 import { z } from "zod";
-import { WEBSITE_ERROR_MESSAGES, normalizeWebsite } from "@/modules/workspaces/domain";
+import { regionName } from "@/i18n/format";
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
+import { getMessages } from "@/i18n/messages";
+import { normalizeWebsite } from "@/modules/workspaces/domain";
 
 /**
  * Server-side validation for workspace create/edit. The form only adds HTML hints; this
- * schema is the source of truth and runs inside the Server Actions.
+ * schema is the source of truth and runs inside the Server Actions. Messages come from the
+ * catalog of the requested language; the default (`es`) keeps the original texts.
  */
 
 export const LIMITS = {
@@ -16,89 +20,104 @@ export const LIMITS = {
 
 /** Codes that CLDR names but that are not countries. */
 const NON_COUNTRY_REGIONS = new Set(["EU", "EZ", "UN", "ZZ", "QO", "XA", "XB"]);
-const regionNames = new Intl.DisplayNames(["es"], { type: "region", fallback: "none" });
 
-export function countryName(code: string): string | undefined {
+export function countryName(code: string, locale: Locale = DEFAULT_LOCALE): string | undefined {
   if (!/^[A-Z]{2}$/.test(code) || NON_COUNTRY_REGIONS.has(code)) return undefined;
-  return regionNames.of(code);
+  return regionName(code, locale);
 }
 
-/** Countries offered first in the form; any valid ISO 3166-1 alpha-2 code is accepted. */
-export const COUNTRY_OPTIONS = ["ES", "PT", "FR", "IT", "DE", "GB", "IE", "NL", "BE", "US", "MX", "AR", "CO", "CL", "PE"].map(
-  (code) => ({ code, name: countryName(code) ?? code }),
-);
+const COUNTRY_CODES = ["ES", "PT", "FR", "IT", "DE", "GB", "IE", "NL", "BE", "US", "MX", "AR", "CO", "CL", "PE"];
 
-const requiredText = (label: string, max: number) =>
-  z
-    .string({ error: `${label} es obligatorio.` })
-    .trim()
-    .min(1, `${label} es obligatorio.`)
-    .max(max, `${label} admite como máximo ${max} caracteres.`);
+/** Countries offered first in the form, named in the interface language; any valid ISO 3166-1 alpha-2 code is accepted. */
+export function countryOptions(locale: Locale = DEFAULT_LOCALE): { code: string; name: string }[] {
+  return COUNTRY_CODES.map((code) => ({ code, name: countryName(code, locale) ?? code }));
+}
 
-const servicesField = z
-  .union([z.string(), z.array(z.string())], { error: "Indica al menos un servicio." })
-  .transform((value) => {
-    const items = (Array.isArray(value) ? value : value.split(/\r?\n/)).map((item) => item.trim()).filter(Boolean);
-    const seen = new Set<string>();
-    return items.filter((item) => {
-      const key = item.toLocaleLowerCase("es");
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
-  })
-  .pipe(
-    z
-      .array(z.string().max(LIMITS.service, `Cada servicio admite como máximo ${LIMITS.service} caracteres.`))
-      .min(1, "Indica al menos un servicio.")
-      .max(LIMITS.services, `Indica como máximo ${LIMITS.services} servicios.`),
-  );
+function buildSchema(locale: Locale) {
+  const { workspace: t, website: websiteErrors } = getMessages(locale).validation;
 
-const workspaceInputSchema = z
-  .object({
-    name: requiredText("El nombre comercial", LIMITS.name),
-    website: z.string({ error: WEBSITE_ERROR_MESSAGES.required }).transform((value, ctx) => {
-      const website = normalizeWebsite(value);
-      if (!website.ok) {
-        ctx.addIssue({ code: "custom", message: WEBSITE_ERROR_MESSAGES[website.error] });
-        return z.NEVER;
-      }
-      return website.value;
-    }),
-    sector: requiredText("El sector", LIMITS.sector),
-    country: z
-      .string({ error: "Selecciona un país." })
-      .trim()
-      .toUpperCase()
-      .refine((code) => countryName(code) !== undefined, "Selecciona un país válido."),
-    city: z
-      .string()
-      .trim()
-      .max(LIMITS.city, `La ciudad admite como máximo ${LIMITS.city} caracteres.`)
-      .optional()
-      .nullable()
-      .transform((value) => (value ? value : null)),
-    services: servicesField,
-  })
-  .transform((input) => ({
-    name: input.name,
-    domain: input.website.domain,
-    hostname: input.website.hostname,
-    originalUrl: input.website.originalInput,
-    sector: input.sector,
-    country: input.country,
-    city: input.city,
-    services: input.services,
-  }));
+  const requiredText = (label: string, max: number) =>
+    z.string({ error: t.required(label) }).trim().min(1, t.required(label)).max(max, t.maxLength(label, max));
 
-export type WorkspaceInput = z.output<typeof workspaceInputSchema>;
+  const servicesField = z
+    .union([z.string(), z.array(z.string())], { error: t.servicesRequired })
+    .transform((value) => {
+      const items = (Array.isArray(value) ? value : value.split(/\r?\n/)).map((item) => item.trim()).filter(Boolean);
+      const seen = new Set<string>();
+      return items.filter((item) => {
+        // Duplicate detection is data normalization, not display: it stays language-independent.
+        const key = item.toLocaleLowerCase("es");
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    })
+    .pipe(
+      z
+        .array(z.string().max(LIMITS.service, t.serviceMaxLength(LIMITS.service)))
+        .min(1, t.servicesRequired)
+        .max(LIMITS.services, t.servicesMax(LIMITS.services)),
+    );
+
+  return z
+    .object({
+      name: requiredText(t.nameLabel, LIMITS.name),
+      website: z.string({ error: websiteErrors.required }).transform((value, ctx) => {
+        const website = normalizeWebsite(value);
+        if (!website.ok) {
+          ctx.addIssue({ code: "custom", message: websiteErrors[website.error] });
+          return z.NEVER;
+        }
+        return website.value;
+      }),
+      sector: requiredText(t.sectorLabel, LIMITS.sector),
+      country: z
+        .string({ error: t.countryRequired })
+        .trim()
+        .toUpperCase()
+        .refine((code) => countryName(code) !== undefined, t.countryInvalid),
+      city: z
+        .string()
+        .trim()
+        .max(LIMITS.city, t.cityMaxLength(LIMITS.city))
+        .optional()
+        .nullable()
+        .transform((value) => (value ? value : null)),
+      services: servicesField,
+    })
+    .transform((input) => ({
+      name: input.name,
+      domain: input.website.domain,
+      hostname: input.website.hostname,
+      originalUrl: input.website.originalInput,
+      sector: input.sector,
+      country: input.country,
+      city: input.city,
+      services: input.services,
+    }));
+}
+
+type WorkspaceInputSchema = ReturnType<typeof buildSchema>;
+const schemas = new Map<Locale, WorkspaceInputSchema>();
+
+/** Schema factory (D007): one schema per language, built on first use. */
+export function workspaceInputSchemaFor(locale: Locale = DEFAULT_LOCALE): WorkspaceInputSchema {
+  let schema = schemas.get(locale);
+  if (!schema) {
+    schema = buildSchema(locale);
+    schemas.set(locale, schema);
+  }
+  return schema;
+}
+
+export type WorkspaceInput = z.output<WorkspaceInputSchema>;
 export type WorkspaceField = "name" | "website" | "sector" | "country" | "city" | "services";
 export type FieldErrors = Partial<Record<WorkspaceField, string[]>>;
 
 export type ParseResult = { success: true; data: WorkspaceInput } | { success: false; fieldErrors: FieldErrors };
 
-export function parseWorkspaceInput(raw: unknown): ParseResult {
-  const result = workspaceInputSchema.safeParse(raw);
+export function parseWorkspaceInput(raw: unknown, locale: Locale = DEFAULT_LOCALE): ParseResult {
+  const result = workspaceInputSchemaFor(locale).safeParse(raw);
   if (result.success) return { success: true, data: result.data };
   const fieldErrors: FieldErrors = {};
   for (const issue of result.error.issues) {

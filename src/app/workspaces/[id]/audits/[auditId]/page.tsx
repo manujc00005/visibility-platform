@@ -7,16 +7,12 @@ import { MetricTile, StatusPill, ToneIcon, toneClasses } from "@/components/audi
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getDb } from "@/db/client";
-import {
-  AUDIT_STATUS_LABELS,
-  CATEGORY_LABELS,
-  formatBytes,
-  formatMs,
-  OUTCOME_LABELS,
-  FIELD_DATA_STATUS_MESSAGES,
-  PERFORMANCE_STATUS_MESSAGES,
-  SEVERITY_LABELS,
-} from "@/modules/audits/presentation";
+import { findingText } from "@/i18n/findings";
+import { formatBytes, formatMs, formatNumber } from "@/i18n/format";
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
+import { getMessages } from "@/i18n/messages";
+import { getLocale } from "@/i18n/server";
+import { auditLabels } from "@/modules/audits/presentation";
 import type { Category } from "@/modules/audits/rules";
 import { getAudit } from "@/modules/audits/service";
 import {
@@ -24,7 +20,6 @@ import {
   categoryStatuses,
   METRIC_THRESHOLDS,
   rateMetric,
-  RATING_LABELS,
   RATING_TONE,
   SEVERITY_TONE,
   type MetricName,
@@ -37,37 +32,35 @@ import { generateReportAction } from "./actions";
 import { displayDate, displayDomain } from "@/modules/workspaces/presentation";
 import { getWorkspace } from "@/modules/workspaces/service";
 
-export const metadata: Metadata = { title: "Auditoría técnica" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: getMessages(await getLocale()).audits.page.metaTitle };
+}
 
 /** Blocking route so an unknown audit returns a real 404 (same reason as the workspace page). */
 export const instant = false;
 
-const cls = (value: number, digits = 2) => value.toLocaleString("es-ES", { maximumFractionDigits: digits });
+/** How each metric is displayed, and its "good" reference, in the interface language. */
+function metricFormat(locale: Locale): Record<MetricName, { format: (v: number) => string; good: string }> {
+  const ms = (v: number) => formatMs(v, locale);
+  const cls = (v: number, digits = 2) => formatNumber(v, locale, { maximumFractionDigits: digits });
+  return {
+    score: { format: (v) => `${v}/100`, good: "≥ 90" },
+    lcp: { format: ms, good: `≤ ${ms(METRIC_THRESHOLDS.lcp[0])}` },
+    inp: { format: ms, good: `≤ ${ms(METRIC_THRESHOLDS.inp[0])}` },
+    cls: { format: (v) => cls(v, 3), good: `≤ ${cls(METRIC_THRESHOLDS.cls[0])}` },
+    tbt: { format: ms, good: `≤ ${ms(METRIC_THRESHOLDS.tbt[0])}` },
+    fcp: { format: ms, good: `≤ ${ms(METRIC_THRESHOLDS.fcp[0])}` },
+    speedIndex: { format: ms, good: `≤ ${ms(METRIC_THRESHOLDS.speedIndex[0])}` },
+    ttfb: { format: ms, good: `≤ ${ms(METRIC_THRESHOLDS.ttfb[0])}` },
+  };
+}
 
-/** How each metric is displayed, and its "good" reference. */
-const METRIC_FORMAT: Record<MetricName, { format: (v: number) => string; good: string }> = {
-  score: { format: (v) => `${v}/100`, good: "≥ 90" },
-  lcp: { format: formatMs, good: `≤ ${formatMs(METRIC_THRESHOLDS.lcp[0])}` },
-  inp: { format: formatMs, good: `≤ ${formatMs(METRIC_THRESHOLDS.inp[0])}` },
-  cls: { format: (v) => cls(v, 3), good: `≤ ${cls(METRIC_THRESHOLDS.cls[0])}` },
-  tbt: { format: formatMs, good: `≤ ${formatMs(METRIC_THRESHOLDS.tbt[0])}` },
-  fcp: { format: formatMs, good: `≤ ${formatMs(METRIC_THRESHOLDS.fcp[0])}` },
-  speedIndex: { format: formatMs, good: `≤ ${formatMs(METRIC_THRESHOLDS.speedIndex[0])}` },
-  ttfb: { format: formatMs, good: `≤ ${formatMs(METRIC_THRESHOLDS.ttfb[0])}` },
-};
-
-function Metric({ label, metric, value }: { label: string; metric: MetricName; value: number | null }) {
-  if (value === null) return <MetricTile label={label} value="—" tone="neutral" verdict="Sin dato" />;
+function Metric({ label, metric, value, locale }: { label: string; metric: MetricName; value: number | null; locale: Locale }) {
+  const speed = getMessages(locale).audits.page.speed;
+  if (value === null) return <MetricTile label={label} value="—" tone="neutral" verdict={speed.noValue} />;
   const rating = rateMetric(metric, value);
-  return (
-    <MetricTile
-      label={label}
-      value={METRIC_FORMAT[metric].format(value)}
-      tone={RATING_TONE[rating]}
-      verdict={RATING_LABELS[rating]}
-      hint={`Bueno: ${METRIC_FORMAT[metric].good}`}
-    />
-  );
+  const format = metricFormat(locale)[metric];
+  return <MetricTile label={label} value={format.format(value)} tone={RATING_TONE[rating]} verdict={auditLabels(locale).rating[rating]} hint={speed.good(format.good)} />;
 }
 
 /** Everything below renders text only: values come from the audited site and are never HTML. */
@@ -89,9 +82,9 @@ function Mono({ children }: { children: ReactNode }) {
 }
 
 /** Yes/no answer where one of the two is the good one. */
-function YesNo({ value, goodWhen }: { value: boolean | null | undefined; goodWhen: boolean }) {
+function YesNo({ value, goodWhen, yes, no }: { value: boolean | null | undefined; goodWhen: boolean; yes: string; no: string }) {
   if (value === null || value === undefined) return null;
-  return <StatusPill tone={value === goodWhen ? "good" : "bad"}>{value ? "Sí" : "No"}</StatusPill>;
+  return <StatusPill tone={value === goodWhen ? "good" : "bad"}>{value ? yes : no}</StatusPill>;
 }
 
 function httpTone(status: number): Tone {
@@ -113,12 +106,15 @@ function SectionTitle({ id, children, description }: { id: string; children: Rea
 export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/audits/[auditId]">) {
   await connection();
   const { id, auditId } = await params;
+  const locale = await getLocale();
   const db = getDb();
   const workspace = await getWorkspace(db, id);
   if (!workspace) notFound();
   const result = await getAudit(db, workspace.id, auditId);
   if (!result) notFound();
   const { audit, findings } = result;
+  const t = getMessages(locale).audits.page;
+  const L = auditLabels(locale);
   const reportList = audit.status === "completed" ? await listReports(db, workspace.id, audit.id) : [];
   const reportBase = `/workspaces/${workspace.id}/audits/${audit.id}/reports`;
   const facts = audit.facts;
@@ -128,10 +124,20 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
   const duration = audit.finishedAt ? audit.finishedAt.getTime() - audit.startedAt.getTime() : null;
 
   const counts = { critical: audit.criticalCount, warning: audit.warningCount, info: audit.infoCount };
-  const headline = auditHeadline(counts);
-  const areas = categoryStatuses(findings, facts);
+  const headline = auditHeadline(counts, locale);
+  const areas = categoryStatuses(findings, facts, locale);
   const perf = facts?.performance;
   const field = facts?.fieldData;
+  // Titles and recommendations of the stored findings in the interface language (SPEC «Contrato de hallazgos»).
+  const context = { facts, rulesVersion: audit.rulesVersion };
+  const texts = findings.map((finding) => findingText(finding, locale, context));
+  const anyFallback = texts.some((text) => text.fallback);
+  const anyEvidence = findings.some((finding) => finding.evidence.length > 0);
+  // One notice per view when the language is not the one the audit was stored in.
+  const originalNotice =
+    locale !== DEFAULT_LOCALE && (anyEvidence || anyFallback)
+      ? [anyEvidence ? t.findings.originalNotice : null, anyFallback ? t.findings.fallbackNotice : null].filter(Boolean).join(" ")
+      : null;
 
   return (
     <div className="flex flex-col gap-8">
@@ -139,29 +145,25 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
         <Link href={`/workspaces/${workspace.id}`} className="text-sm text-muted-foreground hover:underline">
           ← {workspace.name}
         </Link>
-        <h1 className="text-2xl font-semibold tracking-tight">Auditoría técnica de {displayDomain(workspace.domain)}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{t.title(displayDomain(workspace.domain))}</h1>
         <p className="text-sm text-muted-foreground">
-          {displayDate(audit.startedAt)}
-          {duration !== null ? ` · ${formatMs(duration)}` : ""} · reglas {audit.rulesVersion}
+          {displayDate(audit.startedAt, locale)}
+          {duration !== null ? ` · ${formatMs(duration, locale)}` : ""} · {t.rules(audit.rulesVersion)}
         </p>
       </div>
 
       {audit.status !== "completed" ? (
         <Card>
           <CardHeader>
-            <CardTitle>{AUDIT_STATUS_LABELS[audit.status]}</CardTitle>
-            <CardDescription>
-              {audit.status === "running"
-                ? "La auditoría sigue en curso. Recarga la página en unos segundos."
-                : (audit.error ?? "La auditoría no terminó.")}
-            </CardDescription>
+            <CardTitle>{L.status[audit.status]}</CardTitle>
+            <CardDescription>{audit.status === "running" ? t.stillRunning : (audit.error ?? t.notFinished)}</CardDescription>
           </CardHeader>
         </Card>
       ) : (
         <>
           <section aria-labelledby="summary-title" className="flex flex-col gap-4">
             <h2 id="summary-title" className="sr-only">
-              Resumen
+              {t.summary}
             </h2>
             <div
               className={cn(
@@ -178,13 +180,7 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
             </div>
 
             <ul className="grid grid-cols-3 gap-2 sm:gap-3">
-              {(
-                [
-                  ["critical", "Críticos", "Bloquean o dañan la visibilidad"],
-                  ["warning", "Importantes", "Conviene corregirlos pronto"],
-                  ["info", "Mejoras", "Opcionales, suman calidad"],
-                ] as const
-              ).map(([severity, label, hint]) => {
+              {(["critical", "warning", "info"] as const).map((severity) => {
                 const n = counts[severity];
                 const tone: Tone = n > 0 ? SEVERITY_TONE[severity] : "good";
                 return (
@@ -192,8 +188,8 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
                     <ToneIcon tone={tone} className="size-5" />
                     <div className="flex flex-col">
                       <span className="text-2xl leading-none font-semibold tabular-nums">{n}</span>
-                      <span className="text-sm font-medium">{label}</span>
-                      <span className="hidden text-xs text-muted-foreground sm:block">{hint}</span>
+                      <span className="text-sm font-medium">{t.counts[severity].label}</span>
+                      <span className="hidden text-xs text-muted-foreground sm:block">{t.counts[severity].hint}</span>
                     </div>
                   </li>
                 );
@@ -201,7 +197,7 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
             </ul>
 
             <div className="flex flex-col gap-2">
-              <h3 className="text-sm font-medium">Estado por área</h3>
+              <h3 className="text-sm font-medium">{t.areas}</h3>
               <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
                 {areas.map((area) => {
                   const body = (
@@ -234,36 +230,39 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
                 })}
               </ul>
               <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                <span>Verde: bien</span>
-                <span>Ámbar: regular</span>
-                <span>Rojo: mal</span>
-                <span>Azul: mejorable (opcional)</span>
-                <span>Gris: no comprobado</span>
+                <span>{t.legend.good}</span>
+                <span>{t.legend.fair}</span>
+                <span>{t.legend.bad}</span>
+                <span>{t.legend.info}</span>
+                <span>{t.legend.neutral}</span>
               </p>
             </div>
           </section>
 
           <Card>
             <CardHeader>
-              <CardTitle>Informe para el cliente</CardTitle>
-              <CardDescription>PDF con resumen ejecutivo, resultados, problemas, recomendaciones, evidencias y limitaciones.</CardDescription>
+              <CardTitle>{t.report.title}</CardTitle>
+              <CardDescription>{t.report.description}</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-4">
-              <GenerateReportButton action={generateReportAction.bind(null, workspace.id, audit.id)} />
+              <GenerateReportButton action={generateReportAction.bind(null, workspace.id, audit.id)} labels={getMessages(locale).audits.reportButton} />
               {reportList.length > 0 ? (
                 <ul className="flex flex-col divide-y text-sm">
                   {reportList.map((report) => (
                     <li key={report.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                       <span>
-                        {displayDate(report.createdAt)}
-                        <span className="text-muted-foreground"> · {formatBytes(report.pdfBytes)} · plantilla {report.templateVersion}</span>
+                        {displayDate(report.createdAt, locale)}
+                        <span className="text-muted-foreground">
+                          {" "}
+                          · {formatBytes(report.pdfBytes, locale)} · {t.report.template(report.templateVersion)}
+                        </span>
                       </span>
                       <span className="flex gap-3">
                         <a href={`${reportBase}/${report.id}`} target="_blank" rel="noopener noreferrer" className="underline">
-                          Ver
+                          {t.report.view}
                         </a>
                         <a href={`${reportBase}/${report.id}/pdf`} className="underline">
-                          Descargar PDF
+                          {t.report.download}
                         </a>
                       </span>
                     </li>
@@ -274,17 +273,23 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
           </Card>
 
           <section aria-labelledby="findings-title" className="flex flex-col gap-3">
-            <SectionTitle id="findings-title" description="Ordenados de más a menos urgente.">
-              Problemas y recomendaciones
+            <SectionTitle id="findings-title" description={t.findings.description}>
+              {t.findings.title}
             </SectionTitle>
+            {originalNotice ? (
+              <p role="note" className="rounded-md border border-border/80 bg-muted/60 p-2.5 text-xs text-muted-foreground">
+                {originalNotice}
+              </p>
+            ) : null}
             {findings.length === 0 ? (
               <div className={cn("flex items-center gap-2 rounded-lg border p-4 text-sm", toneClasses("good").soft, toneClasses("good").line)}>
                 <ToneIcon tone="good" className="size-5" />
-                No hemos detectado problemas en las comprobaciones realizadas.
+                {t.findings.none}
               </div>
             ) : (
-              findings.map((finding) => {
+              findings.map((finding, index) => {
                 const tone = SEVERITY_TONE[finding.severity];
+                const text = texts[index]!;
                 return (
                   <Card
                     key={finding.id}
@@ -294,29 +299,30 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
                   >
                     <CardHeader>
                       <div className="flex flex-wrap items-center gap-2">
-                        <StatusPill tone={tone}>{SEVERITY_LABELS[finding.severity]}</StatusPill>
-                        <span className="text-xs text-muted-foreground">
-                          {CATEGORY_LABELS[finding.category as Category] ?? finding.category}
-                        </span>
+                        <StatusPill tone={tone}>{L.severity[finding.severity]}</StatusPill>
+                        <span className="text-xs text-muted-foreground">{L.category[finding.category as Category] ?? finding.category}</span>
                       </div>
-                      <CardTitle className="text-base">{finding.title}</CardTitle>
+                      <CardTitle className="text-base" lang={text.fallback ? DEFAULT_LOCALE : undefined}>
+                        {text.title}
+                      </CardTitle>
                     </CardHeader>
                     <CardContent className="flex flex-col gap-3 text-sm">
                       {finding.evidence.length > 0 ? (
                         <div className="rounded-md bg-muted/60 p-2.5">
-                          <p className="text-xs font-medium text-muted-foreground">Evidencia</p>
-                          <ul className="mt-1 flex flex-col gap-0.5">
-                            {finding.evidence.map((line, index) => (
-                              <li key={index}>
+                          <p className="text-xs font-medium text-muted-foreground">{t.findings.evidence}</p>
+                          {/* Evidence is stored as observed, in Spanish; it is never translated (SPEC «Límites»). */}
+                          <ul className="mt-1 flex flex-col gap-0.5" lang={DEFAULT_LOCALE}>
+                            {finding.evidence.map((line, i) => (
+                              <li key={i}>
                                 <Mono>{line}</Mono>
                               </li>
                             ))}
                           </ul>
                         </div>
                       ) : null}
-                      <p>
-                        <span className="font-medium">Qué hacer: </span>
-                        {finding.recommendation}
+                      <p lang={text.fallback ? DEFAULT_LOCALE : undefined}>
+                        <span className="font-medium">{t.findings.whatToDo} </span>
+                        {text.recommendation}
                       </p>
                     </CardContent>
                   </Card>
@@ -326,32 +332,29 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
           </section>
 
           <section aria-labelledby="speed-title" className="flex flex-col gap-3">
-            <SectionTitle id="speed-title" description="Verde: bueno · ámbar: mejorable · rojo: malo, según los umbrales de Google.">
-              Velocidad y experiencia en móvil
+            <SectionTitle id="speed-title" description={t.speed.description}>
+              {t.speed.title}
             </SectionTitle>
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
               <Card size="sm">
                 <CardHeader>
-                  <CardTitle>Prueba de laboratorio</CardTitle>
-                  <CardDescription>
-                    PageSpeed Insights en un móvil simulado
-                    {perf?.status === "ok" && perf.lighthouseVersion ? ` (Lighthouse ${perf.lighthouseVersion})` : ""}. No son visitantes reales.
-                  </CardDescription>
+                  <CardTitle>{t.speed.lab}</CardTitle>
+                  <CardDescription>{t.speed.labDescription(perf?.status === "ok" ? perf.lighthouseVersion : null)}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {perf?.status === "ok" && perf.metrics ? (
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      <Metric label="Puntuación" metric="score" value={perf.score} />
-                      <Metric label="Contenido principal (LCP)" metric="lcp" value={perf.metrics.lcpMs} />
-                      <Metric label="Estabilidad (CLS)" metric="cls" value={perf.metrics.cls} />
-                      <Metric label="Bloqueo (TBT)" metric="tbt" value={perf.metrics.tbtMs} />
-                      <Metric label="Primer contenido (FCP)" metric="fcp" value={perf.metrics.fcpMs} />
-                      <Metric label="Speed Index" metric="speedIndex" value={perf.metrics.speedIndexMs} />
+                      <Metric label={t.speed.metrics.score} metric="score" value={perf.score} locale={locale} />
+                      <Metric label={t.speed.metrics.lcp} metric="lcp" value={perf.metrics.lcpMs} locale={locale} />
+                      <Metric label={t.speed.metrics.cls} metric="cls" value={perf.metrics.cls} locale={locale} />
+                      <Metric label={t.speed.metrics.tbt} metric="tbt" value={perf.metrics.tbtMs} locale={locale} />
+                      <Metric label={t.speed.metrics.fcp} metric="fcp" value={perf.metrics.fcpMs} locale={locale} />
+                      <Metric label={t.speed.metrics.speedIndex} metric="speedIndex" value={perf.metrics.speedIndexMs} locale={locale} />
                     </div>
                   ) : (
                     <p className="flex items-start gap-2 text-sm text-muted-foreground">
                       <ToneIcon tone="neutral" className="mt-0.5 size-4" />
-                      {perf ? PERFORMANCE_STATUS_MESSAGES[perf.status as Exclude<typeof perf.status, "ok">] : "—"}
+                      {perf ? L.performanceStatus[perf.status as Exclude<typeof perf.status, "ok">] : "—"}
                     </p>
                   )}
                 </CardContent>
@@ -359,30 +362,31 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
 
               <Card size="sm">
                 <CardHeader>
-                  <CardTitle>Experiencia real</CardTitle>
+                  <CardTitle>{t.speed.field}</CardTitle>
                   <CardDescription>
-                    Chrome UX Report: visitantes con Chrome en el móvil, percentil 75 de 28 días
-                    {field?.status === "ok"
-                      ? `${field.collectionPeriod ? ` (${field.collectionPeriod.firstDate} a ${field.collectionPeriod.lastDate})` : ""}, ${field.scope === "url" ? "de esta página" : "de toda la web: la página no tiene datos propios"}`
-                      : ""}
-                    .
+                    {t.speed.fieldDescription(
+                      field?.status === "ok"
+                        ? {
+                            period: field.collectionPeriod ? { first: field.collectionPeriod.firstDate, last: field.collectionPeriod.lastDate } : null,
+                            scope: field.scope,
+                          }
+                        : null,
+                    )}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {field?.status === "ok" && field.metrics ? (
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      <Metric label="Contenido principal (LCP)" metric="lcp" value={field.metrics.lcpMs} />
-                      <Metric label="Respuesta (INP)" metric="inp" value={field.metrics.inpMs} />
-                      <Metric label="Estabilidad (CLS)" metric="cls" value={field.metrics.cls} />
-                      <Metric label="Primer contenido (FCP)" metric="fcp" value={field.metrics.fcpMs} />
-                      <Metric label="Respuesta del servidor (TTFB)" metric="ttfb" value={field.metrics.ttfbMs} />
+                      <Metric label={t.speed.metrics.lcp} metric="lcp" value={field.metrics.lcpMs} locale={locale} />
+                      <Metric label={t.speed.metrics.inp} metric="inp" value={field.metrics.inpMs} locale={locale} />
+                      <Metric label={t.speed.metrics.cls} metric="cls" value={field.metrics.cls} locale={locale} />
+                      <Metric label={t.speed.metrics.fcp} metric="fcp" value={field.metrics.fcpMs} locale={locale} />
+                      <Metric label={t.speed.metrics.ttfb} metric="ttfb" value={field.metrics.ttfbMs} locale={locale} />
                     </div>
                   ) : (
                     <p className="flex items-start gap-2 text-sm text-muted-foreground">
                       <ToneIcon tone="neutral" className="mt-0.5 size-4" />
-                      {field
-                        ? FIELD_DATA_STATUS_MESSAGES[field.status as Exclude<typeof field.status, "ok">]
-                        : "Esta auditoría es anterior a la consulta de datos reales."}
+                      {field ? L.fieldDataStatus[field.status as Exclude<typeof field.status, "ok">] : t.speed.fieldLegacy}
                     </p>
                   )}
                 </CardContent>
@@ -391,34 +395,31 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
           </section>
 
           <section aria-labelledby="technical-title" className="flex flex-col gap-3">
-            <SectionTitle
-              id="technical-title"
-              description="Alcance: la portada, su robots.txt, un sitemap y la velocidad en móvil. No se rastrea el resto de la web."
-            >
-              Datos técnicos
+            <SectionTitle id="technical-title" description={t.technical.description}>
+              {t.technical.title}
             </SectionTitle>
 
             <Card size="sm">
               <CardHeader>
-                <CardTitle>Página principal</CardTitle>
+                <CardTitle>{t.technical.homePage.title}</CardTitle>
               </CardHeader>
               <CardContent>
                 <Facts>
-                  <Row label="URL solicitada">
+                  <Row label={t.technical.homePage.requestedUrl}>
                     <Mono>{audit.requestedUrl}</Mono>
                   </Row>
-                  <Row label="URL final">{page ? <Mono>{page.url}</Mono> : null}</Row>
-                  <Row label="Estado HTTP">
+                  <Row label={t.technical.homePage.finalUrl}>{page ? <Mono>{page.url}</Mono> : null}</Row>
+                  <Row label={t.technical.homePage.httpStatus}>
                     {page ? (
                       <StatusPill tone={httpTone(page.status)}>{String(page.status)}</StatusPill>
                     ) : facts?.page.kind === "disallowed" ? (
-                      <StatusPill tone="fair">No leída (robots.txt)</StatusPill>
+                      <StatusPill tone="fair">{t.technical.homePage.notRead}</StatusPill>
                     ) : (
-                      <StatusPill tone="bad">Sin respuesta</StatusPill>
+                      <StatusPill tone="bad">{t.technical.homePage.noResponse}</StatusPill>
                     )}
                   </Row>
-                  <Row label="Tipo de contenido">{page?.contentType ? <Mono>{page.contentType}</Mono> : null}</Row>
-                  <Row label="Redirecciones">
+                  <Row label={t.technical.homePage.contentType}>{page?.contentType ? <Mono>{page.contentType}</Mono> : null}</Row>
+                  <Row label={t.technical.homePage.redirects}>
                     {page && page.redirects.length > 0 ? (
                       <ul>
                         {page.redirects.map((r, i) => (
@@ -430,10 +431,10 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
                         ))}
                       </ul>
                     ) : page ? (
-                      "Ninguna"
+                      t.technical.homePage.none
                     ) : null}
                   </Row>
-                  <Row label="X-Robots-Tag">{page?.xRobotsTag ? <Mono>{page.xRobotsTag}</Mono> : page ? "No" : null}</Row>
+                  <Row label={t.technical.homePage.xRobotsTag}>{page?.xRobotsTag ? <Mono>{page.xRobotsTag}</Mono> : page ? t.no : null}</Row>
                 </Facts>
               </CardContent>
             </Card>
@@ -442,16 +443,16 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
               <>
                 <Card size="sm">
                   <CardHeader>
-                    <CardTitle>Metadatos</CardTitle>
+                    <CardTitle>{t.technical.metadata.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <Facts>
-                      <Row label={`Título (${pageFacts.titleLength})`}>{pageFacts.title}</Row>
-                      <Row label={`Descripción (${pageFacts.metaDescriptionLength})`}>{pageFacts.metaDescription}</Row>
-                      <Row label="Idioma">{pageFacts.lang}</Row>
-                      <Row label="Viewport">{pageFacts.viewport ? <Mono>{pageFacts.viewport}</Mono> : null}</Row>
-                      <Row label="Meta robots">{pageFacts.metaRobots.length ? <Mono>{pageFacts.metaRobots.join(" · ")}</Mono> : null}</Row>
-                      <Row label="Canonical">
+                      <Row label={t.technical.metadata.titleWithLength(pageFacts.titleLength)}>{pageFacts.title}</Row>
+                      <Row label={t.technical.metadata.descriptionWithLength(pageFacts.metaDescriptionLength)}>{pageFacts.metaDescription}</Row>
+                      <Row label={t.technical.metadata.lang}>{pageFacts.lang}</Row>
+                      <Row label={t.technical.metadata.viewport}>{pageFacts.viewport ? <Mono>{pageFacts.viewport}</Mono> : null}</Row>
+                      <Row label={t.technical.metadata.metaRobots}>{pageFacts.metaRobots.length ? <Mono>{pageFacts.metaRobots.join(" · ")}</Mono> : null}</Row>
+                      <Row label={t.technical.metadata.canonical}>
                         {pageFacts.canonicals.length ? (
                           <ul>
                             {pageFacts.canonicals.map((c, i) => (
@@ -468,7 +469,7 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
 
                 <Card size="sm">
                   <CardHeader>
-                    <CardTitle>Encabezados</CardTitle>
+                    <CardTitle>{t.technical.headings.title}</CardTitle>
                     <CardDescription>
                       {Object.entries(pageFacts.headingCounts)
                         .map(([tag, n]) => `${tag.toUpperCase()}: ${n}`)
@@ -477,12 +478,12 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
                   </CardHeader>
                   <CardContent>
                     {pageFacts.headings.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Sin encabezados.</p>
+                      <p className="text-sm text-muted-foreground">{t.technical.headings.none}</p>
                     ) : (
                       <ul className="flex flex-col gap-0.5 text-sm">
                         {pageFacts.headings.map((h, i) => (
                           <li key={i} style={{ paddingLeft: `${(h.level - 1) * 1}rem` }}>
-                            <span className="font-mono text-xs text-muted-foreground">H{h.level}</span> {h.text || "(vacío)"}
+                            <span className="font-mono text-xs text-muted-foreground">H{h.level}</span> {h.text || t.technical.headings.empty}
                           </li>
                         ))}
                       </ul>
@@ -492,12 +493,12 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
 
                 <Card size="sm">
                   <CardHeader>
-                    <CardTitle>Open Graph y datos estructurados</CardTitle>
+                    <CardTitle>{t.technical.structured.title}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <Facts>
                       {Object.keys(pageFacts.openGraph).length === 0 ? (
-                        <Row label="Open Graph">{null}</Row>
+                        <Row label={t.technical.structured.openGraph}>{null}</Row>
                       ) : (
                         Object.entries(pageFacts.openGraph).map(([key, value]) => (
                           <Row key={key} label={key}>
@@ -505,10 +506,10 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
                           </Row>
                         ))
                       )}
-                      <Row label="Bloques JSON-LD">
-                        {`${pageFacts.structuredData.jsonLdBlocks} (${pageFacts.structuredData.invalidJsonLdBlocks} con errores)`}
+                      <Row label={t.technical.structured.jsonLd}>
+                        {t.technical.structured.jsonLdCount(pageFacts.structuredData.jsonLdBlocks, pageFacts.structuredData.invalidJsonLdBlocks)}
                       </Row>
-                      <Row label="Tipos">
+                      <Row label={t.technical.structured.types}>
                         {[...pageFacts.structuredData.types, ...pageFacts.structuredData.microdataTypes].join(", ") || null}
                       </Row>
                     </Facts>
@@ -517,10 +518,9 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
 
                 <Card size="sm">
                   <CardHeader>
-                    <CardTitle>Enlaces de la portada</CardTitle>
+                    <CardTitle>{t.technical.links.title}</CardTitle>
                     <CardDescription>
-                      {pageFacts.links.internalCount} internos únicos · {pageFacts.links.externalCount} externos ·{" "}
-                      {pageFacts.links.nofollowCount} nofollow
+                      {t.technical.links.summary(pageFacts.links.internalCount, pageFacts.links.externalCount, pageFacts.links.nofollowCount)}
                     </CardDescription>
                   </CardHeader>
                   {pageFacts.links.internal.length > 0 ? (
@@ -540,15 +540,17 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
 
             <Card size="sm">
               <CardHeader>
-                <CardTitle>Rastreo</CardTitle>
+                <CardTitle>{t.technical.crawling.title}</CardTitle>
               </CardHeader>
               <CardContent>
                 <Facts>
-                  <Row label="robots.txt">{facts?.robots ? <Mono>{`${facts.robots.url} · ${facts.robots.httpStatus ?? facts.robots.status}`}</Mono> : null}</Row>
-                  <Row label="Google puede rastrear la portada">
-                    <YesNo value={facts?.robots?.homepageAllowedForGoogle} goodWhen={true} />
+                  <Row label={t.technical.crawling.robots}>
+                    {facts?.robots ? <Mono>{`${facts.robots.url} · ${facts.robots.httpStatus ?? facts.robots.status}`}</Mono> : null}
                   </Row>
-                  <Row label="Sitemaps declarados">
+                  <Row label={t.technical.crawling.googleCanCrawl}>
+                    <YesNo value={facts?.robots?.homepageAllowedForGoogle} goodWhen={true} yes={t.yes} no={t.no} />
+                  </Row>
+                  <Row label={t.technical.crawling.sitemapsDeclared}>
                     {facts?.robots?.sitemaps.length ? (
                       <ul>
                         {facts.robots.sitemaps.map((s, i) => (
@@ -559,13 +561,11 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
                       </ul>
                     ) : null}
                   </Row>
-                  <Row label="Sitemap analizado">{facts?.sitemap?.url ? <Mono>{facts.sitemap.url}</Mono> : null}</Row>
-                  <Row label="Resultado">
+                  <Row label={t.technical.crawling.sitemapAnalyzed}>{facts?.sitemap?.url ? <Mono>{facts.sitemap.url}</Mono> : null}</Row>
+                  <Row label={t.technical.crawling.result}>
                     {facts?.sitemap ? (
                       facts.sitemap.status === "ok" && facts.sitemap.sitemap ? (
-                        <StatusPill tone="good">
-                          {`${facts.sitemap.sitemap.kind === "index" ? "Índice de sitemaps" : "Sitemap"} con ${facts.sitemap.sitemap.locCount} URLs`}
-                        </StatusPill>
+                        <StatusPill tone="good">{t.technical.crawling.sitemapWithUrls(facts.sitemap.sitemap.kind, facts.sitemap.sitemap.locCount)}</StatusPill>
                       ) : (
                         <StatusPill tone="fair">
                           {`${facts.sitemap.status}${facts.sitemap.httpStatus ? ` (${facts.sitemap.httpStatus})` : ""}`}
@@ -573,8 +573,8 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
                       )
                     ) : null}
                   </Row>
-                  <Row label="Incluye la portada">
-                    <YesNo value={facts?.sitemap?.homepageListed} goodWhen={true} />
+                  <Row label={t.technical.crawling.includesHome}>
+                    <YesNo value={facts?.sitemap?.homepageListed} goodWhen={true} yes={t.yes} no={t.no} />
                   </Row>
                 </Facts>
               </CardContent>
@@ -582,18 +582,18 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
 
             <Card size="sm">
               <CardHeader>
-                <CardTitle>Peticiones realizadas</CardTitle>
-                <CardDescription>Cada acceso a la web durante la auditoría, con su resultado.</CardDescription>
+                <CardTitle>{t.technical.requests.title}</CardTitle>
+                <CardDescription>{t.technical.requests.description}</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>URL</TableHead>
-                      <TableHead>Resultado</TableHead>
-                      <TableHead>HTTP</TableHead>
-                      <TableHead>Tamaño</TableHead>
-                      <TableHead>Tiempo</TableHead>
+                      <TableHead>{t.technical.requests.url}</TableHead>
+                      <TableHead>{t.technical.requests.result}</TableHead>
+                      <TableHead>{t.technical.requests.http}</TableHead>
+                      <TableHead>{t.technical.requests.size}</TableHead>
+                      <TableHead>{t.technical.requests.time}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -604,13 +604,13 @@ export default async function AuditPage({ params }: PageProps<"/workspaces/[id]/
                         </TableCell>
                         <TableCell className="max-w-xs whitespace-normal">
                           <StatusPill tone={entry.outcome === "ok" ? "good" : entry.outcome === "redirect" ? "neutral" : "bad"}>
-                            {OUTCOME_LABELS[entry.outcome]}
+                            {L.outcome[entry.outcome]}
                           </StatusPill>
                           {entry.error ? <span className="block text-xs text-muted-foreground break-words">{entry.error}</span> : null}
                         </TableCell>
                         <TableCell>{entry.status ?? "—"}</TableCell>
-                        <TableCell>{formatBytes(entry.bytes)}</TableCell>
-                        <TableCell>{formatMs(entry.ms)}</TableCell>
+                        <TableCell>{formatBytes(entry.bytes, locale)}</TableCell>
+                        <TableCell>{formatMs(entry.ms, locale)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

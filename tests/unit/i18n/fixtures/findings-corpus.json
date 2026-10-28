@@ -1,0 +1,3415 @@
+{
+  "capturedAt": "2026-10-27",
+  "rulesVersion": "2026-10-26.1",
+  "scenarios": [
+    {
+      "name": "page_unreachable",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "failed",
+          "failure": {
+            "kind": "dns",
+            "message": "getaddrinfo ENOTFOUND www.clinicagarcia.es",
+            "url": "https://www.clinicagarcia.es/"
+          }
+        },
+        "robots": null,
+        "sitemap": null,
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "page_unreachable",
+          "severity": "critical",
+          "category": "access",
+          "title": "No se pudo acceder a la página principal",
+          "evidence": [
+            "https://www.clinicagarcia.es/: el dominio no se pudo resolver (DNS)",
+            "getaddrinfo ENOTFOUND www.clinicagarcia.es"
+          ],
+          "recommendation": "Comprueba que el dominio está activo y que la web carga desde fuera de tu red. Si la web funciona, contacta con nosotros: el resto de la auditoría depende de poder leerla."
+        }
+      ]
+    },
+    {
+      "name": "page_disallowed",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "disallowed"
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": false
+        },
+        "sitemap": null,
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "page_disallowed_for_audit",
+          "severity": "warning",
+          "category": "access",
+          "title": "robots.txt impide a nuestro analizador leer la página principal",
+          "evidence": [
+            "https://www.clinicagarcia.es/robots.txt"
+          ],
+          "recommendation": "Respetamos robots.txt. Si quieres el análisis completo, permite el acceso a la portada o pide una revisión asistida."
+        }
+      ]
+    },
+    {
+      "name": "robots_blocks_homepage",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": "Clínica Dental García | Implantes en Valladolid",
+              "titleLength": 47,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible y odontología general. Pide tu primera cita sin coste.",
+              "metaDescriptionLength": 119,
+              "metaDescriptionCount": 1,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "https://www.clinicagarcia.es/servicios",
+                  "https://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": false,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 12,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 0
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "robots_blocks_homepage",
+          "severity": "critical",
+          "category": "indexability",
+          "title": "robots.txt bloquea la página principal a Google",
+          "evidence": [
+            "https://www.clinicagarcia.es/robots.txt"
+          ],
+          "recommendation": "Elimina la regla Disallow que afecta a «/» para Googlebot o para todos los robots; mientras exista, Google no rastreará tu portada."
+        }
+      ]
+    },
+    {
+      "name": "robots_missing",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": "Clínica Dental García | Implantes en Valladolid",
+              "titleLength": 47,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible y odontología general. Pide tu primera cita sin coste.",
+              "metaDescriptionLength": 119,
+              "metaDescriptionCount": 1,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "https://www.clinicagarcia.es/servicios",
+                  "https://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "not_found",
+          "httpStatus": 404,
+          "error": null,
+          "sitemaps": [],
+          "homepageAllowedForGoogle": null,
+          "homepageAllowedForUs": null
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 12,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 0
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "robots_missing",
+          "severity": "info",
+          "category": "crawling",
+          "title": "No hay archivo robots.txt",
+          "evidence": [
+            "https://www.clinicagarcia.es/robots.txt: 404"
+          ],
+          "recommendation": "No es obligatorio, pero un robots.txt sencillo que indique la ubicación del sitemap ayuda a los buscadores."
+        }
+      ]
+    },
+    {
+      "name": "robots_error",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": "Clínica Dental García | Implantes en Valladolid",
+              "titleLength": 47,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible y odontología general. Pide tu primera cita sin coste.",
+              "metaDescriptionLength": 119,
+              "metaDescriptionCount": 1,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "https://www.clinicagarcia.es/servicios",
+                  "https://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "http_error",
+          "httpStatus": 503,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 12,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 0
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "robots_error",
+          "severity": "warning",
+          "category": "crawling",
+          "title": "robots.txt responde con error",
+          "evidence": [
+            "https://www.clinicagarcia.es/robots.txt: 503"
+          ],
+          "recommendation": "Un robots.txt que falla con error de servidor puede hacer que Google reduzca o pause el rastreo. Haz que responda 200 o 404."
+        }
+      ]
+    },
+    {
+      "name": "sitemap_missing",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": "Clínica Dental García | Implantes en Valladolid",
+              "titleLength": 47,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible y odontología general. Pide tu primera cita sin coste.",
+              "metaDescriptionLength": 119,
+              "metaDescriptionCount": 1,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "https://www.clinicagarcia.es/servicios",
+                  "https://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "not_found",
+          "httpStatus": 404,
+          "error": null,
+          "sitemap": null,
+          "homepageListed": null
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "sitemap_missing",
+          "severity": "warning",
+          "category": "crawling",
+          "title": "No se encontró un sitemap XML",
+          "evidence": [
+            "https://www.clinicagarcia.es/sitemap.xml: 404"
+          ],
+          "recommendation": "Publica un sitemap.xml con tus páginas importantes y decláralo en robots.txt y en Search Console."
+        }
+      ]
+    },
+    {
+      "name": "sitemap_invalid",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": "Clínica Dental García | Implantes en Valladolid",
+              "titleLength": 47,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible y odontología general. Pide tu primera cita sin coste.",
+              "metaDescriptionLength": 119,
+              "metaDescriptionCount": 1,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "https://www.clinicagarcia.es/servicios",
+                  "https://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "invalid",
+          "httpStatus": 200,
+          "error": "not_a_sitemap",
+          "sitemap": null,
+          "homepageListed": null
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "sitemap_invalid",
+          "severity": "warning",
+          "category": "crawling",
+          "title": "El sitemap no es válido",
+          "evidence": [
+            "https://www.clinicagarcia.es/sitemap.xml: no es un sitemap XML (parece una página web)"
+          ],
+          "recommendation": "Revisa que la URL del sitemap devuelva XML con el formato de sitemaps.org."
+        }
+      ]
+    },
+    {
+      "name": "sitemap_undeclared_empty",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": "Clínica Dental García | Implantes en Valladolid",
+              "titleLength": 47,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible y odontología general. Pide tu primera cita sin coste.",
+              "metaDescriptionLength": 119,
+              "metaDescriptionCount": 1,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "https://www.clinicagarcia.es/servicios",
+                  "https://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "default",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 0,
+            "sample": [],
+            "invalidLocCount": 0
+          },
+          "homepageListed": false
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "sitemap_empty",
+          "severity": "warning",
+          "category": "crawling",
+          "title": "El sitemap está vacío",
+          "evidence": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "recommendation": "Incluye en el sitemap las URLs que quieres que aparezcan en Google."
+        },
+        {
+          "ruleId": "sitemap_not_declared",
+          "severity": "info",
+          "category": "crawling",
+          "title": "El sitemap no está declarado en robots.txt",
+          "evidence": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "recommendation": "Añade una línea «Sitemap: <url>» en robots.txt para que todos los buscadores lo encuentren."
+        }
+      ]
+    },
+    {
+      "name": "sitemap_invalid_urls",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": "Clínica Dental García | Implantes en Valladolid",
+              "titleLength": 47,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible y odontología general. Pide tu primera cita sin coste.",
+              "metaDescriptionLength": 119,
+              "metaDescriptionCount": 1,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "https://www.clinicagarcia.es/servicios",
+                  "https://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "index",
+            "locCount": 5,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 2
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "sitemap_invalid_urls",
+          "severity": "info",
+          "category": "crawling",
+          "title": "El sitemap contiene URLs no válidas",
+          "evidence": [
+            "2 de 5 entradas"
+          ],
+          "recommendation": "Cada <loc> debe ser una URL absoluta http o https."
+        }
+      ]
+    },
+    {
+      "name": "page_http_error",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 503,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": "Clínica Dental García | Implantes en Valladolid",
+              "titleLength": 47,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible y odontología general. Pide tu primera cita sin coste.",
+              "metaDescriptionLength": 119,
+              "metaDescriptionCount": 1,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "https://www.clinicagarcia.es/servicios",
+                  "https://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 12,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 0
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "page_http_error",
+          "severity": "critical",
+          "category": "access",
+          "title": "La página principal responde con error 503",
+          "evidence": [
+            "https://www.clinicagarcia.es/: HTTP 503"
+          ],
+          "recommendation": "La portada debe responder 200. Un error impide que Google la indexe."
+        }
+      ]
+    },
+    {
+      "name": "page_not_html",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "application/json",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": null,
+              "titleLength": 0,
+              "titleCount": 0,
+              "metaDescription": null,
+              "metaDescriptionLength": 0,
+              "metaDescriptionCount": 0,
+              "metaRobots": [],
+              "lang": null,
+              "viewport": null,
+              "canonicals": [],
+              "canonicalCount": 0,
+              "headings": [],
+              "headingCounts": {
+                "h1": 0,
+                "h2": 0,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {},
+              "structuredData": {
+                "jsonLdBlocks": 0,
+                "invalidJsonLdBlocks": 0,
+                "types": [],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [],
+                "internalCount": 0,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 12,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 0
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "page_not_html",
+          "severity": "critical",
+          "category": "access",
+          "title": "La página principal no devuelve HTML",
+          "evidence": [
+            "Content-Type: application/json"
+          ],
+          "recommendation": "Revisa la configuración del servidor: la portada debe servirse como text/html."
+        },
+        {
+          "ruleId": "title_missing",
+          "severity": "critical",
+          "category": "metadata",
+          "title": "La página no tiene título",
+          "evidence": [
+            "https://www.clinicagarcia.es/"
+          ],
+          "recommendation": "Añade un <title> con tu marca y lo que ofreces, por ejemplo «Clínica Dental García | Implantes en Valladolid»."
+        },
+        {
+          "ruleId": "canonical_missing",
+          "severity": "warning",
+          "category": "indexability",
+          "title": "Falta la etiqueta canonical",
+          "evidence": [
+            "https://www.clinicagarcia.es/"
+          ],
+          "recommendation": "Añade <link rel=\"canonical\"> apuntando a la URL principal de la página para evitar duplicados."
+        },
+        {
+          "ruleId": "description_missing",
+          "severity": "warning",
+          "category": "metadata",
+          "title": "Falta la meta descripción",
+          "evidence": [
+            "https://www.clinicagarcia.es/"
+          ],
+          "recommendation": "Escribe una descripción de 70–160 caracteres que invite a hacer clic; Google la usa a menudo como texto del resultado."
+        },
+        {
+          "ruleId": "h1_missing",
+          "severity": "warning",
+          "category": "headings",
+          "title": "La página no tiene encabezado H1",
+          "evidence": [
+            "Sin encabezados"
+          ],
+          "recommendation": "Añade un H1 visible que diga qué ofreces y dónde."
+        },
+        {
+          "ruleId": "lang_missing",
+          "severity": "info",
+          "category": "metadata",
+          "title": "No se declara el idioma de la página",
+          "evidence": [
+            "<html> sin atributo lang"
+          ],
+          "recommendation": "Añade lang=\"es\" (o el idioma correspondiente) a la etiqueta <html>."
+        }
+      ]
+    },
+    {
+      "name": "not_https_plain",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "http://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": "Clínica Dental García | Implantes en Valladolid",
+              "titleLength": 47,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible y odontología general. Pide tu primera cita sin coste.",
+              "metaDescriptionLength": 119,
+              "metaDescriptionCount": 1,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "http://www.clinicagarcia.es/servicios",
+                  "http://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 12,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 0
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "not_https",
+          "severity": "critical",
+          "category": "access",
+          "title": "La web no usa HTTPS",
+          "evidence": [
+            "http://www.clinicagarcia.es/"
+          ],
+          "recommendation": "Activa un certificado SSL y redirige todo el tráfico http a https. Los navegadores marcan como «no seguras» las webs sin HTTPS."
+        },
+        {
+          "ruleId": "canonical_other_url",
+          "severity": "warning",
+          "category": "indexability",
+          "title": "La canonical apunta a otra URL",
+          "evidence": [
+            "Página: http://www.clinicagarcia.es/",
+            "Canonical: https://www.clinicagarcia.es/"
+          ],
+          "recommendation": "Si esta es la URL principal, la canonical debe apuntar a sí misma. Si no, comprueba que la URL indicada es la correcta y funciona."
+        }
+      ]
+    },
+    {
+      "name": "not_https_failed",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": {
+          "kind": "network",
+          "message": "EPROTO: write EPROTO ...:SSL routines:ssl3_read_bytes:tlsv1 alert internal error",
+          "url": "https://www.clinicagarcia.es/"
+        },
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "http://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": "Clínica Dental García | Implantes en Valladolid",
+              "titleLength": 47,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible y odontología general. Pide tu primera cita sin coste.",
+              "metaDescriptionLength": 119,
+              "metaDescriptionCount": 1,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "http://www.clinicagarcia.es/servicios",
+                  "http://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 12,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 0
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "not_https",
+          "severity": "critical",
+          "category": "access",
+          "title": "La conexión segura (HTTPS) no funciona",
+          "evidence": [
+            "https://www.clinicagarcia.es/: el certificado o la conexión segura (TLS) no funcionan",
+            "Se leyó por http: http://www.clinicagarcia.es/"
+          ],
+          "recommendation": "Activa un certificado SSL y redirige todo el tráfico http a https. Los navegadores marcan como «no seguras» las webs sin HTTPS."
+        },
+        {
+          "ruleId": "canonical_other_url",
+          "severity": "warning",
+          "category": "indexability",
+          "title": "La canonical apunta a otra URL",
+          "evidence": [
+            "Página: http://www.clinicagarcia.es/",
+            "Canonical: https://www.clinicagarcia.es/"
+          ],
+          "recommendation": "Si esta es la URL principal, la canonical debe apuntar a sí misma. Si no, comprueba que la URL indicada es la correcta y funciona."
+        }
+      ]
+    },
+    {
+      "name": "redirects_cross_host",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://clinica-garcia.com/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [
+              {
+                "url": "https://www.clinicagarcia.es/",
+                "status": 301,
+                "location": "https://clinicagarcia.es/"
+              },
+              {
+                "url": "https://clinicagarcia.es/",
+                "status": 302,
+                "location": "https://clinica-garcia.com/"
+              }
+            ],
+            "facts": {
+              "title": "Clínica Dental García | Implantes en Valladolid",
+              "titleLength": 47,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible y odontología general. Pide tu primera cita sin coste.",
+              "metaDescriptionLength": 119,
+              "metaDescriptionCount": 1,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "https://clinica-garcia.com/servicios",
+                  "https://clinica-garcia.com/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 12,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 0
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "cross_host_redirect",
+          "severity": "warning",
+          "category": "access",
+          "title": "La web redirige a otro dominio",
+          "evidence": [
+            "https://www.clinicagarcia.es/ → https://clinica-garcia.com/"
+          ],
+          "recommendation": "Comprueba que el dominio registrado es el principal de tu negocio; la auditoría analiza el dominio final."
+        },
+        {
+          "ruleId": "canonical_other_url",
+          "severity": "warning",
+          "category": "indexability",
+          "title": "La canonical apunta a otra URL",
+          "evidence": [
+            "Página: https://clinica-garcia.com/",
+            "Canonical: https://www.clinicagarcia.es/"
+          ],
+          "recommendation": "Si esta es la URL principal, la canonical debe apuntar a sí misma. Si no, comprueba que la URL indicada es la correcta y funciona."
+        },
+        {
+          "ruleId": "redirect_chain",
+          "severity": "info",
+          "category": "access",
+          "title": "La portada pasa por 2 redirecciones",
+          "evidence": [
+            "301 https://www.clinicagarcia.es/ → https://clinicagarcia.es/",
+            "302 https://clinicagarcia.es/ → https://clinica-garcia.com/"
+          ],
+          "recommendation": "Redirige directamente a la URL final en un solo salto para cargar antes."
+        }
+      ]
+    },
+    {
+      "name": "noindex",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": "noindex, nofollow",
+            "redirects": [],
+            "facts": {
+              "title": "Clínica Dental García | Implantes en Valladolid",
+              "titleLength": 47,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible y odontología general. Pide tu primera cita sin coste.",
+              "metaDescriptionLength": 119,
+              "metaDescriptionCount": 1,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "https://www.clinicagarcia.es/servicios",
+                  "https://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 12,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 0
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "noindex",
+          "severity": "critical",
+          "category": "indexability",
+          "title": "La página principal pide no ser indexada (noindex)",
+          "evidence": [
+            "X-Robots-Tag: noindex, nofollow"
+          ],
+          "recommendation": "Quita «noindex» de la portada: mientras esté, Google no la mostrará en los resultados."
+        }
+      ]
+    },
+    {
+      "name": "nofollow",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": "Clínica Dental García | Implantes en Valladolid",
+              "titleLength": 47,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible y odontología general. Pide tu primera cita sin coste.",
+              "metaDescriptionLength": 119,
+              "metaDescriptionCount": 1,
+              "metaRobots": [
+                "nofollow"
+              ],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "https://www.clinicagarcia.es/servicios",
+                  "https://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 12,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 0
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "nofollow",
+          "severity": "warning",
+          "category": "indexability",
+          "title": "La página principal indica no seguir sus enlaces (nofollow)",
+          "evidence": [
+            "nofollow"
+          ],
+          "recommendation": "Quita «nofollow» para que Google descubra el resto de páginas desde la portada."
+        }
+      ]
+    },
+    {
+      "name": "canonicals",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": "Clínica Dental García | Implantes en Valladolid",
+              "titleLength": 47,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible y odontología general. Pide tu primera cita sin coste.",
+              "metaDescriptionLength": 119,
+              "metaDescriptionCount": 1,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://clinicagarcia.es/inicio"
+              ],
+              "canonicalCount": 2,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "https://www.clinicagarcia.es/servicios",
+                  "https://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 12,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 0
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "canonical_invalid",
+          "severity": "warning",
+          "category": "indexability",
+          "title": "La etiqueta canonical no contiene una URL válida",
+          "evidence": [
+            "1 canonical sin URL http(s) válida"
+          ],
+          "recommendation": "La canonical debe ser una URL absoluta http o https."
+        },
+        {
+          "ruleId": "canonical_multiple",
+          "severity": "warning",
+          "category": "indexability",
+          "title": "Hay 2 etiquetas canonical",
+          "evidence": [
+            "https://clinicagarcia.es/inicio"
+          ],
+          "recommendation": "Deja una sola etiqueta canonical; con varias, Google puede ignorarlas todas."
+        },
+        {
+          "ruleId": "canonical_other_url",
+          "severity": "warning",
+          "category": "indexability",
+          "title": "La canonical apunta a otra URL",
+          "evidence": [
+            "Página: https://www.clinicagarcia.es/",
+            "Canonical: https://clinicagarcia.es/inicio"
+          ],
+          "recommendation": "Si esta es la URL principal, la canonical debe apuntar a sí misma. Si no, comprueba que la URL indicada es la correcta y funciona."
+        }
+      ]
+    },
+    {
+      "name": "metadata_long",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": "Clínica Dental García | Implantes, ortodoncia invisible y blanqueamiento en Valladolid",
+              "titleLength": 86,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible, blanqueamiento, odontología general, odontopediatría y urgencias. Pide tu primera cita sin coste y conoce al equipo de la clínica.",
+              "metaDescriptionLength": 196,
+              "metaDescriptionCount": 1,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "https://www.clinicagarcia.es/servicios",
+                  "https://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 12,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 0
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "description_length",
+          "severity": "info",
+          "category": "metadata",
+          "title": "La meta descripción mide 196 caracteres",
+          "evidence": [
+            "Clínica dental en Valladolid con implantes, ortodoncia invisible, blanqueamiento, odontología general, odontopediatría y urgencias. Pide tu primera cita sin coste y conoce al equipo de la clínica."
+          ],
+          "recommendation": "Lo habitual es entre 70 y 160 caracteres para que no se corte ni se quede corta."
+        },
+        {
+          "ruleId": "title_too_long",
+          "severity": "info",
+          "category": "metadata",
+          "title": "El título es largo (86 caracteres)",
+          "evidence": [
+            "Clínica Dental García | Implantes, ortodoncia invisible y blanqueamiento en Valladolid"
+          ],
+          "recommendation": "Google suele cortar los títulos de más de ~60 caracteres. Pon lo importante al principio."
+        }
+      ]
+    },
+    {
+      "name": "metadata_short_multiple",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": "Inicio",
+              "titleLength": 6,
+              "titleCount": 2,
+              "metaDescription": "Clínica en Valladolid",
+              "metaDescriptionLength": 21,
+              "metaDescriptionCount": 2,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica"
+                },
+                {
+                  "level": 1,
+                  "text": "Dental"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                },
+                {
+                  "level": 4,
+                  "text": "Implantes"
+                }
+              ],
+              "headingCounts": {
+                "h1": 2,
+                "h2": 1,
+                "h3": 0,
+                "h4": 1,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "x",
+                "og:description": "y",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "https://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 1,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 12,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 0
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "title_multiple",
+          "severity": "warning",
+          "category": "metadata",
+          "title": "Hay 2 etiquetas <title>",
+          "evidence": [
+            "Inicio"
+          ],
+          "recommendation": "Deja un único <title> por página."
+        },
+        {
+          "ruleId": "title_too_short",
+          "severity": "warning",
+          "category": "metadata",
+          "title": "El título es muy corto (6 caracteres)",
+          "evidence": [
+            "Inicio"
+          ],
+          "recommendation": "Usa un título descriptivo con tu actividad y tu zona."
+        },
+        {
+          "ruleId": "description_length",
+          "severity": "info",
+          "category": "metadata",
+          "title": "La meta descripción mide 21 caracteres",
+          "evidence": [
+            "Clínica en Valladolid"
+          ],
+          "recommendation": "Lo habitual es entre 70 y 160 caracteres para que no se corte ni se quede corta."
+        },
+        {
+          "ruleId": "description_multiple",
+          "severity": "info",
+          "category": "metadata",
+          "title": "Hay 2 meta descripciones",
+          "evidence": [
+            "Clínica en Valladolid"
+          ],
+          "recommendation": "Deja una sola meta descripción por página."
+        },
+        {
+          "ruleId": "h1_multiple",
+          "severity": "info",
+          "category": "headings",
+          "title": "Hay 2 encabezados H1",
+          "evidence": [
+            "H1 «Clínica»",
+            "H1 «Dental»"
+          ],
+          "recommendation": "Lo recomendable es un único H1 con el tema principal de la página."
+        },
+        {
+          "ruleId": "heading_level_skip",
+          "severity": "info",
+          "category": "headings",
+          "title": "La jerarquía de encabezados salta niveles",
+          "evidence": [
+            "H2 «Servicios» → H4 «Implantes»"
+          ],
+          "recommendation": "Ordena los encabezados sin saltos (H1 → H2 → H3) para que la estructura sea clara."
+        }
+      ]
+    },
+    {
+      "name": "bare_page",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": null,
+              "titleLength": 0,
+              "titleCount": 0,
+              "metaDescription": null,
+              "metaDescriptionLength": 0,
+              "metaDescriptionCount": 0,
+              "metaRobots": [],
+              "lang": null,
+              "viewport": null,
+              "canonicals": [],
+              "canonicalCount": 0,
+              "headings": [],
+              "headingCounts": {
+                "h1": 0,
+                "h2": 0,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {},
+              "structuredData": {
+                "jsonLdBlocks": 0,
+                "invalidJsonLdBlocks": 0,
+                "types": [],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [],
+                "internalCount": 0,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 12,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 0
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "title_missing",
+          "severity": "critical",
+          "category": "metadata",
+          "title": "La página no tiene título",
+          "evidence": [
+            "https://www.clinicagarcia.es/"
+          ],
+          "recommendation": "Añade un <title> con tu marca y lo que ofreces, por ejemplo «Clínica Dental García | Implantes en Valladolid»."
+        },
+        {
+          "ruleId": "canonical_missing",
+          "severity": "warning",
+          "category": "indexability",
+          "title": "Falta la etiqueta canonical",
+          "evidence": [
+            "https://www.clinicagarcia.es/"
+          ],
+          "recommendation": "Añade <link rel=\"canonical\"> apuntando a la URL principal de la página para evitar duplicados."
+        },
+        {
+          "ruleId": "description_missing",
+          "severity": "warning",
+          "category": "metadata",
+          "title": "Falta la meta descripción",
+          "evidence": [
+            "https://www.clinicagarcia.es/"
+          ],
+          "recommendation": "Escribe una descripción de 70–160 caracteres que invite a hacer clic; Google la usa a menudo como texto del resultado."
+        },
+        {
+          "ruleId": "h1_missing",
+          "severity": "warning",
+          "category": "headings",
+          "title": "La página no tiene encabezado H1",
+          "evidence": [
+            "Sin encabezados"
+          ],
+          "recommendation": "Añade un H1 visible que diga qué ofreces y dónde."
+        },
+        {
+          "ruleId": "internal_links_none",
+          "severity": "warning",
+          "category": "links",
+          "title": "La portada no enlaza a otras páginas de la web",
+          "evidence": [
+            "0 enlaces externos, 0 internos"
+          ],
+          "recommendation": "Enlaza desde la portada a tus servicios y contacto con enlaces HTML normales; si el menú se genera solo con JavaScript, Google puede no verlo."
+        },
+        {
+          "ruleId": "viewport_missing",
+          "severity": "warning",
+          "category": "mobile",
+          "title": "Falta la etiqueta viewport para móviles",
+          "evidence": [
+            "https://www.clinicagarcia.es/"
+          ],
+          "recommendation": "Añade <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"> para que la web se adapte al móvil."
+        },
+        {
+          "ruleId": "lang_missing",
+          "severity": "info",
+          "category": "metadata",
+          "title": "No se declara el idioma de la página",
+          "evidence": [
+            "<html> sin atributo lang"
+          ],
+          "recommendation": "Añade lang=\"es\" (o el idioma correspondiente) a la etiqueta <html>."
+        },
+        {
+          "ruleId": "structured_data_missing",
+          "severity": "info",
+          "category": "structured_data",
+          "title": "No hay datos estructurados",
+          "evidence": [
+            "Sin JSON-LD ni microdatos"
+          ],
+          "recommendation": "Añade datos estructurados de tu negocio (Organization o LocalBusiness con nombre, dirección y teléfono). Ayudan a Google y a los asistentes de IA a entender quién eres."
+        },
+        {
+          "ruleId": "open_graph_incomplete",
+          "severity": "info",
+          "category": "social",
+          "title": "Faltan etiquetas Open Graph",
+          "evidence": [
+            "Faltan: og:title, og:description, og:image"
+          ],
+          "recommendation": "Añade título, descripción e imagen Open Graph para que la web se vea bien al compartirla en WhatsApp o redes sociales."
+        }
+      ]
+    },
+    {
+      "name": "structured_data",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": "Clínica Dental García | Implantes en Valladolid",
+              "titleLength": 47,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible y odontología general. Pide tu primera cita sin coste.",
+              "metaDescriptionLength": 119,
+              "metaDescriptionCount": 1,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 2,
+                "invalidJsonLdBlocks": 1,
+                "types": [
+                  "WebPage"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "https://www.clinicagarcia.es/servicios",
+                  "https://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 12,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 0
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "structured_data_invalid",
+          "severity": "warning",
+          "category": "structured_data",
+          "title": "Hay datos estructurados con errores de sintaxis",
+          "evidence": [
+            "1 de 2 bloques JSON-LD no se pueden leer"
+          ],
+          "recommendation": "Corrige el JSON-LD (por ejemplo con la prueba de resultados enriquecidos de Google)."
+        },
+        {
+          "ruleId": "structured_data_no_business",
+          "severity": "info",
+          "category": "structured_data",
+          "title": "Los datos estructurados no describen al negocio",
+          "evidence": [
+            "Tipos encontrados: WebPage"
+          ],
+          "recommendation": "Añade un bloque Organization o LocalBusiness con los datos de tu empresa."
+        }
+      ]
+    },
+    {
+      "name": "performance_error",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": "Clínica Dental García | Implantes en Valladolid",
+              "titleLength": 47,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible y odontología general. Pide tu primera cita sin coste.",
+              "metaDescriptionLength": 119,
+              "metaDescriptionCount": 1,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "https://www.clinicagarcia.es/servicios",
+                  "https://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 12,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 0
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "error",
+          "strategy": "mobile",
+          "score": null,
+          "metrics": null,
+          "lighthouseVersion": null,
+          "error": "PageSpeed Insights: 500"
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "performance_unavailable",
+          "severity": "info",
+          "category": "performance",
+          "title": "No se pudo medir el rendimiento",
+          "evidence": [
+            "PageSpeed Insights: 500"
+          ],
+          "recommendation": "Repite la auditoría más tarde para obtener las métricas de velocidad."
+        }
+      ]
+    },
+    {
+      "name": "performance_slow_warning",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": "Clínica Dental García | Implantes en Valladolid",
+              "titleLength": 47,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible y odontología general. Pide tu primera cita sin coste.",
+              "metaDescriptionLength": 119,
+              "metaDescriptionCount": 1,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "https://www.clinicagarcia.es/servicios",
+                  "https://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 12,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 0
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 5000,
+            "cls": 0.3,
+            "tbtMs": 700,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "cls_high",
+          "severity": "warning",
+          "category": "performance",
+          "title": "La página se mueve mientras carga",
+          "evidence": [
+            "CLS de laboratorio: 0,3 (bueno: ≤ 0,1)"
+          ],
+          "recommendation": "Reserva espacio para imágenes, anuncios y banners para que el contenido no salte."
+        },
+        {
+          "ruleId": "lcp_slow",
+          "severity": "warning",
+          "category": "performance",
+          "title": "El contenido principal tarda 5 s en aparecer en móvil",
+          "evidence": [
+            "LCP de laboratorio: 5 s (bueno: ≤ 2,5 s)"
+          ],
+          "recommendation": "Optimiza el tamaño de la imagen o bloque principal y el tiempo de respuesta del servidor."
+        },
+        {
+          "ruleId": "tbt_high",
+          "severity": "warning",
+          "category": "performance",
+          "title": "La página tarda en responder a la interacción",
+          "evidence": [
+            "Tiempo total de bloqueo: 700 ms (bueno: ≤ 200 ms)"
+          ],
+          "recommendation": "Reduce el JavaScript que se carga al inicio (plugins, chats, scripts de terceros)."
+        }
+      ]
+    },
+    {
+      "name": "performance_slow_info",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": "Clínica Dental García | Implantes en Valladolid",
+              "titleLength": 47,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible y odontología general. Pide tu primera cita sin coste.",
+              "metaDescriptionLength": 119,
+              "metaDescriptionCount": 1,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "https://www.clinicagarcia.es/servicios",
+                  "https://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 12,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 0
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 3000,
+            "cls": 0.15,
+            "tbtMs": 300,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "cls_high",
+          "severity": "info",
+          "category": "performance",
+          "title": "La página se mueve mientras carga",
+          "evidence": [
+            "CLS de laboratorio: 0,15 (bueno: ≤ 0,1)"
+          ],
+          "recommendation": "Reserva espacio para imágenes, anuncios y banners para que el contenido no salte."
+        },
+        {
+          "ruleId": "lcp_slow",
+          "severity": "info",
+          "category": "performance",
+          "title": "El contenido principal tarda 3 s en aparecer en móvil",
+          "evidence": [
+            "LCP de laboratorio: 3 s (bueno: ≤ 2,5 s)"
+          ],
+          "recommendation": "Optimiza el tamaño de la imagen o bloque principal y el tiempo de respuesta del servidor."
+        },
+        {
+          "ruleId": "tbt_high",
+          "severity": "info",
+          "category": "performance",
+          "title": "La página tarda en responder a la interacción",
+          "evidence": [
+            "Tiempo total de bloqueo: 300 ms (bueno: ≤ 200 ms)"
+          ],
+          "recommendation": "Reduce el JavaScript que se carga al inicio (plugins, chats, scripts de terceros)."
+        }
+      ]
+    },
+    {
+      "name": "field_poor",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": "Clínica Dental García | Implantes en Valladolid",
+              "titleLength": 47,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible y odontología general. Pide tu primera cita sin coste.",
+              "metaDescriptionLength": 119,
+              "metaDescriptionCount": 1,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "https://www.clinicagarcia.es/servicios",
+                  "https://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 12,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 0
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        },
+        "fieldData": {
+          "status": "ok",
+          "formFactor": "PHONE",
+          "scope": "origin",
+          "key": "https://www.clinicagarcia.es",
+          "collectionPeriod": {
+            "firstDate": "2026-09-27",
+            "lastDate": "2026-10-24"
+          },
+          "metrics": {
+            "lcpMs": 4500,
+            "inpMs": 300,
+            "cls": 0.12,
+            "fcpMs": 1500,
+            "ttfbMs": 600
+          },
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "field_cwv_failed",
+          "severity": "warning",
+          "category": "performance",
+          "title": "Los visitantes reales en móvil tienen una experiencia mejorable",
+          "evidence": [
+            "Carga del contenido principal (LCP): 4,5 s, mala (bueno: ≤ 2,5 s)",
+            "Respuesta a la interacción (INP): 300 ms, mejorable (bueno: ≤ 200 ms)",
+            "Estabilidad visual (CLS): 0,12, mejorable (bueno: ≤ 0,1)",
+            "Datos de usuarios de Chrome en móvil, percentil 75, últimos 28 días (2026-09-27 a 2026-10-24), de toda la web"
+          ],
+          "recommendation": "Prioriza las métricas marcadas: son las que Google usa para valorar la experiencia real de la web."
+        }
+      ]
+    },
+    {
+      "name": "field_fair",
+      "facts": {
+        "requestedUrl": "https://www.clinicagarcia.es/",
+        "httpsFailure": null,
+        "page": {
+          "kind": "fetched",
+          "result": {
+            "url": "https://www.clinicagarcia.es/",
+            "status": 200,
+            "contentType": "text/html; charset=utf-8",
+            "xRobotsTag": null,
+            "redirects": [],
+            "facts": {
+              "title": "Clínica Dental García | Implantes en Valladolid",
+              "titleLength": 47,
+              "titleCount": 1,
+              "metaDescription": "Clínica dental en Valladolid con implantes, ortodoncia invisible y odontología general. Pide tu primera cita sin coste.",
+              "metaDescriptionLength": 119,
+              "metaDescriptionCount": 1,
+              "metaRobots": [],
+              "lang": "es",
+              "viewport": "width=device-width, initial-scale=1",
+              "canonicals": [
+                "https://www.clinicagarcia.es/"
+              ],
+              "canonicalCount": 1,
+              "headings": [
+                {
+                  "level": 1,
+                  "text": "Clínica dental en Valladolid"
+                },
+                {
+                  "level": 2,
+                  "text": "Servicios"
+                }
+              ],
+              "headingCounts": {
+                "h1": 1,
+                "h2": 1,
+                "h3": 0,
+                "h4": 0,
+                "h5": 0,
+                "h6": 0
+              },
+              "openGraph": {
+                "og:title": "Clínica Dental García",
+                "og:description": "Implantes en Valladolid",
+                "og:image": "https://www.clinicagarcia.es/og.jpg"
+              },
+              "structuredData": {
+                "jsonLdBlocks": 1,
+                "invalidJsonLdBlocks": 0,
+                "types": [
+                  "Dentist"
+                ],
+                "microdataTypes": []
+              },
+              "links": {
+                "internal": [
+                  "https://www.clinicagarcia.es/servicios",
+                  "https://www.clinicagarcia.es/contacto"
+                ],
+                "internalCount": 2,
+                "externalCount": 0,
+                "nofollowCount": 0
+              }
+            }
+          }
+        },
+        "robots": {
+          "url": "https://www.clinicagarcia.es/robots.txt",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemaps": [
+            "https://www.clinicagarcia.es/sitemap.xml"
+          ],
+          "homepageAllowedForGoogle": true,
+          "homepageAllowedForUs": true
+        },
+        "sitemap": {
+          "url": "https://www.clinicagarcia.es/sitemap.xml",
+          "source": "robots",
+          "status": "ok",
+          "httpStatus": 200,
+          "error": null,
+          "sitemap": {
+            "kind": "urlset",
+            "locCount": 12,
+            "sample": [
+              "https://www.clinicagarcia.es/"
+            ],
+            "invalidLocCount": 0
+          },
+          "homepageListed": true
+        },
+        "performance": {
+          "status": "ok",
+          "strategy": "mobile",
+          "score": 95,
+          "metrics": {
+            "lcpMs": 1800,
+            "cls": 0.02,
+            "tbtMs": 90,
+            "fcpMs": 1000,
+            "speedIndexMs": 1500
+          },
+          "lighthouseVersion": "12.8.2",
+          "error": null
+        },
+        "fieldData": {
+          "status": "ok",
+          "formFactor": "PHONE",
+          "scope": "origin",
+          "key": "https://www.clinicagarcia.es",
+          "collectionPeriod": {
+            "firstDate": "2026-09-27",
+            "lastDate": "2026-10-24"
+          },
+          "metrics": {
+            "lcpMs": 2100,
+            "inpMs": 300,
+            "cls": 0.05,
+            "fcpMs": 1500,
+            "ttfbMs": 600
+          },
+          "error": null
+        }
+      },
+      "findings": [
+        {
+          "ruleId": "field_cwv_failed",
+          "severity": "info",
+          "category": "performance",
+          "title": "Los visitantes reales en móvil tienen una experiencia mejorable",
+          "evidence": [
+            "Respuesta a la interacción (INP): 300 ms, mejorable (bueno: ≤ 200 ms)",
+            "Datos de usuarios de Chrome en móvil, percentil 75, últimos 28 días (2026-09-27 a 2026-10-24), de toda la web"
+          ],
+          "recommendation": "Prioriza las métricas marcadas: son las que Google usa para valorar la experiencia real de la web."
+        }
+      ]
+    }
+  ]
+}

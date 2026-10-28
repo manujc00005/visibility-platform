@@ -1,5 +1,6 @@
 import { desc, eq, sql } from "drizzle-orm";
 import type { Database } from "@/db/client";
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
 import { logger } from "@/lib/logger";
 import { workspaces, type Workspace } from "@/modules/workspaces/schema";
 import { parseWorkspaceInput, type FieldErrors } from "@/modules/workspaces/validation";
@@ -42,9 +43,10 @@ export async function getWorkspace(db: Database, id: string): Promise<Workspace 
 /**
  * Creates a workspace. Uniqueness is enforced by the database constraint, not by a
  * prior SELECT, so two concurrent creations of the same domain yield exactly one row.
+ * `locale` only selects the language of the validation messages.
  */
-export async function createWorkspace(db: Database, raw: unknown): Promise<WorkspaceResult> {
-  const parsed = parseWorkspaceInput(raw);
+export async function createWorkspace(db: Database, raw: unknown, locale: Locale = DEFAULT_LOCALE): Promise<WorkspaceResult> {
+  const parsed = parseWorkspaceInput(raw, locale);
   if (!parsed.success) return { ok: false, error: { kind: "validation", fieldErrors: parsed.fieldErrors } };
 
   try {
@@ -61,9 +63,14 @@ export async function createWorkspace(db: Database, raw: unknown): Promise<Works
  * Updates a workspace in a single statement. Invalid input is rejected before touching
  * the database, and a duplicate domain fails the statement, so no partial change persists.
  */
-export async function updateWorkspace(db: Database, id: string, raw: unknown): Promise<WorkspaceResult> {
+export async function updateWorkspace(
+  db: Database,
+  id: string,
+  raw: unknown,
+  locale: Locale = DEFAULT_LOCALE,
+): Promise<WorkspaceResult> {
   if (!UUID.test(id)) return { ok: false, error: { kind: "not_found" } };
-  const parsed = parseWorkspaceInput(raw);
+  const parsed = parseWorkspaceInput(raw, locale);
   if (!parsed.success) return { ok: false, error: { kind: "validation", fieldErrors: parsed.fieldErrors } };
 
   try {

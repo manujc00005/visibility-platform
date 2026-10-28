@@ -11,30 +11,29 @@ import { WorkspaceNav } from "@/components/overview/workspace-nav";
 import { buttonVariants } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getDb } from "@/db/client";
+import { getMessages, type Messages } from "@/i18n/messages";
+import { getLocale } from "@/i18n/server";
 import type { Tone } from "@/modules/audits/status";
 import type { Fraction } from "@/modules/geo/metrics";
-import { INTENT_LABELS, PROVIDER_LABELS, RUN_STATUS_LABELS } from "@/modules/geo/presentation";
+import { geoLabels } from "@/modules/geo/presentation";
 import { listGeoRuns, listPrompts } from "@/modules/geo/service";
 import { summarizeAi, type BlockState } from "@/modules/overview";
 import { displayDate, displayDomain } from "@/modules/workspaces/presentation";
 import { getWorkspace } from "@/modules/workspaces/service";
 
-export const metadata: Metadata = { title: "Presencia en IA" };
+export async function generateMetadata(): Promise<Metadata> {
+  return { title: getMessages(await getLocale()).geo.page.metaTitle };
+}
 
 /** Blocking route so an unknown workspace returns a real 404 (same reason as the overview). */
 export const instant = false;
 
-const STATUS: Record<BlockState, { tone: Tone; label: string }> = {
-  ok: { tone: "neutral", label: "Medido" },
-  partial: { tone: "fair", label: "Parcial" },
-  analyzing: { tone: "neutral", label: "Recogiendo respuestas" },
-  error: { tone: "bad", label: "Error" },
-  not_configured: { tone: "neutral", label: "Sin configurar" },
-  no_data: { tone: "neutral", label: "Sin mediciones" },
-};
+const STATUS_TONE: Record<BlockState, Tone> = { ok: "neutral", partial: "fair", analyzing: "neutral", error: "bad", not_configured: "neutral", no_data: "neutral" };
 
-function count(f: Fraction, one: string, many: string): string {
-  return f.n === 0 ? "Sin datos" : `${f.k} de ${f.n} ${f.n === 1 ? one : many}`;
+type PageTexts = Messages["geo"]["page"];
+
+function count(t: PageTexts, noData: string, f: Fraction, unit: "answer" | "scheduled" | "question"): string {
+  return f.n === 0 ? noData : t.count(f.k, f.n, unit);
 }
 
 function Section({ id, title, description, children }: { id: string; title: string; description?: ReactNode; children: ReactNode }) {
@@ -73,7 +72,7 @@ function QuestionGroup({ title, hint, items }: { title: string; hint: string; it
       </div>
       <ul className="flex flex-col gap-1 text-sm">
         {items.map((q) => (
-          <li key={q} className="break-words">
+          <li key={q} className="break-words" lang="es">
             «{q}»
           </li>
         ))}
@@ -85,9 +84,13 @@ function QuestionGroup({ title, hint, items }: { title: string; hint: string; it
 export default async function GeoPage({ params }: PageProps<"/workspaces/[id]/geo">) {
   await connection();
   const { id } = await params;
+  const locale = await getLocale();
   const db = getDb();
   const workspace = await getWorkspace(db, id);
   if (!workspace) notFound();
+  const m = getMessages(locale);
+  const t = m.geo.page;
+  const L = geoLabels(locale);
 
   const [runs, prompts] = await Promise.all([listGeoRuns(db, workspace.id), listPrompts(db, workspace.id)]);
   const s = summarizeAi(
@@ -102,6 +105,7 @@ export default async function GeoPage({ params }: PageProps<"/workspaces/[id]/ge
     })),
     prompts.length,
     new Date(),
+    locale,
   );
   const view = s.coverage ? runs.find((r) => r.run.id === s.runId) : undefined;
   const competitorName = new Map(view?.run.config.panel.competitors.map((c) => [c.id, c.name]) ?? []);
@@ -122,49 +126,48 @@ export default async function GeoPage({ params }: PageProps<"/workspaces/[id]/ge
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-6">
         <PageHeader
+          locale={locale}
           breadcrumbs={[
-            { href: "/workspaces", label: "Empresas" },
+            { href: "/workspaces", label: m.workspaces.list.title },
             { href: `/workspaces/${workspace.id}`, label: workspace.name },
           ]}
-          title="Presencia en IA"
-          description={`Si ChatGPT menciona a ${workspace.name} (${displayDomain(workspace.domain)}) al responder las preguntas que monitorizamos.`}
-          actions={setupLink("Configurar medición")}
+          title={t.title}
+          description={t.description(workspace.name, displayDomain(workspace.domain))}
+          actions={setupLink(t.configure)}
         />
-        <WorkspaceNav workspaceId={workspace.id} current="geo" />
+        <WorkspaceNav workspaceId={workspace.id} current="geo" locale={locale} />
       </div>
 
       {!s.coverage ? (
         s.state === "not_configured" ? (
-          <Empty title="Todavía no hay preguntas" action={setupLink("Configurar preguntas")}>
-            Añade preguntas que podrían hacer tus clientes (por ejemplo, qué empresa de tu sector recomienda ChatGPT en tu ciudad) y lanza una
-            medición. Así sabremos si te menciona al responderlas.
+          <Empty title={t.empty.noQuestionsTitle} action={setupLink(t.empty.configureQuestions)}>
+            {t.empty.noQuestionsBody}
           </Empty>
         ) : s.state === "analyzing" && s.runId ? (
           <Empty
-            title="Recogiendo respuestas de la primera medición"
+            title={t.empty.collectingTitle}
             action={
               <Link href={`${base}/runs/${s.runId}`} className={buttonVariants({ variant: "outline" })}>
-                Ver la medición en curso
+                {t.empty.viewRunning}
               </Link>
             }
           >
-            Cuando estén las respuestas verás aquí en cuántas preguntas apareces.
+            {t.empty.collectingBody}
           </Empty>
         ) : s.state === "error" && s.runId ? (
           <Empty
-            title="La medición no pudo recoger ninguna respuesta"
+            title={t.empty.failedTitle}
             action={
               <Link href={`${base}/runs/${s.runId}`} className={buttonVariants({ variant: "outline" })}>
-                Ver la medición
+                {t.empty.viewRun}
               </Link>
             }
           >
-            No hay resultado que mostrar. Revisa la medición y vuelve a lanzarla desde la configuración.
+            {t.empty.failedBody}
           </Empty>
         ) : (
-          <Empty title="Todavía no hay mediciones" action={setupLink("Lanzar la primera medición")}>
-            Tienes {prompts.length} {prompts.length === 1 ? "pregunta preparada" : "preguntas preparadas"}. Lanza una medición para saber si ChatGPT te
-            menciona.
+          <Empty title={t.empty.noRunsTitle} action={setupLink(t.empty.firstRun)}>
+            {t.empty.noRunsBody(prompts.length)}
           </Empty>
         )
       ) : (
@@ -172,34 +175,31 @@ export default async function GeoPage({ params }: PageProps<"/workspaces/[id]/ge
           <div className="flex flex-col gap-5 rounded-2xl border border-border/80 bg-card shadow-card p-5">
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-[1.2fr_1fr]">
               <div className="flex flex-col gap-2">
-                <span className="text-sm font-medium text-muted-foreground">Preguntas en las que apareces</span>
+                <span className="text-sm font-medium text-muted-foreground">{t.appear}</span>
                 {s.coverage.n > 0 ? (
                   <span className="text-4xl font-semibold tracking-tight tabular-nums">
                     {s.coverage.k}
-                    <span className="text-lg font-normal text-muted-foreground">
-                      {" "}
-                      de {s.coverage.n} {s.coverage.n === 1 ? "pregunta evaluada" : "preguntas evaluadas"}
-                    </span>
+                    <span className="text-lg font-normal text-muted-foreground"> {t.ofEvaluated(s.coverage.n)}</span>
                   </span>
                 ) : (
-                  <span className="text-2xl font-medium text-muted-foreground">Sin datos</span>
+                  <span className="text-2xl font-medium text-muted-foreground">{L.noData}</span>
                 )}
-                <StatusPill tone={STATUS[s.state].tone}>{STATUS[s.state].label}</StatusPill>
+                <StatusPill tone={STATUS_TONE[s.state]}>{t.status[s.state]}</StatusPill>
                 <ChangeLine change={s.change} note={s.comparisonNote} />
               </div>
               <dl className="flex flex-col gap-3 text-sm sm:border-l sm:pl-6">
                 <div>
-                  <dt className="text-muted-foreground">Respuestas que citan tu web como fuente</dt>
-                  <dd className="font-medium">{s.citing ? count(s.citing, "respuesta", "respuestas") : "Sin datos"}</dd>
+                  <dt className="text-muted-foreground">{t.citing}</dt>
+                  <dd className="font-medium">{s.citing ? count(t, L.noData, s.citing, "answer") : L.noData}</dd>
                 </div>
                 <div>
-                  <dt className="text-muted-foreground">Respuestas recogidas</dt>
-                  <dd className="font-medium">{s.capture ? count(s.capture, "prevista", "previstas") : "Sin datos"}</dd>
+                  <dt className="text-muted-foreground">{t.collected}</dt>
+                  <dd className="font-medium">{s.capture ? count(t, L.noData, s.capture, "scheduled") : L.noData}</dd>
                 </div>
                 {s.branded ? (
                   <div>
-                    <dt className="text-muted-foreground">Preguntas sobre tu marca (aparte)</dt>
-                    <dd className="font-medium">Te nombra en {count(s.branded.mentioned, "respuesta", "respuestas")}</dd>
+                    <dt className="text-muted-foreground">{t.branded}</dt>
+                    <dd className="font-medium">{t.brandedValue(count(t, L.noData, s.branded.mentioned, "answer"))}</dd>
                   </div>
                 ) : null}
               </dl>
@@ -207,36 +207,26 @@ export default async function GeoPage({ params }: PageProps<"/workspaces/[id]/ge
             <NoticeList notices={notices} />
             {s.attempt?.status === "running" ? (
               <Link href={`${base}/runs/${s.attempt.runId}`} className="w-fit text-sm font-medium text-brand underline underline-offset-4">
-                Ver la medición en curso
+                {t.empty.viewRunning}
               </Link>
             ) : null}
             <div className="flex flex-col gap-1 border-t pt-4 text-sm text-muted-foreground">
-              <p>
-                Es una muestra: las preguntas que hemos hecho a ChatGPT en un momento concreto. No es tu cuota de todas las búsquedas en IA, y las
-                respuestas cambian entre consultas.
-              </p>
-              <p className="text-xs">
-                Medición en ChatGPT · {s.provider} · {s.measuredAt ? displayDate(s.measuredAt) : ""} · {s.configured}{" "}
-                {s.configured === 1 ? "pregunta" : "preguntas"} en esta medición
-              </p>
+              <p>{t.sample}</p>
+              <p className="text-xs">{t.source(s.provider ?? "", s.measuredAt ? displayDate(s.measuredAt, locale) : "", s.configured ?? 0)}</p>
             </div>
           </div>
 
           {view ? (
-            <Section
-              id="geo"
-              title="Visibilidad y menciones"
-              description="Qué ha contestado ChatGPT a cada pregunta. Las preguntas sobre tu marca la nombran y no cuentan para la presencia."
-            >
+            <Section id="geo" title={t.visibility.title} description={t.visibility.description}>
               <div className="rounded-2xl border border-border/80 bg-card shadow-card">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Pregunta</TableHead>
-                      <TableHead>Respuestas</TableHead>
-                      <TableHead>Te menciona</TableHead>
-                      <TableHead>Cita tu web</TableHead>
-                      <TableHead>Competidores mencionados</TableHead>
+                      <TableHead>{t.visibility.question}</TableHead>
+                      <TableHead>{t.visibility.answers}</TableHead>
+                      <TableHead>{t.visibility.mentions}</TableHead>
+                      <TableHead>{t.visibility.cites}</TableHead>
+                      <TableHead>{t.visibility.competitors}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -247,14 +237,14 @@ export default async function GeoPage({ params }: PageProps<"/workspaces/[id]/ge
                       return (
                         <TableRow key={p.promptId}>
                           <TableCell className="max-w-xs whitespace-normal">
-                            <span className="block">{p.text}</span>
-                            <span className="text-xs text-muted-foreground">{INTENT_LABELS[p.intent]}</span>
+                            <span className="block" lang="es">
+                              {p.text}
+                            </span>
+                            <span className="text-xs text-muted-foreground">{L.intent[p.intent]}</span>
                           </TableCell>
-                          <TableCell className="tabular-nums">
-                            {p.answered} de {p.scheduled}
-                          </TableCell>
-                          <TableCell className="tabular-nums">{p.answered === 0 ? "Sin respuesta" : `${p.brandMentions} de ${p.answered}`}</TableCell>
-                          <TableCell className="tabular-nums">{p.answered === 0 ? "—" : `${p.ownCitations} de ${p.answered}`}</TableCell>
+                          <TableCell className="tabular-nums">{t.visibility.of(p.answered, p.scheduled)}</TableCell>
+                          <TableCell className="tabular-nums">{p.answered === 0 ? t.visibility.noAnswer : t.visibility.of(p.brandMentions, p.answered)}</TableCell>
+                          <TableCell className="tabular-nums">{p.answered === 0 ? "—" : t.visibility.of(p.ownCitations, p.answered)}</TableCell>
                           <TableCell className="max-w-xs whitespace-normal">{rivals.length ? rivals.join(", ") : "—"}</TableCell>
                         </TableRow>
                       );
@@ -264,64 +254,42 @@ export default async function GeoPage({ params }: PageProps<"/workspaces/[id]/ge
               </div>
 
               <div className="flex flex-col gap-2 rounded-2xl border border-border/80 bg-card shadow-card p-5">
-                <h3 className="text-sm font-semibold">Comparación de menciones</h3>
+                <h3 className="text-sm font-semibold">{t.comparison.title}</h3>
                 {view.run.config.panel.competitors.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Esta medición no tenía competidores confirmados. Puedes añadirlos en la configuración para las próximas mediciones.
-                  </p>
+                  <p className="text-sm text-muted-foreground">{t.comparison.noCompetitors}</p>
                 ) : view.metrics.shareOfVoice ? (
                   <>
-                    <p className="text-sm text-muted-foreground">
-                      Respuestas que nombran a cada marca, en preguntas que no nombran la tuya. Son los competidores confirmados cuando se hizo la
-                      medición.
-                    </p>
+                    <p className="text-sm text-muted-foreground">{t.comparison.description}</p>
                     <ul className="flex flex-col divide-y text-sm">
                       {view.metrics.shareOfVoice.entries.map((e) => (
                         <li key={e.id} className="flex items-center justify-between gap-3 py-2">
-                          <span>{e.id === "brand" ? `${workspace.name} (tu marca)` : e.name}</span>
-                          <span className="tabular-nums text-muted-foreground">
-                            {e.k} {e.k === 1 ? "respuesta" : "respuestas"}
-                          </span>
+                          <span>{e.id === "brand" ? t.comparison.yourBrand(workspace.name) : e.name}</span>
+                          <span className="tabular-nums text-muted-foreground">{t.comparison.answers(e.k)}</span>
                         </li>
                       ))}
                     </ul>
                   </>
                 ) : (
-                  <p className="text-sm text-muted-foreground">Ninguna marca del panel aparece en las respuestas recogidas.</p>
+                  <p className="text-sm text-muted-foreground">{t.comparison.none}</p>
                 )}
               </div>
             </Section>
           ) : null}
 
-          <Section
-            id="aeo"
-            title="Preguntas y oportunidades de contenido (AEO)"
-            description="En qué preguntas monitorizadas te mencionó ChatGPT y en cuáles no, según esta medición."
-          >
-            <p className="rounded-lg bg-muted/60 px-3 py-2.5 text-sm">
-              No hemos analizado si tu web responde estas preguntas. Que ChatGPT no te mencione no demuestra que te falte contenido, y aparecer hoy
-              no garantiza aparecer mañana. Úsalo para decidir qué revisar.
-            </p>
+          <Section id="aeo" title={t.aeo.title} description={t.aeo.description}>
+            <p className="rounded-lg bg-muted/60 px-3 py-2.5 text-sm">{t.aeo.caveat}</p>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-              <QuestionGroup
-                title="No te menciona"
-                hint="En esta medición ChatGPT no te mencionó al responderlas. Puedes revisar si tu web trata estos temas y si siguen siendo preguntas relevantes para tu negocio."
-                items={s.uncovered}
-              />
-              <QuestionGroup title="Te menciona" hint="En esta medición ChatGPT te mencionó en al menos una respuesta a cada una." items={s.covered} />
-              <QuestionGroup
-                title="Sin respuesta válida"
-                hint="No obtuvimos respuesta en esta medición: no cuentan en ningún sentido."
-                items={s.unanswered}
-              />
+              <QuestionGroup title={t.aeo.uncovered.title} hint={t.aeo.uncovered.hint} items={s.uncovered} />
+              <QuestionGroup title={t.aeo.covered.title} hint={t.aeo.covered.hint} items={s.covered} />
+              <QuestionGroup title={t.aeo.unanswered.title} hint={t.aeo.unanswered.hint} items={s.unanswered} />
             </div>
           </Section>
         </>
       )}
 
-      <Section id="history" title="Mediciones" description="Solo son comparables entre sí las mediciones con la misma configuración.">
+      <Section id="history" title={t.history.title} description={t.history.description}>
         {runs.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Todavía no hay mediciones.</p>
+          <p className="text-sm text-muted-foreground">{t.history.none}</p>
         ) : (
           <ul className="flex flex-col divide-y rounded-2xl border border-border/80 bg-card shadow-card">
             {runs.map(({ run, metrics }, index) => {
@@ -334,16 +302,16 @@ export default async function GeoPage({ params }: PageProps<"/workspaces/[id]/ge
                     className="flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-foreground/60 focus-visible:outline-none"
                   >
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="font-medium">{displayDate(run.createdAt)}</span>
+                      <span className="font-medium">{displayDate(run.createdAt, locale)}</span>
                       <span className="text-xs text-muted-foreground">
-                        {PROVIDER_LABELS[run.provider]} · {RUN_STATUS_LABELS[run.status]}
-                        {changed ? " · configuración distinta a la anterior" : ""}
+                        {L.provider[run.provider]} · {L.runStatus[run.status]}
+                        {changed ? t.history.changed : ""}
                       </span>
                     </span>
                     <span className="hidden text-right text-xs text-muted-foreground sm:block">
-                      Apareces: {count(metrics.promptCoverage, "pregunta", "preguntas")}
+                      {t.history.appear(count(t, L.noData, metrics.promptCoverage, "question"))}
                       <br />
-                      Citas a tu web: {count(metrics.citationRate, "respuesta", "respuestas")}
+                      {t.history.cites(count(t, L.noData, metrics.citationRate, "answer"))}
                     </span>
                     <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-brand" />
                   </Link>

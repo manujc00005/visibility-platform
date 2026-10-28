@@ -1,0 +1,107 @@
+# T008 — contraste del diff desde 425e23b (AC-016), 2026-10-27
+
+## Archivos modificados (git diff --name-status 425e23b)
+M	src/app/globals.css
+M	src/app/layout.tsx
+M	src/app/not-found.tsx
+M	src/app/page.tsx
+M	src/app/workspaces/[id]/audits/[auditId]/actions.ts
+M	src/app/workspaces/[id]/audits/[auditId]/page.tsx
+M	src/app/workspaces/[id]/audits/actions.ts
+M	src/app/workspaces/[id]/edit/page.tsx
+M	src/app/workspaces/[id]/geo/actions.ts
+M	src/app/workspaces/[id]/geo/page.tsx
+M	src/app/workspaces/[id]/geo/runs/[runId]/page.tsx
+M	src/app/workspaces/[id]/geo/setup/page.tsx
+M	src/app/workspaces/[id]/not-found.tsx
+M	src/app/workspaces/[id]/page.tsx
+M	src/app/workspaces/[id]/performance/page.tsx
+M	src/app/workspaces/[id]/seo/page.tsx
+M	src/app/workspaces/actions.ts
+M	src/app/workspaces/new/page.tsx
+M	src/app/workspaces/page.tsx
+M	src/components/audits/evolution-chart.tsx
+M	src/components/audits/run-audit-button.tsx
+M	src/components/geo/competitor-suggestions.tsx
+M	src/components/geo/geo-forms.tsx
+M	src/components/layout/app-header.tsx
+M	src/components/overview/opportunities.tsx
+M	src/components/overview/overview-card.tsx
+M	src/components/overview/page-header.tsx
+M	src/components/overview/workspace-nav.tsx
+M	src/components/page-loading.tsx
+M	src/components/reports/generate-report-button.tsx
+M	src/components/system-status.tsx
+M	src/components/workspaces/workspace-form.tsx
+M	src/modules/audits/presentation.ts
+M	src/modules/audits/rules.ts
+M	src/modules/audits/status.ts
+M	src/modules/geo/budget.ts
+M	src/modules/geo/competitors/service.ts
+M	src/modules/geo/deps.ts
+M	src/modules/geo/presentation.ts
+M	src/modules/geo/service.ts
+M	src/modules/overview/ai.ts
+M	src/modules/overview/index.ts
+M	src/modules/overview/opportunities.ts
+M	src/modules/overview/performance.ts
+M	src/modules/overview/seo.ts
+M	src/modules/overview/types.ts
+M	src/modules/workspaces/presentation.ts
+M	src/modules/workspaces/service.ts
+M	src/modules/workspaces/validation.ts
+
+## Archivos nuevos sin seguimiento (git ls-files --others --exclude-standard)
+docs/visibility-mvp/18-i18n-and-header.md
+specs/features/003-i18n-sticky-header/ANALYSIS.md
+specs/features/003-i18n-sticky-header/DECISIONS.md
+specs/features/003-i18n-sticky-header/PLAN.md
+specs/features/003-i18n-sticky-header/SPEC.md
+specs/features/003-i18n-sticky-header/TASKS.md
+src/components/layout/header-nav.tsx
+src/components/layout/language-switcher.tsx
+src/i18n/actions.ts
+src/i18n/client-format.ts
+src/i18n/findings.ts
+src/i18n/format.ts
+src/i18n/locale.ts
+src/i18n/messages/en.ts
+src/i18n/messages/es.ts
+src/i18n/messages/findings.ts
+src/i18n/messages/index.ts
+src/i18n/messages/types.ts
+src/i18n/server.ts
+src/modules/audits/thresholds.ts
+tests/unit/geo/competitor-suggestions-render.test.ts
+tests/unit/geo/i18n-en.test.ts
+tests/unit/i18n/actions.test.ts
+tests/unit/i18n/client-format.test.ts
+tests/unit/i18n/findings-corpus.test.ts
+tests/unit/i18n/findings.test.ts
+tests/unit/i18n/fixtures/findings-corpus.json
+tests/unit/i18n/fixtures/findings-corpus.scenarios.ts
+tests/unit/i18n/format.test.ts
+tests/unit/i18n/locale.test.ts
+tests/unit/i18n/messages.test.ts
+tests/unit/i18n/types.test.ts
+tests/unit/layout/header.test.ts
+tests/unit/overview/i18n-en.test.ts
+tests/unit/workspaces/validation-en.test.ts
+(+ 38 archivos de evidencia en docs/visibility-mvp/assets/18-i18n/)
+
+## Rutas protegidas
+src/modules/reports: modificados=0 nuevos=0
+src/proxy.ts: modificados=0 nuevos=0
+src/modules/routing: modificados=0 nuevos=0
+package.json: modificados=0 nuevos=0
+package-lock.json: modificados=0 nuevos=0
+src/db/migrations: modificados=0 nuevos=0
+drizzle.config.ts: modificados=0 nuevos=0
+esquemas Drizzle (*schema.ts): modificados=0 nuevos=0
+
+## URLs: archivos de ruta en src/app añadidos o eliminados
+ninguno modificado en ese sentido
+ninguno nuevo
+
+## Dependencias
+(vacío = sin cambios)

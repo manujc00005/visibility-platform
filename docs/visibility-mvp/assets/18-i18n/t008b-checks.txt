@@ -1,0 +1,5 @@
+# T008 (repetición tras D019) — checks sobre el árbol fusionado (HEAD acba536 + 003), 2026-10-27 20:12
+npm run lint EXIT=0
+npm run typecheck EXIT=0
+npm run test:unit EXIT=0 · Test Files 52 passed (52) · Tests 557 passed (557)
+npm run build EXIT=0

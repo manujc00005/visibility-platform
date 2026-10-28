@@ -1,4 +1,6 @@
 import { env } from "@/config/env";
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
+import { getMessages } from "@/i18n/messages";
 import { AUDIT_USER_AGENT } from "@/modules/audits/collect";
 import { createSafeFetcher } from "@/modules/audits/fetcher/safe-fetch";
 import type { CompetitorDeps } from "@/modules/geo/competitors/service";
@@ -11,14 +13,11 @@ export interface GeoProviderStatus {
 }
 
 /** What the operator can use right now, and why not when unavailable. */
-export function geoProviderStatus(): GeoProviderStatus {
+export function geoProviderStatus(locale: Locale = DEFAULT_LOCALE): GeoProviderStatus {
   const e = env();
+  const t = getMessages(locale).geo.providerStatus;
   const budgetMicros = parseUsdToMicros(e.GEO_MONTHLY_BUDGET_USD);
-  const reason = !e.DATAFORSEO_LOGIN || !e.DATAFORSEO_PASSWORD
-    ? "Faltan las credenciales de DataForSEO (DATAFORSEO_LOGIN y DATAFORSEO_PASSWORD)."
-    : budgetMicros === null
-      ? "Falta el presupuesto mensual (GEO_MONTHLY_BUDGET_USD): sin él no se hacen llamadas de pago."
-      : null;
+  const reason = !e.DATAFORSEO_LOGIN || !e.DATAFORSEO_PASSWORD ? t.missingCredentials : budgetMicros === null ? t.missingBudget : null;
   return { dataforseo: { available: reason === null, reason, budgetMicros, reportable: e.DATAFORSEO_REDISTRIBUTION_CONFIRMED } };
 }
 

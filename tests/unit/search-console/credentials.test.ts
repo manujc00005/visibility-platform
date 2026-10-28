@@ -31,13 +31,12 @@ describe("parseServiceAccount", () => {
       serviceAccountJson({ client_email: "nope" }),
       serviceAccountJson({ private_key: "-----BEGIN PRIVATE KEY-----\ngarbage\n-----END PRIVATE KEY-----" }),
     ];
-    for (const raw of cases) {
+    const reasons = cases.map((raw) => {
       const parsed = parseServiceAccount(raw);
       expect(parsed?.ok).toBe(false);
-      if (parsed && !parsed.ok) {
-        expect(parsed.reason).not.toContain("PRIVATE KEY");
-        expect(parsed.reason).not.toContain(PRIVATE_PEM.slice(40, 80));
-      }
-    }
+      return parsed && !parsed.ok ? parsed.reason : null;
+    });
+    expect(reasons).toEqual(["not_json", "not_service_account", "not_service_account", "unreadable_key"]);
+    expect(JSON.stringify(reasons)).not.toContain(PRIVATE_PEM.slice(40, 80));
   });
 });

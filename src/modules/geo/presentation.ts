@@ -1,25 +1,24 @@
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
+import { getMessages, type Messages } from "@/i18n/messages";
+import { es } from "@/i18n/messages/es";
 import type { Fraction } from "@/modules/geo/metrics";
 
-/** Plain module (no "use client"): importable from server and client components alike. */
-export const INTENT_LABELS = {
-  discovery: "Descubrimiento",
-  recommendation: "Recomendación",
-  comparison: "Comparación",
-  branded: "Sobre tu marca",
-} as const;
+/**
+ * GEO labels by interface language. Server side only: it reads the catalog, so Client
+ * Components receive their labels by props instead of importing this module (D015).
+ */
+export type GeoLabels = Messages["geo"]["labels"];
 
-export const RUN_STATUS_LABELS = { collecting: "Recogiendo respuestas", completed: "Completada" } as const;
-export const OBSERVATION_STATUS_LABELS = {
-  pending: "Pendiente",
-  submitted: "Enviada al proveedor",
-  completed: "Recogida",
-  failed: "Fallida",
-  uncertain: "Envío incierto",
-} as const;
-export const PROVIDER_LABELS = { manual: "Captura asistida (ChatGPT web)", dataforseo_chatgpt: "DataForSEO · ChatGPT (interfaz)" } as const;
+export function geoLabels(locale: Locale = DEFAULT_LOCALE): GeoLabels {
+  return getMessages(locale).geo.labels;
+}
+
+/** Spanish provider labels for the HTML/PDF report, which stays in Spanish (D006). */
+export const PROVIDER_LABELS = es.geo.labels.provider;
 
 /** "3 de 8" plus a percentage only when there is a denominator. Never "0 %" for "no data". */
-export function fraction(value: Fraction): string {
-  if (value.n === 0) return "Sin datos";
-  return `${value.k} de ${value.n} (${Math.round((value.k / value.n) * 100)} %)`;
+export function fraction(value: Fraction, locale: Locale = DEFAULT_LOCALE): string {
+  const t = geoLabels(locale);
+  if (value.n === 0) return t.noData;
+  return t.fraction(value.k, value.n, Math.round((value.k / value.n) * 100));
 }

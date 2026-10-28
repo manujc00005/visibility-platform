@@ -63,7 +63,7 @@ export function OverviewCard({
   children,
   notices = [],
   source,
-  cta = "Ver informe",
+  cta,
 }: {
   id: string;
   href: string;
@@ -78,7 +78,7 @@ export function OverviewCard({
   notices?: Notice[];
   /** Where the data comes from and when it was measured. */
   source: string;
-  cta?: string;
+  cta: string;
 }) {
   return (
     <Link

@@ -1,0 +1,30 @@
+# T008 (repetición tras D019) — contraste del cambio propio de 003 respecto a acba536 (AC-016), 2026-10-27 20:14
+
+## Rutas protegidas
+src/modules/reports: modificados=0 nuevos=0
+src/proxy.ts: modificados=0 nuevos=0
+src/modules/routing: modificados=0 nuevos=0
+package.json: modificados=0 nuevos=0
+package-lock.json: modificados=0 nuevos=0
+src/db: modificados=0 nuevos=0
+drizzle.config.ts: modificados=0 nuevos=0
+esquemas (*schema.ts): modificados=0 nuevos=0
+
+## Search Console (D019: solo presentación y código del motivo de configuración)
+M	src/app/workspaces/[id]/seo/actions.ts
+M	src/components/search-console/refresh-button.tsx
+M	src/components/search-console/search-console-section.tsx
+M	src/modules/search-console/credentials.ts
+M	src/modules/search-console/deps.ts
+M	src/modules/search-console/summary.ts
+M	tests/unit/search-console/credentials.test.ts
+M	tests/unit/search-console/summary.test.ts
+collect.ts, google.ts, service.ts, schema.ts, migración 0006: 0 cambios
+
+## URLs: archivos de ruta añadidos o eliminados en src/app
+ninguno
+ninguno nuevo
+
+## Cambios del árbol que no son de 003
+.gitignore (clave de servicio de Search Console, cambio local ajeno): 1
+eslint.config.mjs (pedido por el propietario, commit aparte): 1

@@ -1,5 +1,7 @@
 import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import type { Database } from "@/db/client";
+import { formatNumber } from "@/i18n/format";
+import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
 import { providerSpend } from "@/modules/geo/schema";
 
 /**
@@ -48,8 +50,9 @@ export function usdFloatToMicros(value: unknown): number | null {
   return Math.round(value * MICROS_PER_USD);
 }
 
-export function formatMicros(micros: number): string {
-  return `${(micros / MICROS_PER_USD).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 4 })} USD`;
+/** Amount in the interface language. "min2" keeps the previous grouping (no separator in four-digit amounts). */
+export function formatMicros(micros: number, locale: Locale = DEFAULT_LOCALE): string {
+  return `${formatNumber(micros / MICROS_PER_USD, locale, { minimumFractionDigits: 2, maximumFractionDigits: 4, useGrouping: "min2" })} USD`;
 }
 
 function monthStart(now: Date): Date {
