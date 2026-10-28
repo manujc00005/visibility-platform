@@ -25,6 +25,9 @@ export const REDACTED_PATHS = [
   "assertion",
   "*.assertion",
   "GSC_SERVICE_ACCOUNT_JSON",
+  "apikey",
+  "*.apikey",
+  "BING_WEBMASTER_API_KEY",
 ];
 
 export function createLogger(options: { level?: string; destination?: pino.DestinationStream } = {}) {

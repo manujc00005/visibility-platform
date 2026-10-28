@@ -624,6 +624,68 @@ export const es = {
       showing: (shown: number, total: number) => `Se muestran las ${shown} auditorías más recientes de ${total}.`,
     },
   },
+  bingWebmaster: {
+    name: "Bing Webmaster Tools",
+    section: {
+      title: "Posicionamiento en Bing",
+      description:
+        "Cuántas veces apareces en Bing, cuántas personas entran en tu web y con qué búsquedas, según Bing Webmaster Tools. Bing también da resultados a Copilot, DuckDuckGo y Ecosia.",
+    },
+    status: {
+      ok: "Conectado",
+      no_data: "Sin datos",
+      processing: "Procesando",
+      error: "Error",
+      not_configured: "Sin configurar",
+      invalid_config: "Configuración no válida",
+    },
+    button: { fetch: "Traer datos de Bing", update: "Actualizar datos", pending: "Consultando Bing…" },
+    actionErrors: { notConfigured: "Bing Webmaster Tools no está configurado en la plataforma.", workspaceGone: "Esta empresa ya no existe." },
+    setup: {
+      verify: "Añade la web en Bing Webmaster Tools y verifícala. Si ya está en Search Console, puedes importarla desde allí.",
+      keyBefore: "En Bing Webmaster Tools, abre Configuración › Acceso a la API, genera la clave y guárdala en la variable de entorno ",
+      keyAfter: ". La clave da acceso a todos los sitios de tu cuenta: no la compartas.",
+      run: (button: string) => `Vuelve aquí y pulsa «${button}».`,
+    },
+    reasons: {
+      notConfigured: "Bing Webmaster Tools no está configurado en la plataforma.",
+      noData: (button: string) => `Pulsa «${button}» para ver cómo te encuentran en Bing.`,
+      invalidConfig: { bad_format: "BING_WEBMASTER_API_KEY no tiene el formato de una clave de Bing: solo letras y números, entre 16 y 128." },
+      processing: "Bing todavía no tiene datos de este sitio. Tras verificarlo tarda hasta 48 horas en mostrarlos; vuelve a intentarlo más tarde.",
+      noTraffic: "Bing todavía no tiene clics ni impresiones diarias de este sitio. Abajo están las búsquedas y páginas que ya tiene.",
+      storedData: "Se muestran los datos de la última consulta guardada.",
+    },
+    failures: {
+      no_access: (domain: string) =>
+        `La cuenta de la clave no tiene ${domain} entre sus sitios de Bing Webmaster Tools. Añádelo y verifícalo en esa cuenta y vuelve a intentarlo.`,
+      verifiedSites: (count: number) => `Ahora mismo la clave ve ${count} ${count === 1 ? "sitio verificado" : "sitios verificados"}.`,
+      not_verified: (siteUrl: string) => `${siteUrl} está en Bing Webmaster Tools pero sin verificar. Verifícalo y vuelve a intentarlo.`,
+      invalid_credentials: "Bing rechazó la clave: no existe, se borró o la cuenta está bloqueada. Revisa BING_WEBMASTER_API_KEY.",
+      quota_exceeded: "La cuota de la API de Bing Webmaster está agotada. Vuelve a intentarlo más tarde.",
+      error: "No se pudieron leer los datos de Bing Webmaster Tools. Vuelve a intentarlo.",
+      lastAttempt: (when: string, text: string) => `El último intento (${when}) falló: ${text}`,
+    },
+    metrics: {
+      clicks: { label: "Clics", hint: "Veces que alguien entró en tu web desde Bing" },
+      impressions: { label: "Impresiones", hint: "Veces que apareciste en los resultados de Bing" },
+      ctr: { label: "CTR", hint: "Porcentaje de impresiones que acabaron en clic" },
+      noPrevious: "Sin datos del periodo anterior",
+    },
+    source: {
+      prefix: "Bing Webmaster Tools · sitio ",
+      period: (start: string, end: string, previousStart: string, previousEnd: string, when: string) =>
+        ` · del ${start} al ${end}, comparado con los 28 días anteriores (del ${previousStart} al ${previousEnd}) · consultado ${when}`,
+      captured: (when: string) => ` · consultado ${when}`,
+    },
+    tables: {
+      queries: "Búsquedas por las que te encuentran en Bing",
+      pages: "Tus páginas más visibles en Bing",
+      window: (start: string, end: string) => `Búsquedas y páginas: datos acumulados por Bing del ${start} al ${end}. No se comparan con el periodo anterior.`,
+    },
+    noQueries: "Bing todavía no tiene búsquedas de este sitio.",
+    noPages: "Bing todavía no tiene páginas de este sitio.",
+    note: "Las cifras de arriba suman todo Bing (web, imágenes, noticias, vídeos, chat y paneles de información). Las búsquedas y las páginas se actualizan una vez por semana y cubren las fechas que indica Bing, así que no cuadran con las cifras de arriba ni con Google.",
+  },
   searchConsole: {
     name: "Google Search Console",
     status: { ok: "Conectado", no_data: "Sin datos", error: "Error", not_configured: "Sin configurar", invalid_config: "Configuración no válida" },

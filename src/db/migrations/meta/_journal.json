@@ -50,6 +50,13 @@
       "when": 1793113484581,
       "tag": "0006_search_console",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793212256085,
+      "tag": "0007_bing_webmaster",
+      "breakpoints": true
     }
   ]
 }

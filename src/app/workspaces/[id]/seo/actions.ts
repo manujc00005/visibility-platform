@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { getDb } from "@/db/client";
 import { getMessages } from "@/i18n/messages";
 import { getLocale } from "@/i18n/server";
+import { createBingWebmasterDeps } from "@/modules/bing-webmaster/deps";
+import { refreshBingWebmaster } from "@/modules/bing-webmaster/service";
 import { createSearchConsoleDeps } from "@/modules/search-console/deps";
 import { refreshSearchConsole } from "@/modules/search-console/service";
 
@@ -21,6 +23,19 @@ export async function refreshSearchConsoleAction(workspaceId: string): Promise<R
   }
   // A failed capture is stored too and explained by the page itself.
   revalidatePath(`/workspaces/${workspaceId}`);
+  revalidatePath(`/workspaces/${workspaceId}/seo`);
+  return { error: null };
+}
+
+export type RefreshBingWebmasterState = RefreshSearchConsoleState;
+
+export async function refreshBingWebmasterAction(workspaceId: string): Promise<RefreshBingWebmasterState> {
+  const result = await refreshBingWebmaster(getDb(), workspaceId, createBingWebmasterDeps());
+  if (!result.ok) {
+    const t = getMessages(await getLocale()).bingWebmaster.actionErrors;
+    return { error: result.error === "not_configured" ? t.notConfigured : t.workspaceGone };
+  }
+  // A failed capture is stored too and explained by the page itself.
   revalidatePath(`/workspaces/${workspaceId}/seo`);
   return { error: null };
 }

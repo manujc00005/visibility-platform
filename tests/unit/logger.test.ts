@@ -38,4 +38,16 @@ describe("logger", () => {
     }
     expect(raw).toContain("[REDACTED]");
   });
+
+  it("redacts the Bing Webmaster API key", () => {
+    const { lines, destination } = capture();
+    createLogger({ level: "info", destination }).info(
+      { apikey: "BINGKEY0123456789", params: { apikey: "BINGKEY9876543210" }, BING_WEBMASTER_API_KEY: "BINGKEYENV0123456" },
+      "bing",
+    );
+    const raw = lines[0]!;
+    for (const secret of ["BINGKEY0123456789", "BINGKEY9876543210", "BINGKEYENV0123456"]) {
+      expect(raw).not.toContain(secret);
+    }
+  });
 });

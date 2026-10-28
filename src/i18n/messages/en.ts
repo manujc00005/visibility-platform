@@ -621,6 +621,68 @@ export const en = {
       showing: (shown: number, total: number) => `Showing the ${shown} most recent audits of ${total}.`,
     },
   },
+  bingWebmaster: {
+    name: "Bing Webmaster Tools",
+    section: {
+      title: "Rankings on Bing",
+      description:
+        "How often you appear on Bing, how many people visit your website from it and through which searches, according to Bing Webmaster Tools. Bing also powers results in Copilot, DuckDuckGo and Ecosia.",
+    },
+    status: {
+      ok: "Connected",
+      no_data: "No data",
+      processing: "Processing",
+      error: "Error",
+      not_configured: "Not set up",
+      invalid_config: "Invalid configuration",
+    },
+    button: { fetch: "Get Bing data", update: "Update data", pending: "Querying Bing…" },
+    actionErrors: { notConfigured: "Bing Webmaster Tools is not set up on the platform.", workspaceGone: "This company no longer exists." },
+    setup: {
+      verify: "Add the website in Bing Webmaster Tools and verify it. If it is already in Search Console, you can import it from there.",
+      keyBefore: "In Bing Webmaster Tools, open Settings › API Access, generate the key and store it in the environment variable ",
+      keyAfter: ". The key gives access to every site in your account: do not share it.",
+      run: (button: string) => `Come back here and press “${button}”.`,
+    },
+    reasons: {
+      notConfigured: "Bing Webmaster Tools is not set up on the platform.",
+      noData: (button: string) => `Press “${button}” to see how people find you on Bing.`,
+      invalidConfig: { bad_format: "BING_WEBMASTER_API_KEY does not look like a Bing key: letters and digits only, 16 to 128 of them." },
+      processing: "Bing has no data for this site yet. After verification it takes up to 48 hours to show it; try again later.",
+      noTraffic: "Bing has no daily clicks or impressions for this site yet. The searches and pages it already has are below.",
+      storedData: "Showing the data from the last stored check.",
+    },
+    failures: {
+      no_access: (domain: string) =>
+        `The key's account does not have ${domain} among its Bing Webmaster Tools sites. Add and verify it in that account and try again.`,
+      verifiedSites: (count: number) => `Right now the key sees ${count} verified ${count === 1 ? "site" : "sites"}.`,
+      not_verified: (siteUrl: string) => `${siteUrl} is in Bing Webmaster Tools but not verified. Verify it and try again.`,
+      invalid_credentials: "Bing rejected the key: it does not exist, was deleted or the account is blocked. Check BING_WEBMASTER_API_KEY.",
+      quota_exceeded: "The Bing Webmaster API quota is exhausted. Try again later.",
+      error: "Bing Webmaster Tools data could not be read. Try again.",
+      lastAttempt: (when: string, text: string) => `The last attempt (${when}) failed: ${text}`,
+    },
+    metrics: {
+      clicks: { label: "Clicks", hint: "Times someone visited your website from Bing" },
+      impressions: { label: "Impressions", hint: "Times you appeared in Bing results" },
+      ctr: { label: "CTR", hint: "Share of impressions that ended in a click" },
+      noPrevious: "No data for the previous period",
+    },
+    source: {
+      prefix: "Bing Webmaster Tools · site ",
+      period: (start: string, end: string, previousStart: string, previousEnd: string, when: string) =>
+        ` · ${start} to ${end}, compared with the previous 28 days (${previousStart} to ${previousEnd}) · checked ${when}`,
+      captured: (when: string) => ` · checked ${when}`,
+    },
+    tables: {
+      queries: "Searches that find you on Bing",
+      pages: "Your most visible pages on Bing",
+      window: (start: string, end: string) => `Searches and pages: totals accumulated by Bing from ${start} to ${end}. They are not compared with the previous period.`,
+    },
+    noQueries: "Bing has no searches for this site yet.",
+    noPages: "Bing has no pages for this site yet.",
+    note: "The figures above add up all of Bing (web, images, news, videos, chat and knowledge panels). Searches and pages are updated once a week and cover the dates Bing states, so they do not match the figures above or Google's.",
+  },
   searchConsole: {
     name: "Google Search Console",
     status: { ok: "Connected", no_data: "No data", error: "Error", not_configured: "Not set up", invalid_config: "Invalid configuration" },

@@ -76,3 +76,12 @@ describe("GEO provider variables", () => {
     expect(parseEnv({ ...base, DATAFORSEO_REDISTRIBUTION_CONFIRMED: "TRUE" }).DATAFORSEO_REDISTRIBUTION_CONFIRMED).toBe(true);
   });
 });
+
+describe("BING_WEBMASTER_API_KEY", () => {
+  it("is optional and trimmed", () => {
+    const base = { DATABASE_URL: "postgresql://u:p@h/db" };
+    expect(parseEnv(base).BING_WEBMASTER_API_KEY).toBeUndefined();
+    expect(parseEnv({ ...base, BING_WEBMASTER_API_KEY: " " }).BING_WEBMASTER_API_KEY).toBeUndefined();
+    expect(parseEnv({ ...base, BING_WEBMASTER_API_KEY: " ABC123 " }).BING_WEBMASTER_API_KEY).toBe("ABC123");
+  });
+});

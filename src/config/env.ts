@@ -52,6 +52,11 @@ const envSchema = z.object({
    * Search Console section is "not configured". Parsed when used, so a bad value never stops the app.
    */
   GSC_SERVICE_ACCOUNT_JSON: z.string().optional().transform((v) => v?.trim() || undefined),
+  /**
+   * Bing Webmaster Tools: the operator's user API key (Settings > API Access). Optional: without it
+   * the Bing section is "not configured". Its format is checked when used (feature 005, FR-001).
+   */
+  BING_WEBMASTER_API_KEY: z.string().optional().transform((v) => v?.trim() || undefined),
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),

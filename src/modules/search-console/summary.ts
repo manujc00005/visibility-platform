@@ -43,7 +43,7 @@ type Texts = Messages["searchConsole"];
 const SAME_THRESHOLD = 0.05;
 const POSITION_SAME = 0.5;
 
-function formatters(locale: Locale, t: Texts) {
+export function formatters(locale: Locale, t: Texts) {
   const integer = (n: number) => formatNumber(Math.round(n), locale, { maximumFractionDigits: 0 });
   const decimal = (n: number) => formatNumber(n, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   const percent = (ratio: number) => t.percent(decimal(ratio * 100));
@@ -52,7 +52,7 @@ function formatters(locale: Locale, t: Texts) {
 }
 type Format = ReturnType<typeof formatters>;
 
-function countChange(current: number, previous: number, unit: (count: number) => string, t: Texts, f: Format): Change {
+export function countChange(current: number, previous: number, unit: (count: number) => string, t: Texts, f: Format): Change {
   const before = `${f.integer(previous)} ${unit(Math.round(previous))}`;
   if (previous === 0) return current === 0 ? { direction: "same", text: t.changes.sameAsBefore } : { direction: "better", text: t.changes.before(before) };
   const ratio = (current - previous) / previous;
@@ -71,7 +71,7 @@ function positionChange(current: number, previous: number, t: Texts, f: Format):
     : { direction: "worse", text: t.changes.positionDown(before, f.decimal(delta)) };
 }
 
-function ctrChange(current: number, previous: number, t: Texts, f: Format): Change {
+export function ctrChange(current: number, previous: number, t: Texts, f: Format): Change {
   const delta = (current - previous) * 100;
   const before = f.percent(previous);
   if (Math.abs(delta) < 0.1) return { direction: "same", text: t.changes.same(before) };
