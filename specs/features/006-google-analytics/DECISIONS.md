@@ -106,3 +106,30 @@
 **Decision:** `runReport` quita `dateRange` de las dimensiones que envía. Con varios periodos GA4 añade esa columna por su cuenta (comprobado con la API real), y la respuesta se sigue exigiendo con ella.
 
 **Consequences:** Cambia una línea de `ga4.ts` y la aserción del cuerpo en `ga4.test.ts`. La recogida real ya termina en `ok` (con ceros: la web aún no lleva la etiqueta `G-KF9XKPT07W`).
+
+### D011 - T009 cerrada con el estado «Sin visitas»; la comparación de cifras, pendiente
+
+**Date:** 2026-10-29 · **Status:** Accepted
+
+**Context:** La recogida real funciona de punta a punta, pero olessium.com aún no lleva la etiqueta `G-KF9XKPT07W` (se instala desde el repo de la web), así que GA4 devuelve ceros en los dos periodos. AC-012 admite este caso («o el estado de AC-005»), pero no hay cifras que comparar con los informes de GA4 ni tablas con filas que ver a 375 px.
+
+**Decision:** T009 se da por hecha con AC-012 cumplido por la vía de AC-005, como hizo la 005 con Bing (su D011). La comparación de cifras queda como seguimiento en TASKS y no bloquea el cierre.
+
+**Consequences:** Si con datos reales aparece una diferencia (por ejemplo, en cómo se reparten los canales), se corrige en una iteración aparte con la captura guardada como guía.
+
+### D012 - Hallazgos de las revisiones de cierre que se aceptan
+
+**Date:** 2026-10-29 · **Status:** Accepted
+
+**Context:** `/spec-review`, `/qa-review` y `/review-all` (seguridad, base de datos, acción, backend y frontend) no encontraron nada crítico ni alto. Se arregló lo que pedía la spec: la prueba de AC-006 sobre la fila guardada, las notas de D010 en FR-007/FR-008 y las filas ya verificadas de la matriz. También se comprobó con la API real que GA4 devuelve `dateRange` en `dimensionHeaders` aunque no se pida (totales y canales), así que el día que haya visitas la comprobación de cabeceras no falla. Quedan hallazgos que no rompen nada en modo operador.
+
+**Decision:** Se aceptan y se revisan cuando cambie su condición:
+- Búsqueda de propiedad en serie y sin plazo total: hasta 23 llamadas de 15 s antes de los informes si la cuenta ve muchas propiedades y Google va lento. Es lo que fija la spec (SPEC, «Las de búsqueda de propiedad van en serie»); la cuenta de Olessium ve una propiedad y la app corre en local, sin límite por función. Se revisa antes de desplegar (paralelo acotado, plazo común y `maxDuration`).
+- Un fallo al listar los flujos de una propiedad corta la búsqueda, y un 403 de la Admin API sin propiedad elegida se explica como «sin permiso en esta propiedad». Poco probable: `accountSummaries` solo lista propiedades accesibles. Se revisa si aparece en real.
+- Con más de 200 propiedades el recuento dice 200 (además del aviso de que no se revisaron todas).
+- El token usa el cliente de Search Console, sin `redirect: "error"` ni `no-store` (FR-003); el host es fijo.
+- `scope` acepta cualquier texto; hoy solo se pasan constantes de lectura.
+- Una ruta de página podría llevar datos personales (`/usuario/correo@…`); no hay purga de capturas (M07 del roadmap).
+- Sin límite de frecuencia en la acción y sin autenticación: es D-03 del roadmap, que ahora además expone datos confidenciales de tráfico; queda en el backlog como BL-07.
+
+**Consequences:** Ninguno bloquea el cierre de la 006. Los tres primeros se vuelven a mirar con datos reales (seguimiento de D011) o antes del primer despliegue.

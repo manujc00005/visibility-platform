@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress (2026-10-28). T001–T008 hechas; T009 espera a que el operador active las APIs de GA4 y dé acceso de lector (D009).
+Done (2026-10-29). Pasó `/spec-review` (Pass tras corregir la prueba de AC-006 y los documentos), `/qa-review` y `/review-all` sin hallazgos críticos ni altos; los aceptados están en D012. Seguimiento abierto: comparar las cifras con GA4 cuando olessium.com lleve la etiqueta `G-KF9XKPT07W` y tenga visitas (D011, TASKS › Follow-ups).
 
 ## Problem
 
@@ -50,8 +50,8 @@ El operador pulsa un botón en la ficha de una empresa y obtiene, desde la API o
 - FR-004 Propiedad por dominio (D003): `accountSummaries.list` (una página de 200) da las propiedades visibles; para cada una, `dataStreams.list` da sus flujos web. Una propiedad casa si algún flujo `WEB_DATA_STREAM` tiene un `defaultUri` cuyo host, en minúsculas y sin barra final, es el host guardado, el dominio o `www.` del dominio. Prioridad por ese orden; empate, el id numérico más bajo. Se revisan como mucho 20 propiedades, en el orden de la respuesta.
 - FR-005 Si ninguna propiedad casa: fallo `no_access`, con el número de propiedades que ve la cuenta de servicio y si se quedaron sin revisar por el límite de 20.
 - FR-006 Periodos (D005): el actual son los 28 días que terminan 2 días antes de la fecha UTC de la captura; el anterior, los 28 previos. Se piden con fechas `YYYY-MM-DD` explícitas, con nombre `current` y `previous`.
-- FR-007 Totales: un `runReport` con los dos periodos, dimensión `dateRange` y métricas `activeUsers`, `sessions` y `screenPageViews`. Un periodo sin fila cuenta como cero.
-- FR-008 Canales: un `runReport` con los dos periodos, dimensiones `sessionDefaultChannelGroup` y `dateRange` y métrica `sessions`. Se guardan los canales con sesiones en alguno de los dos periodos, ordenados por sesiones del periodo actual, como mucho 20.
+- FR-007 Totales: un `runReport` con los dos periodos, dimensión `dateRange` y métricas `activeUsers`, `sessions` y `screenPageViews`. Un periodo sin fila cuenta como cero. (`dateRange` no se envía en la petición: GA4 la rechaza y la añade sola a la respuesta, D010.)
+- FR-008 Canales: un `runReport` con los dos periodos, dimensiones `sessionDefaultChannelGroup` y `dateRange` (esta última la añade GA4, D010) y métrica `sessions`. Se guardan los canales con sesiones en alguno de los dos periodos, ordenados por sesiones del periodo actual, como mucho 20.
 - FR-009 Páginas: un `runReport` del periodo actual, dimensión `pagePath` (sin query string) y métricas `screenPageViews` y `activeUsers`, ordenado por páginas vistas, las 10 primeras. Ruta recortada a 500 caracteres.
 - FR-010 La respuesta se lee por los nombres de `dimensionHeaders` y `metricHeaders`, no por posición. Los valores de métrica llegan como texto: deben ser enteros entre 0 y 10¹²; si no, la respuesta es inválida.
 - FR-011 Avisos de calidad: si algún informe trae `metadata.dataLossFromOtherRow`, `subjectToThresholding` o `samplingMetadatas`, se guarda y la sección lo explica en una frase.
@@ -125,8 +125,8 @@ Tabla `analytics_snapshots`, migración `0008`. Una fila por intento, borrado en
 | `accountSummaries.list`: `pageSize` hasta 200, `propertySummaries[].property`/`displayName` | developers.google.com/analytics/devguides/config/admin/v1/rest/v1beta/accountSummaries/list | 2026-10-28 |
 | `dataStreams.list`; `DataStream.type` `WEB_DATA_STREAM`, `webStreamData.defaultUri` | .../admin/v1/rest/v1beta/properties.dataStreams | 2026-10-28 |
 | Hay que activar la Google Analytics Data API en el proyecto | .../data/v1/quickstart-client-libraries | 2026-10-28 |
-| La cuenta de servicio entra como usuario «Lector» en la gestión de acceso de la propiedad | Práctica habitual; no lo dice la página de inicio rápido | UNVERIFIED; se comprueba en AC-012 |
-| Forma exacta de los errores 403 (`SERVICE_DISABLED`) en estas dos APIs | Mismo formato de error de Google que Search Console | UNVERIFIED; se comprueba en AC-012 |
+| La cuenta de servicio entra como usuario «Lector» en la gestión de acceso de la propiedad | Práctica habitual; no lo dice la página de inicio rápido | VERIFIED 2026-10-29: con el rol Lector la recogida real llega a los informes (D010, T009) |
+| Forma exacta de los errores 403 (`SERVICE_DISABLED`) en estas dos APIs | Mismo formato de error de Google que Search Console | VERIFIED 2026-10-28: la Admin API desactivada devolvió `SERVICE_DISABLED` (D009) |
 
 ## Assumptions
 
@@ -138,7 +138,7 @@ Tabla `analytics_snapshots`, migración `0008`. Una fila por intento, borrado en
 
 ## Open questions
 
-- Ninguna bloqueante. Fuera de esta feature: el acceso OAuth por cliente en la Fase 5 (BL-03).
+- Ninguna bloqueante. Fuera de esta feature: el acceso OAuth por cliente en la Fase 5 (BL-03). Status: Deferred al backlog del roadmap (BL-03).
 
 ## Contracted services
 
