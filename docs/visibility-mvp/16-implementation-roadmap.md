@@ -1,6 +1,6 @@
 # 16 — Roadmap de implementación (referencia operativa)
 
-**Última actualización:** 2026-10-25, cierre de la Fase 3.
+**Última actualización:** 2026-10-29: conectores de Search Console, Bing y GA4 (§8), seguimientos y backlog (§6, §9).
 **Estado del diseño:** `00`–`12` siguen siendo referencia arquitectónica (versión 1, PROPUESTA). `13-codex-review.md` (REQUEST CHANGES) sigue siendo el registro de riesgos. **Este documento manda sobre el orden de trabajo y sobre las decisiones técnicas de construcción.** Donde contradiga a `00`–`12`, prevalece este y la contradicción se lista en §7.
 
 Nota: `14-architecture-sync.md` no llegó a escribirse; el cambio de estrategia lo sustituyó por este documento antes de redactarlo. Los hallazgos de Codex se gestionan aquí de forma progresiva (§4).
@@ -254,7 +254,7 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 |---|---|---|---|
 | D-01 | ~~Rama `dev` con TTL de 7 días~~ | Resuelto el 2026-10-25: `dev` es permanente | — |
 | D-02 | `npm audit`: 4 avisos moderados en el `esbuild` transitivo de `drizzle-kit` (afecta al servidor de desarrollo de esbuild, no a la app) | Bajo; herramienta de desarrollo | Al actualizar `drizzle-kit`; no se fuerza un downgrade |
-| D-03 | Sin autenticación hasta la Fase 5 | La app no puede exponerse públicamente con datos de empresas | Antes de cualquier despliegue accesible desde internet: barrera mínima (acceso de red privada o autenticación básica del operador) |
+| D-03 | Sin autenticación hasta la Fase 5. Desde el 2026-10-29 incluye también las acciones que traen datos de Search Console, Bing y GA4 (`refreshSearchConsoleAction`, `refreshBingWebmasterAction`, `refreshAnalyticsAction`): quien llegue a la app gasta cuota de esas APIs con las credenciales del operador. Además, como crear una empresa tampoco pide identidad, podría dar de alta el dominio de cualquier cliente que la cuenta de servicio vea y leer sus visitas, canales y páginas: datos confidenciales del propietario, no solo auditorías de webs públicas (revisión de seguridad de la 006, 2026-10-29) | La app no puede exponerse públicamente con datos de empresas | Antes de cualquier despliegue accesible desde internet: barrera mínima (acceso de red privada o autenticación básica del operador). En el backlog como BL-07 |
 | D-04 | `typecheck` necesita `next typegen` antes de `tsc` (tipos globales de rutas) | Ninguno; el script ya lo hace | — |
 | D-05 | Sin CI | Validación manual con `npm run check` | Cuando haya un repositorio remoto con Actions disponibles |
 | D-06 | Contenedor Docker `visibility-postgres` (puerto 5433), parado tras pasar a Neon | Recurso local sin uso | Borrarlo con `docker rm visibility-postgres` si no se quiere como alternativa sin red |
@@ -274,11 +274,13 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 | D-21 | Tope de gasto global, no por empresa; la captura asistida usa una sola repetición; una sola superficie (ChatGPT); AI Overviews vía SERP no implementado | Alcance reducido de la medición | Ampliar cuando haya demanda o volumen |
 | D-22 | **Desplegar la migración antes del código.** Durante el desarrollo hubo 500 transitorios («column brand_aliases does not exist») por servir código nuevo con la BD sin migrar | Caída breve en un despliegue | El procedimiento de despliegue (M13) migra primero |
 | D-23 | La rama `dev` contiene para Olessium un competidor de ejemplo, 3 preguntas y una medición con respuestas marcadas «[RESPUESTA DE PRUEBA]» | Datos de prueba en desarrollo | Archivarlos o borrarlos cuando molesten; no afectan a `test` ni a `production` |
-| D-24 | La prueba de integración de concurrencia de auditorías falló una vez en la suite completa y pasó en las tres repeticiones siguientes. El 2026-10-26 falló en 2 de 3 ejecuciones seguidas sin cambios en el servicio ni en la prueba | Prueba intermitente: depende de que tres auditorías se solapen en una ventana de 300 ms; la latencia hasta Neon `test` la rompe con frecuencia | Hacer el solapamiento determinista (barrera en el `pageSpeed` simulado) |
+| D-24 | La prueba de integración de concurrencia de auditorías falló una vez en la suite completa y pasó en las tres repeticiones siguientes. El 2026-10-26 falló en 2 de 3 ejecuciones seguidas sin cambios en el servicio ni en la prueba | Prueba intermitente: depende de que tres auditorías se solapen en una ventana de 300 ms; la latencia hasta Neon `test` la rompe con frecuencia | Hacer el solapamiento determinista (barrera en el `pageSpeed` simulado). Volvió a fallar 2 de 9 veces el 2026-10-28. Aparcado en el backlog como BL-06 |
 | D-25 | Dev perdió y recuperó `geo_competitors` el 2026-10-26 por un `DROP` con patrón `LIKE` demasiado amplio; la fila se restauró desde `geo_runs.config` | Datos de prueba de `dev`; `test` se limpia en cada prueba | Nunca borrar tablas por patrón; nombrar explícitamente. Antes de clientes reales, backups coherentes (M13) |
 | D-26 | **Perímetro de la extracción de competidores:** `extractCompetitorsAction` no tiene autenticación ni límite de frecuencia (perímetro de operador único, D-03) y lanza hasta 25 GET a webs públicas elegidas por quien pegue la respuesta; además distingue «destino no público» de «no responde» (oráculo DNS). Revisión de seguridad del 2026-10-26: Low | Solo relevante si la app se expone a terceros | Antes de abrir acceso a clientes (Fase 5): autenticación y límite por empresa; decidir si se unifica la etiqueta de destino bloqueado |
 | D-27 | Invariantes de las tablas de sugerencias que solo garantiza la aplicación: `candidate_key` `host:` ⇔ `domain` no nulo, `sources`/`warnings` como arrays JSON, `candidates_shown ≤ candidates_total`, `rules_version` no vacío; sin índice en `geo_competitor_suggestions.competitor_id` (FK SET NULL) | Riesgo bajo con tablas pequeñas | Migración aditiva de CHECKs e índice en una siguiente iteración |
 | D-28 | ~~En el build de producción, los ids inexistentes o mal formados de `/workspaces/[id]` y subrutas respondían HTTP 200 con la página de «no encontrada» y `noindex` (soft 404)~~ | Resuelto el 2026-10-26 con `src/proxy.ts` (404 real verificado con `next start` en las ocho rutas, ids inexistentes y mal formados, HEAD; 200 en los existentes; acciones de servidor sin cambios; `next dev` igual). Coste: una o dos consultas por clave primaria por petición de documento a `/workspaces/<id>/…`. Una visita directa muestra la página global «Página no encontrada» en vez de «Empresa no encontrada»; la navegación interna sigue mostrando la de empresa con estado 200 (no visible para el usuario). Si la consulta falla, la petición sigue como antes | — |
+| D-29 | **Cifras de Bing sin comparar.** La 005 se cerró con el estado «Procesando» (su D011): el 2026-10-29 Bing sigue devolviendo olessium.com sin filas | No se ha visto aún la forma real de `GetPageStats` ni de las filas por semana | Cuando Bing tenga datos: «Actualizar datos» y comparar con Search Performance en el mismo periodo (TASKS de la 005, Follow-ups) |
+| D-30 | **Cifras de GA4 sin comparar.** La 006 se verificó con el estado «Sin visitas» (su D011): la etiqueta `G-KF9XKPT07W` aún no está publicada en olessium.com | No se han visto aún tablas con filas reales | 24–48 h después de publicar la etiqueta: «Actualizar datos» y comparar con los informes de GA4 en el mismo periodo (TASKS de la 006, Follow-ups) |
 | D-07 | `neon init -y` instaló el plugin de Neon (skills y MCP) a nivel de usuario en Claude Code, Codex y VS Code | Configuración global del equipo, no del repo | Ninguno; el servidor MCP de Neon en Claude Code necesita autorizar OAuth con `/mcp` |
 | R-01 | Las fases 2–6 dependen de cuentas externas (PSI, DataForSEO, Stripe) aún no abiertas; la Fase 4 se cerró sin la de DataForSEO | Retraso de fases | Abrir PSI antes de Fase 2; DataForSEO antes de Fase 4; Stripe test antes de Fase 5 |
 | R-02 | El NORTE del workspace `lead-platform` sigue en mantenimiento | Conflicto de foco del único desarrollador | Decisión del owner; este repo no depende de ello técnicamente |
@@ -402,17 +404,38 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 
 **Estado:** cerrada el 2026-10-28 tras `/spec-review`, `/qa-review` y `/review-all`. Límite conocido: sin JavaScript, el cambio de idioma en la 404 de una empresa llega en blanco (D021). Seguimientos en doc 18 §14.
 
-**Estado:** las ocho tareas están hechas y el propietario dio su conformidad con la copia inglesa el 2026-10-27. Faltan las revisiones de cierre (`/spec-review` y siguientes). Detalle completo en la doc 18.
+### Panel de la empresa (spec `specs/features/002-dashboard-overview`) — 2026-10-26, en progreso
+
+**Alcance:** resumen comercial por empresa, detalles y configuración GEO separada (commit `425e23b`). Diseño, pruebas y límites en la doc 17.
+
+**Pendiente:** T007 (validaciones finales, revisión del plan y comprobación humana, doc 17 §8).
+
+### Datos reales de buscadores y visitas: modo operador
+
+Los tres conectores siguen el mismo patrón: credencial del operador en el entorno, sin OAuth ni cuentas de cliente, un botón en la página SEO de la empresa, una tabla de capturas propia y la página leyendo solo lo guardado. Todos comparan 28 días con los 28 anteriores. Esto adelanta BL-02, BL-03 y BL-04 para el operador; la versión para clientes sigue en el backlog (§9).
+
+| Conector | Spec | Credencial | Migración | Estado |
+|---|---|---|---|---|
+| Google Search Console: clics, impresiones, CTR, posición media, búsquedas y páginas | `003-search-console` (PR #1, `acba536`) | Cuenta de servicio de Google, `GSC_SERVICE_ACCOUNT_JSON` | `0006` | En progreso: falta T009 con la credencial real sobre olessium.com. La cuenta de servicio real (`gsc-reader@olessium.iam.gserviceaccount.com`) ya existe y la usa GA4; falta comprobar su acceso a la propiedad de Search Console |
+| Bing Webmaster Tools: clics, impresiones, CTR, búsquedas y páginas | `005-bing-webmaster` (`97e006e`) | Clave de API, `BING_WEBMASTER_API_KEY` | `0007` | Hecha el 2026-10-28. Seguimiento D-29 |
+| Google Analytics 4: usuarios, sesiones, vistas, canales y páginas | `006-google-analytics` (`56ca665`…`cc8f58a`) | La misma cuenta de servicio, con el permiso `analytics.readonly` | `0008` | Implementada y verificada con la propiedad real `Olessium web` (`properties/561384888`, ID de medición `G-KF9XKPT07W`). Hecha el 2026-10-29; riesgos aceptados en su D012. Seguimiento D-30 |
+
+**Lo que se vio con las APIs reales:** Bing devuelve el sitio verificado sin filas mientras procesa (hasta 48 h). GA4 responde 403 con `SERVICE_DISABLED` si falta activar una API, y 400 si se pide `dateRange` como dimensión (spec 006, D010).
+
+### Categorías de Lighthouse (spec `specs/features/004-lighthouse-categories`) — 2026-10-28, en progreso
+
+En otra sesión y sin commitear a fecha de esta actualización.
 
 ## 9. Backlog (aparcado por decisión del owner, 2026-10-26)
 
-Primero todo lo gratuito; lo siguiente queda aparcado.
+Primero todo lo gratuito; lo siguiente queda aparcado. BL-02 a BL-04 se hicieron para el operador el 2026-10-27/29 (§8); aquí queda la versión para clientes. BL-06 y BL-07 se añadieron el 2026-10-29.
 
 | ID | Elemento | Por qué está aquí | Qué hace falta para retomarlo |
 |---|---|---|---|
 | BL-01 | **DataForSEO en real** (medición automática de ChatGPT) | De pago | Cuenta con saldo, `DATAFORSEO_LOGIN` y `DATAFORSEO_PASSWORD` de la API, tope `GEO_MONTHLY_BUDGET_USD`, prueba con 3 preguntas (D-18, D-19). Confirmación escrita de licencia antes de usar sus datos en informes (M01) |
-| BL-02 | **Google Search Console** (clics, impresiones, posiciones, indexación) | Gratuita, pero exige que cada cliente autorice el acceso a su propiedad (OAuth) | Autenticación y cuentas de cliente (Fase 5), app OAuth verificada por Google, guardado cifrado de tokens |
-| BL-03 | **Google Analytics 4** (visitas reales) | Igual que BL-02 | Igual que BL-02 |
-| BL-04 | **Bing Webmaster Tools** | Gratuita, pero requiere que el cliente verifique su web y comparta acceso | Igual que BL-02 |
+| BL-02 | **Google Search Console para clientes** (clics, impresiones, posiciones, indexación). Hecho para el operador con cuenta de servicio (spec 003) | Gratuita, pero exige que cada cliente autorice el acceso a su propiedad (OAuth) | Autenticación y cuentas de cliente (Fase 5), app OAuth verificada por Google, guardado cifrado de tokens |
+| BL-03 | **Google Analytics 4 para clientes** (visitas reales). Hecho para el operador con la misma cuenta de servicio (spec 006) | Igual que BL-02 | Igual que BL-02 |
+| BL-04 | **Bing Webmaster Tools para clientes**. Hecho para el operador con su clave de API (spec 005) | Gratuita, pero requiere que el cliente verifique su web y comparta acceso | Igual que BL-02 |
 | BL-05 | Superficies de IA adicionales (AI Overviews de Google vía SERP, Perplexity, Gemini) | De pago a través de proveedores | Después de BL-01 |
-
+| BL-06 | **Prueba de concurrencia de auditorías intermitente** (D-24) | Afecta solo a la suite de integración; ninguna funcionalidad depende de arreglarla ya | Barrera en el `pageSpeed` simulado para que las tres auditorías se solapen siempre; repetir la suite varias veces seguidas |
+| BL-07 | **Barrera de acceso antes de desplegar** (D-03, D-26) | Hoy la app solo corre en la máquina del operador; ninguna acción de servidor comprueba quién llama | Antes de cualquier despliegue accesible desde internet: red privada o autenticación del operador, más límite de frecuencia en las acciones que llaman a APIs externas (Search Console, Bing, GA4, extracción de competidores) |
