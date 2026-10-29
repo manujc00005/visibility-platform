@@ -85,3 +85,17 @@
 **Reasoning:** la SPEC lo pide (AC-008) y el coste es una sola columna pequeña.
 
 **Consequences:** si `drizzle-kit` no reproduce bien la expresión, se escribe la restricción en el SQL de la migración y en el esquema con el mismo texto. Las filas anteriores con nulo pasan los `check`.
+
+### D007 - T009 cerrada con Olessium a cero; la sintaxis con datos, pendiente
+
+**Date:** 2026-10-29
+
+**Status:** Accepted
+
+**Context:** la captura real de olessium.com (fila `completed` del 2026-10-29 a las 16:33 UTC en `dev`) se guardó con `segments`. Google respondió 200 a las cuatro consultas filtradas con `(?i)`, `includingRegex` y `excludingRegex`. Todo está a cero porque la propiedad aún no tiene impresiones (D006 de la 003). Una sonda de solo lectura contra la misma propiedad mostró que la API también responde 200, con una fila a cero, a expresiones inválidas: `(?i)(`, con un paréntesis sin cerrar, y `(?=x)`, una anticipación que RE2 no admite. La cuenta de servicio solo ve `sc-domain:olessium.com`, así que no hay otra propiedad con datos para comprobarlo.
+
+**Decision:** T009 se da por hecha como en la 003, la 005 y la 006: AC-014 se cumple en su letra, porque Google no rechazó la expresión, y la pantalla se comprobó en `es` y `en` a 375 px sin desbordamiento. Que Google interprete bien `(?i)` y los literales escapados queda como seguimiento en TASKS, para cuando haya impresiones.
+
+**Reasoning:** con la propiedad vacía, un 200 no distingue una expresión válida de una inválida. Afirmar más sería presentar como verificado algo que no lo está.
+
+**Consequences:** el primer día con impresiones hay que repetir la captura y comparar el bloque «con tu marca» con la interfaz de Search Console filtrada por la misma expresión. Si no coincide, o si con datos Google rechaza `(?i)`, se aplica la salida de D004: quitar el prefijo y confiar en que el regex de la API no distingue mayúsculas, como el de la interfaz.
