@@ -39,10 +39,13 @@ function settings(options: ClientOptions) {
 
 const b64url = (value: string) => Buffer.from(value).toString("base64url");
 
-/** RS256 JWT for the token endpoint; 1 hour lifetime (the documented maximum). Exported for tests. */
-export function signJwt(account: ServiceAccount, nowSeconds: number): string {
+/**
+ * RS256 JWT for the token endpoint; 1 hour lifetime (the documented maximum). Exported for tests.
+ * The scope defaults to Search Console's; Google Analytics passes its own (feature 006, D004).
+ */
+export function signJwt(account: ServiceAccount, nowSeconds: number, scope: string = SCOPE): string {
   const header = { alg: "RS256", typ: "JWT", ...(account.privateKeyId ? { kid: account.privateKeyId } : {}) };
-  const claims = { iss: account.clientEmail, scope: SCOPE, aud: TOKEN_ENDPOINT, iat: nowSeconds, exp: nowSeconds + 3600 };
+  const claims = { iss: account.clientEmail, scope, aud: TOKEN_ENDPOINT, iat: nowSeconds, exp: nowSeconds + 3600 };
   const unsigned = `${b64url(JSON.stringify(header))}.${b64url(JSON.stringify(claims))}`;
   const signature = createSign("RSA-SHA256").update(unsigned).sign(account.privateKey, "base64url");
   return `${unsigned}.${signature}`;
@@ -68,8 +71,8 @@ async function bodyOf(response: Response): Promise<unknown> {
 
 const tokenSchema = z.object({ access_token: z.string().min(1) });
 
-export async function fetchAccessToken(account: ServiceAccount, options: ClientOptions & { nowSeconds?: number } = {}): Promise<string> {
-  const assertion = signJwt(account, options.nowSeconds ?? Math.floor(Date.now() / 1000));
+export async function fetchAccessToken(account: ServiceAccount, options: ClientOptions & { nowSeconds?: number; scope?: string } = {}): Promise<string> {
+  const assertion = signJwt(account, options.nowSeconds ?? Math.floor(Date.now() / 1000), options.scope);
   const response = await send(
     TOKEN_ENDPOINT,
     {
@@ -90,8 +93,8 @@ export async function fetchAccessToken(account: ServiceAccount, options: ClientO
   return parsed.data.access_token;
 }
 
-/** Google's 403 means either "API not enabled in the project" or "no permission on this property". */
-function isServiceDisabled(body: unknown): boolean {
+/** Google's 403 means either "API not enabled in the project" or "no permission on this property". Shared with Google Analytics (feature 006). */
+export function isServiceDisabled(body: unknown): boolean {
   const error = (body as { error?: { message?: unknown; details?: { reason?: unknown }[]; errors?: { reason?: unknown }[] } })?.error;
   const reasons = [...(error?.details ?? []), ...(error?.errors ?? [])].map((d) => d?.reason);
   if (reasons.includes("SERVICE_DISABLED") || reasons.includes("accessNotConfigured")) return true;

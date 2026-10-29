@@ -37,6 +37,11 @@ describe("signJwt", () => {
     const valid = createVerify("RSA-SHA256").update(`${header}.${claims}`).verify(keys.publicKey, signature!, "base64url");
     expect(valid).toBe(true);
   });
+
+  it("signs for another Google API when asked (feature 006, D004)", () => {
+    const [, claims] = signJwt(account, 1, "https://www.googleapis.com/auth/analytics.readonly").split(".");
+    expect(decode(claims!).scope).toBe("https://www.googleapis.com/auth/analytics.readonly");
+  });
 });
 
 describe("fetchAccessToken", () => {
@@ -47,6 +52,14 @@ describe("fetchAccessToken", () => {
     const form = new URLSearchParams(calls[0]!.body);
     expect(form.get("grant_type")).toBe("urn:ietf:params:oauth:grant-type:jwt-bearer");
     expect(form.get("assertion")?.split(".")).toHaveLength(3);
+    expect(decode(form.get("assertion")!.split(".")[1]!).scope).toBe("https://www.googleapis.com/auth/webmasters.readonly");
+  });
+
+  it("asks for the requested scope", async () => {
+    const { calls, impl } = scripted([{ match: (u) => u === TOKEN_ENDPOINT, status: 200, body: { access_token: "ya29.t" } }]);
+    await fetchAccessToken(account, { fetchImpl: impl, scope: "https://www.googleapis.com/auth/analytics.readonly" });
+    const assertion = new URLSearchParams(calls[0]!.body).get("assertion")!;
+    expect(decode(assertion.split(".")[1]!).scope).toBe("https://www.googleapis.com/auth/analytics.readonly");
   });
 
   it("maps a rejected key to invalid_credentials", async () => {
