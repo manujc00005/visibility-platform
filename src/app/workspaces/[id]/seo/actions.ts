@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { getDb } from "@/db/client";
 import { getMessages } from "@/i18n/messages";
 import { getLocale } from "@/i18n/server";
+import { createAnalyticsDeps } from "@/modules/analytics/deps";
+import { refreshAnalytics } from "@/modules/analytics/service";
 import { createBingWebmasterDeps } from "@/modules/bing-webmaster/deps";
 import { refreshBingWebmaster } from "@/modules/bing-webmaster/service";
 import { createSearchConsoleDeps } from "@/modules/search-console/deps";
@@ -33,6 +35,19 @@ export async function refreshBingWebmasterAction(workspaceId: string): Promise<R
   const result = await refreshBingWebmaster(getDb(), workspaceId, createBingWebmasterDeps());
   if (!result.ok) {
     const t = getMessages(await getLocale()).bingWebmaster.actionErrors;
+    return { error: result.error === "not_configured" ? t.notConfigured : t.workspaceGone };
+  }
+  // A failed capture is stored too and explained by the page itself.
+  revalidatePath(`/workspaces/${workspaceId}/seo`);
+  return { error: null };
+}
+
+export type RefreshAnalyticsState = RefreshSearchConsoleState;
+
+export async function refreshAnalyticsAction(workspaceId: string): Promise<RefreshAnalyticsState> {
+  const result = await refreshAnalytics(getDb(), workspaceId, createAnalyticsDeps());
+  if (!result.ok) {
+    const t = getMessages(await getLocale()).analytics.actionErrors;
     return { error: result.error === "not_configured" ? t.notConfigured : t.workspaceGone };
   }
   // A failed capture is stored too and explained by the page itself.

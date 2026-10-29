@@ -621,6 +621,92 @@ export const en = {
       showing: (shown: number, total: number) => `Showing the ${shown} most recent audits of ${total}.`,
     },
   },
+  analytics: {
+    name: "Google Analytics 4",
+    section: {
+      title: "Visits to your website",
+      description:
+        "How many people visit your website, where they come from and which pages they see, according to Google Analytics 4. It counts every visit, not only those from search engines.",
+    },
+    status: {
+      ok: "Connected",
+      no_data: "No data",
+      empty: "No visits",
+      error: "Error",
+      not_configured: "Not set up",
+      invalid_config: "Invalid configuration",
+    },
+    button: { fetch: "Get Analytics data", update: "Update data", pending: "Querying Analytics…" },
+    actionErrors: { notConfigured: "Google Analytics is not set up on the platform.", workspaceGone: "This company no longer exists." },
+    setup: {
+      keyBefore: "Use the same service account as Search Console, stored in the environment variable ",
+      keyAfter: ".",
+      apis: "In Google Cloud, in that service account's project, enable the “Google Analytics Data API” and the “Google Analytics Admin API”.",
+      addUserBefore: "In Google Analytics, open Admin › Property access management for the website and add ",
+      addUserFallback: "that account's email",
+      addUserAfter: " with the Viewer role.",
+      run: (button: string) => `Come back here and press “${button}”.`,
+    },
+    reasons: {
+      notConfigured: "Google Analytics is not set up on the platform.",
+      noData: (button: string) => `Press “${button}” to see how many people visit your website.`,
+      empty: "Google Analytics has no visits to this website in these 56 days. Check that the Google Analytics tag is installed on every page.",
+      storedData: "Showing the data from the last saved query.",
+    },
+    failures: {
+      thisAccount: "the service account",
+      no_access: (email: string, domain: string) =>
+        `${email} cannot see any Google Analytics property with the website ${domain}. Add it with the Viewer role in Admin › Property access management and try again.`,
+      visibleProperties: (count: number) => `Right now it can see ${count} ${count === 1 ? "property" : "properties"}.`,
+      skipped: (max: number) => `Only the first ${max} are checked.`,
+      denied: "The service account is not allowed to read this Google Analytics property. Check its role in Property access management.",
+      admin_api_disabled:
+        "The Google Analytics Admin API is not enabled in the service account's Google Cloud project. Enable it in Google Cloud (APIs & Services) and try again.",
+      data_api_disabled:
+        "The Google Analytics Data API is not enabled in the service account's Google Cloud project. Enable it in Google Cloud (APIs & Services) and try again.",
+      invalid_credentials:
+        "Google rejected the service account key: revoked, deleted or with the server clock out of sync. Check GSC_SERVICE_ACCOUNT_JSON.",
+      quota_exceeded: "The Google Analytics API quota is used up. Try again later.",
+      error: "The Google Analytics data could not be read. Try again.",
+      lastAttempt: (when: string, text: string) => `The last attempt (${when}) failed: ${text}`,
+    },
+    metrics: {
+      users: { label: "Users", hint: "Different people who visited your website" },
+      sessions: { label: "Sessions", hint: "Visits, counting each return separately" },
+      views: { label: "Page views", hint: "Pages opened in total, repeats included" },
+      noPrevious: "No visits in the previous period",
+    },
+    units: {
+      users: (count: number): string => (count === 1 ? "user" : "users"),
+      sessions: (count: number): string => (count === 1 ? "session" : "sessions"),
+      views: (count: number): string => (count === 1 ? "page view" : "page views"),
+    },
+    source: {
+      prefix: "Google Analytics 4 · property ",
+      period: (start: string, end: string, previousStart: string, previousEnd: string, when: string) =>
+        ` · ${start} to ${end}, compared with the previous 28 days (${previousStart} to ${previousEnd}) · checked ${when}`,
+    },
+    tables: {
+      channels: "Where visits come from",
+      channel: "Channel",
+      sessions: "Sessions",
+      change: "Compared with the previous period",
+      pages: "Most viewed pages",
+      page: "Page",
+      views: "Views",
+      users: "Users",
+    },
+    noChannels: "Google Analytics has no sessions for this website in these periods.",
+    noPages: "Google Analytics has no page views for this website in this period.",
+    quality: {
+      intro: (items: string) => `Google Analytics notice: ${items}.`,
+      otherRow: "it grouped part of the data under “(other)”",
+      thresholded: "it hid some rows with few users to protect their privacy",
+      sampled: "it calculated part of the figures from a sample",
+      separator: "; ",
+    },
+    note: "The figures count every visit to the website, wherever it comes from, from people who accept analytics when the website asks for consent. They are not compared with Search Console or Bing clicks.",
+  },
   bingWebmaster: {
     name: "Bing Webmaster Tools",
     section: {

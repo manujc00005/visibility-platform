@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { ChartDataTable, ProblemsChart, ProblemsLegend } from "@/components/audits/evolution-chart";
 import { RunAuditButton } from "@/components/audits/run-audit-button";
 import { StatusPill, ToneIcon } from "@/components/audits/status-ui";
+import { AnalyticsSection } from "@/components/analytics/analytics-section";
 import { BingWebmasterSection } from "@/components/bing-webmaster/bing-webmaster-section";
 import { SearchConsoleSection } from "@/components/search-console/search-console-section";
 import { ChangeLine, NoticeList, type Notice } from "@/components/overview/overview-card";
@@ -21,6 +22,9 @@ import { auditLabels } from "@/modules/audits/presentation";
 import type { Category } from "@/modules/audits/rules";
 import { getAudit, listAudits } from "@/modules/audits/service";
 import { SEVERITY_TONE } from "@/modules/audits/status";
+import { analyticsConfig } from "@/modules/analytics/deps";
+import { latestAnalytics } from "@/modules/analytics/service";
+import { summarizeAnalytics } from "@/modules/analytics/summary";
 import { bingWebmasterConfig } from "@/modules/bing-webmaster/deps";
 import { latestBingWebmaster } from "@/modules/bing-webmaster/service";
 import { summarizeBingWebmaster } from "@/modules/bing-webmaster/summary";
@@ -31,7 +35,7 @@ import { seoCounts, seoFindings, seoHistoryPoints, splitAudits, summarizeSeo, ty
 import { displayDate } from "@/modules/workspaces/presentation";
 import { getWorkspace } from "@/modules/workspaces/service";
 import { runAuditAction } from "../audits/actions";
-import { refreshBingWebmasterAction, refreshSearchConsoleAction } from "./actions";
+import { refreshAnalyticsAction, refreshBingWebmasterAction, refreshSearchConsoleAction } from "./actions";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: getMessages(await getLocale()).seoPage.metaTitle };
@@ -68,11 +72,18 @@ export default async function SeoPage({ params }: PageProps<"/workspaces/[id]/se
   const t = m.seoPage;
   const L = auditLabels(locale);
 
-  const [audits, stored, storedBing] = await Promise.all([listAudits(db, workspace.id), latestSearchConsole(db, workspace.id), latestBingWebmaster(db, workspace.id)]);
+  const [audits, stored, storedBing, storedAnalytics] = await Promise.all([
+    listAudits(db, workspace.id),
+    latestSearchConsole(db, workspace.id),
+    latestBingWebmaster(db, workspace.id),
+    latestAnalytics(db, workspace.id),
+  ]);
   const gscConfig = searchConsoleConfig();
   const gsc = summarizeSearchConsole(stored, gscConfig, workspace.domain, locale);
   const bingConfig = bingWebmasterConfig();
   const bing = summarizeBingWebmaster(storedBing, bingConfig, workspace.domain, locale);
+  const analyticsConf = analyticsConfig();
+  const analytics = summarizeAnalytics(storedAnalytics, analyticsConf, workspace.domain, locale);
   const recent = audits.slice(0, HISTORY_LIMIT);
   const { result, previous } = splitAudits(audits);
   const toLoad = new Set([...recent.filter((a) => a.status === "completed").map((a) => a.id), ...[result, previous].flatMap((a) => (a ? [a.id] : []))]);
@@ -121,6 +132,10 @@ export default async function SeoPage({ params }: PageProps<"/workspaces/[id]/se
 
       <Section id="bing-title" title={m.bingWebmaster.section.title} description={m.bingWebmaster.section.description}>
         <BingWebmasterSection s={bing} config={bingConfig} action={refreshBingWebmasterAction.bind(null, workspace.id)} locale={locale} />
+      </Section>
+
+      <Section id="analytics-title" title={m.analytics.section.title} description={m.analytics.section.description}>
+        <AnalyticsSection s={analytics} config={analyticsConf} action={refreshAnalyticsAction.bind(null, workspace.id)} locale={locale} />
       </Section>
 
       <Section id="health-title" title={t.health.title} description={t.health.description}>
