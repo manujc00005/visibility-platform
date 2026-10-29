@@ -160,15 +160,16 @@ describe("AnalyticsSection key events (feature 008)", () => {
     expect(html).toContain(k.table.caption);
     expect(html).toContain(">generate_lead</td>");
     expect(html).toContain(k.configured);
-    expect(html).toContain(">purchase</span>");
-    expect(html).toContain(k.limits);
-    expect(html).not.toContain(k.noneConfigured);
+    expect(html).toContain(">purchase</li>");
+    expect(html).toContain(k.limitsTotal);
+    expect(html).toContain(k.limitsTable);
+    expect(html).not.toContain(k.noneConfigured(t.button.update));
     expect(html).not.toContain(k.missing(t.button.update));
   });
 
   it("explains how to mark key events, without figures, when none are configured (AC-007)", () => {
     const { html } = render(completed({ keyEvents: { ...KE, configured: [] } }), READY);
-    expect(html).toContain(k.noneConfigured);
+    expect(html).toContain(k.noneConfigured(t.button.update));
     expect(html).not.toContain(`>${k.organic.label}</dt>`);
     expect(html).not.toContain(k.table.caption);
   });
@@ -177,10 +178,14 @@ describe("AnalyticsSection key events (feature 008)", () => {
     const { html } = render(completed({ keyEvents: { ...KE, total: 0, previousTotal: 0, organic: 0, previousOrganic: 0, organicByEvent: [] } }), READY);
     expect(html).toContain(k.allZero);
     expect(html).toContain(k.noPrevious);
-    // The figures' own note speaks of key events, not of visits, and there is no table to explain.
-    expect(html).toContain(k.noPreviousValue);
+    // The figures' own notes speak of key events, not of visits, and there is nothing to explain about limits.
+    expect(html).toContain(k.organic.noPrevious);
+    expect(html).toContain(k.total.noPrevious);
     expect(html).not.toContain(t.metrics.noPrevious);
-    expect(html).not.toContain(k.limits);
+    expect(html).not.toContain(k.limitsTotal);
+    expect(html).not.toContain(k.limitsTable);
+    // No share sentence for a zero total, not even with "—".
+    expect(html).not.toContain(k.share("—"));
     expect(html).toContain(`>${k.organic.label}</dt>`);
     expect(html).not.toContain(k.table.caption);
   });
@@ -221,5 +226,68 @@ describe("AnalyticsSection key events (feature 008)", () => {
     const { html } = render(completed({ keyEvents: KE }), READY, "en");
     expect(html).toContain(en.title);
     expect(html).toContain(en.share("25.0%"));
+  });
+});
+
+describe("AnalyticsSection key events after the reviews (feature 008, D009)", () => {
+  const k = t.keyEvents;
+  const zero = { users: 0, sessions: 0, views: 0 };
+  const KE = {
+    version: 1 as const,
+    configured: ["generate_lead"],
+    configuredMore: false,
+    total: 100,
+    previousTotal: 80,
+    organic: 25,
+    previousOrganic: 20,
+    organicByEvent: [{ event: "generate_lead", keyEvents: 18 }],
+  };
+
+  it("labels the total as a sum of channels, visible at every width (AC-008)", () => {
+    expect(render(completed({ keyEvents: KE }), READY).html).toContain(`>${k.total.label}</dt>`);
+    expect(k.total.label).toContain("suma de canales");
+  });
+
+  it("speaks of organic key events when only the organic figure had none before (AC-008)", () => {
+    const { html } = render(completed({ keyEvents: { ...KE, previousOrganic: 0 } }), READY);
+    expect(html).toContain(k.organic.noPrevious);
+    expect(html).not.toContain(k.total.noPrevious);
+  });
+
+  it("has no share sentence when the current total is zero but the previous was not (AC-008)", () => {
+    const { html } = render(completed({ keyEvents: { ...KE, total: 0, organic: 0, organicByEvent: [] } }), READY);
+    expect(html).not.toContain(k.share("—"));
+    expect(html).not.toContain(k.allZero);
+    expect(html).toContain(k.limitsTotal);
+    expect(html).not.toContain(k.limitsTable);
+  });
+
+  it("shows decimal key events with one decimal (D009)", () => {
+    const { html } = render(completed({ keyEvents: { ...KE, organic: 2.5, organicByEvent: [{ event: "generate_lead", keyEvents: 2.5 }] } }), READY);
+    expect(html).toContain(">2,5</dd>");
+    expect(html).toContain(">2,5</td>");
+  });
+
+  it("keeps the 006 no-visits view without key events: no quality notice (regression)", () => {
+    const { html } = render(completed({ totals: zero, previousTotals: zero, channels: [], pages: [], quality: { otherRow: false, thresholded: true, sampled: false }, keyEvents: null }), READY);
+    expect(html).not.toContain("ocultó algunas filas");
+    expect(html).toContain(k.missing(t.button.update));
+  });
+
+  it("shows no update phrase without any completed capture (AC-006)", () => {
+    const failedOnly = completed({ status: "failed", property: null, totals: null, previousTotals: null, quality: null, keyEvents: null, errorKind: "no_access", errorMessage: "x", accessibleProperties: 0 });
+    const s = summarizeAnalytics({ latest: failedOnly, latestCompleted: null }, READY, "olessium.com", "es");
+    const html = renderToStaticMarkup(createElement(AnalyticsSection, { s, config: READY, action: noop, locale: "es" }));
+    expect(html).not.toContain(k.missing(t.button.update));
+    expect(html).not.toContain(k.title);
+  });
+
+  it("shows an old capture, the last failure and the update phrase together (AC-006)", () => {
+    const old = completed({ keyEvents: null });
+    const failed = completed({ id: "f1", status: "failed", property: null, totals: null, previousTotals: null, quality: null, keyEvents: null, errorKind: "quota_exceeded", errorMessage: "x", createdAt: new Date("2026-10-29T10:00:00Z") });
+    const s = summarizeAnalytics({ latest: failed, latestCompleted: old }, READY, "olessium.com", "es");
+    const html = renderToStaticMarkup(createElement(AnalyticsSection, { s, config: READY, action: noop, locale: "es" }));
+    expect(html).toContain(k.missing(t.button.update));
+    expect(html).toContain(t.failures.quota_exceeded);
   });
 });

@@ -1,6 +1,7 @@
 import type { ServiceAccount } from "@/modules/search-console/credentials";
 import { fetchAccessToken, GscError } from "@/modules/search-console/google";
 import {
+  clipName,
   Ga4Error,
   listKeyEvents,
   listPropertySummaries,
@@ -139,6 +140,7 @@ export async function collectAnalytics(
 ): Promise<CollectOutcome> {
   const now = options.now ?? new Date();
   let property: string | null = null;
+  let capture: AbortController | null = null;
   try {
     const token = await fetchAccessToken(account, { ...options, scope: SCOPE, nowSeconds: Math.floor(now.getTime() / 1000) });
     const { properties, more } = await listPropertySummaries(token, options);
@@ -162,22 +164,26 @@ export async function collectAnalytics(
       { name: "previous", startDate: previous.start, endDate: previous.end },
     ];
     const id = property;
+    // One signal for the six parallel calls: when one fails, the others stop instead of running
+    // out their 15 s and spending quota on answers that are thrown away (review of 008).
+    capture = new AbortController();
+    const parallel: ClientOptions = { ...options, signal: options.signal ? AbortSignal.any([options.signal, capture.signal]) : capture.signal };
     const [totalsReport, channelsReport, pagesReport, configuredKeyEvents, keyEventsReport, organicEventsReport] = await Promise.all([
-      runReport(token, id, { dateRanges: ranges, dimensions: ["dateRange"], metrics: ["activeUsers", "sessions", "screenPageViews"], limit: 2 }, options),
-      runReport(token, id, { dateRanges: ranges, dimensions: ["sessionDefaultChannelGroup", "dateRange"], metrics: ["sessions"], limit: 100 }, options),
+      runReport(token, id, { dateRanges: ranges, dimensions: ["dateRange"], metrics: ["activeUsers", "sessions", "screenPageViews"], limit: 2 }, parallel),
+      runReport(token, id, { dateRanges: ranges, dimensions: ["sessionDefaultChannelGroup", "dateRange"], metrics: ["sessions"], limit: 100 }, parallel),
       runReport(
         token,
         id,
         { dateRanges: [ranges[0]!], dimensions: ["pagePath"], metrics: ["screenPageViews", "activeUsers"], orderBy: "screenPageViews", limit: TOP_PAGES },
-        options,
+        parallel,
       ),
-      listKeyEvents(token, id, options),
-      runReport(token, id, { dateRanges: ranges, dimensions: ["sessionDefaultChannelGroup", "dateRange"], metrics: ["keyEvents"], limit: 100 }, options),
+      listKeyEvents(token, id, parallel),
+      runReport(token, id, { dateRanges: ranges, dimensions: ["sessionDefaultChannelGroup", "dateRange"], metrics: ["keyEvents"], limit: 100 }, parallel),
       runReport(
         token,
         id,
         { dateRanges: [ranges[0]!], dimensions: ["eventName"], metrics: ["keyEvents"], orderBy: "keyEvents", limit: TOP_EVENTS, dimensionFilter: ORGANIC_FILTER },
-        options,
+        parallel,
       ),
     ]);
 
@@ -239,11 +245,12 @@ export async function collectAnalytics(
           organicByEvent: organicEventsReport.rows
             .filter((r) => r.metrics.keyEvents! > 0)
             .slice(0, TOP_EVENTS)
-            .map((r) => ({ event: r.dimensions.eventName!.slice(0, MAX_EVENT_NAME_LENGTH), keyEvents: r.metrics.keyEvents! })),
+            .map((r) => ({ event: clipName(r.dimensions.eventName!, MAX_EVENT_NAME_LENGTH), keyEvents: r.metrics.keyEvents! })),
         },
       },
     };
   } catch (error) {
+    capture?.abort();
     if (error instanceof Ga4Error) return { ok: false, kind: error.kind, message: error.message, property, accessibleProperties: null, propertiesSkipped: null };
     // The token comes from Search Console's client; it only fails as rejected credentials or a generic error.
     if (error instanceof GscError) {

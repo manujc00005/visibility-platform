@@ -40,7 +40,7 @@
 
 **Decision:** se compara y se filtra con el valor exacto, `caseSensitive: true`, sin sumar otros canales ni traducir.
 
-**Reasoning:** es el valor que devuelve la API (visto en la 006). Una lista de equivalencias sería una suposición sin datos.
+**Reasoning:** es el valor que documenta GA4 para el grupo de canales predeterminado. Una lista de equivalencias sería una suposición sin datos. *Corrección tras las revisiones (D009):* no se ha visto en una respuesta con filas; la 006 cerró sin visitas. Queda como seguimiento.
 
 **Consequences:** si una propiedad devolviera otro nombre, orgánico saldría a cero; la sección lo advierte cuando hay total positivo y orgánico cero.
 
@@ -123,3 +123,59 @@ La revisión visual a 375 px encontró dos fallos:
 Además, la nota sobre los límites de la tabla no se muestra cuando todo está a cero, porque no hay tabla que explicar.
 
 **Consequences:** la comparación de cifras con los informes de GA4 queda como seguimiento hasta que haya visitas y eventos, como en la 006.
+
+### D009 - Resultado de las revisiones de cierre
+
+**Date:** 2026-10-29
+
+**Status:** Accepted
+
+**Context:** T009 se hizo con tres revisiones independientes:
+- **Seguridad:** sin hallazgos críticos, altos ni medios; uno bajo y cuatro informativos.
+- **Dominio (base de datos, API interna y frontend):** sin críticos ni altos; un medio, el tipo real de `keyEvents`.
+- **Conformidad:** «conforme con observaciones», con cinco medios de evidencia y una contradicción de la SPEC.
+
+La consulta de solo lectura a `GET /v1beta/properties/561384888/metadata` confirmó el riesgo del medio: GA4 declara `keyEvents` como `TYPE_FLOAT`. `sessions`, `activeUsers`, `screenPageViews` y `eventCount` son `TYPE_INTEGER`, igual que las métricas por evento (`keyEvents:<evento>`). Con la regla de enteros de la 006, un valor «2.5» habría hecho fallar toda la captura de GA4, visitas incluidas.
+
+**Decision:** se corrige:
+- **Datos:**
+  - Solo `keyEvents` acepta decimales no negativos (`^\d{1,13}(\.\d{1,12})?$`, como mucho 10¹²); las demás métricas siguen enteras y con el mismo mensaje.
+  - El resumen enseña los decimales con un decimal y los enteros como enteros.
+  - La base ya aceptaba cualquier número.
+- **Recursos y robustez:**
+  - Una señal de cancelación compartida por captura: si una de las seis llamadas paralelas falla, las otras se cancelan en lugar de agotar sus 15 s y gastar cuota (SEC-008-L1).
+  - Tipo literal `"Organic Search"` en el filtro.
+  - Topes de Zod en la lista de eventos clave: 200 entradas y nombres de 1000 caracteres.
+  - Recorte de nombres por punto de código y sin NUL, para que Postgres no rechace el `jsonb`.
+- **Sección:**
+  - Nota propia bajo cada cifra cuando no hay periodo anterior.
+  - «En total (suma de canales)» como etiqueta visible a cualquier ancho.
+  - Sin frase de parte orgánica si el total actual es cero.
+  - Nota de límites partida en total y tabla, cada una solo cuando aplica.
+  - Texto de «sin recuento orgánico» que habla del nombre exacto de canal.
+  - Lista de configurados como `ul`/`li`.
+  - Tabla anidada sin sombra y con título pequeño.
+  - Frase de «sin eventos clave» que nombra el botón y la ruta «Administrar › Visualización de datos › Eventos clave».
+- **Pruebas:**
+  - Tiempo agotado de las llamadas nuevas y cancelación compartida.
+  - JSON inválido y topes de la lista.
+  - Decimales aceptados y valores inválidos rechazados.
+  - Cuerpos literales de la 006, informe de 100 filas y desglose que no llega a lo orgánico.
+  - Seis formas más rechazadas por el `check`.
+  - Último éxito visible tras un fallo de una llamada nueva.
+  - Regresiones del estado vacío de la 006.
+- **Documentos:**
+  - SPEC: el `check` usa un predicado `strict` más un `CASE`, que compara cuántos elementos del desglose están bien formados con cuántos hay. En modo `strict`, un elemento sin `event` solo excluye su propio filtro.
+  - PLAN: el rollback incluye quitar los dos `check` del esquema.
+  - D003: el literal `Organic Search` no se ha visto todavía.
+
+Se acepta sin cambio:
+- `break-all` en la tabla (DOM-014): cumple a 375 px y evita depender de una utilidad nueva de Tailwind.
+- La «fila previa» de AC-009 se simula con nulo tras migrar (DOM-005, CONF-11). La equivalencia la da que la columna no tiene valor por defecto, y la confirma la fila real de `dev`.
+- El error de consola de T008 (CONF-12): el registro del servidor lo sitúa en el hueco D-22, antes de aplicar la `0011`.
+- El recorte de `pagePath` de la 006 por unidades UTF-16 (SEC-008-I1): es de otra feature y se menciona, no se cambia.
+- Datos personales en nombres de evento mal configurados y la falta de retención de `analytics_snapshots` (SEC-008-I4): son anteriores y quedan para la fase de privacidad.
+- La ruta de la interfaz de GA4 en el texto: la documenta Google, pero no se ha comprobado en la interfaz real.
+- `UNVERIFIED`: el formato real de un `keyEvents` distinto de cero y el literal `Organic Search` solo se verán con visitas.
+
+**Consequences:** el tipo `KeyEvents` guarda números que pueden tener decimales. El seguimiento de TASKS añade el literal del canal y el formato real de `keyEvents`.

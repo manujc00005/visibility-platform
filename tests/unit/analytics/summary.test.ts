@@ -170,6 +170,7 @@ describe("summarizeAnalytics key events (feature 008)", () => {
       organic: { value: "25", previous: "20", change: { direction: "better", text: "Antes: 20 eventos clave (+25 %)" } },
       total: { value: "100", previous: "80", change: { direction: "better", text: "Antes: 80 eventos clave (+25 %)" } },
       organicShare: "25,0 %",
+      hasTotal: true,
       byEvent: [
         { event: "generate_lead", keyEvents: "18" },
         { event: "(not set)", keyEvents: "4" },
@@ -220,6 +221,19 @@ describe("summarizeAnalytics key events (feature 008)", () => {
     expect(s.state).toBe("empty");
     expect(s.keyEvents?.organic.value).toBe("25");
     expect(s.quality).toContain("ocultó algunas filas");
+  });
+
+  it("has no share to state when the current total is zero, even if the previous was not (AC-008)", () => {
+    const v = view({ total: 0, organic: 0, organicByEvent: [] })!;
+    expect(v.hasTotal).toBe(false);
+    expect(v.allZero).toBe(false);
+  });
+
+  it("formats decimal key events with one decimal and whole ones as integers (D009)", () => {
+    const v = view({ total: 100, organic: 2.5, previousOrganic: 2, organicByEvent: [{ event: "generate_lead", keyEvents: 2.5 }] })!;
+    expect(v.organic.value).toBe("2,5");
+    expect(v.total.value).toBe("100");
+    expect(v.byEvent[0]!.keyEvents).toBe("2,5");
   });
 
   it("has no block for a capture taken before feature 008 (AC-006)", () => {

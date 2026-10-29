@@ -196,6 +196,13 @@ describe("analytics key events (feature 008)", () => {
     ["a breakdown item without keyEvents", { ...keyEvents, organicByEvent: [{ event: "a" }] }],
     ["a breakdown item that is text", { ...keyEvents, organicByEvent: ["a"] }],
     ["a breakdown that is not an array", { ...keyEvents, organicByEvent: { event: "a", keyEvents: 1 } }],
+    // Branches guarded by the CASE (review DOM-001).
+    ["no breakdown", without("organicByEvent")],
+    ["a breakdown that is null", { ...keyEvents, organicByEvent: null }],
+    ["a scalar", 5],
+    ["a string", "x"],
+    ["a breakdown item with keyEvents as text", { ...keyEvents, organicByEvent: [{ event: "a", keyEvents: "1" }] }],
+    ["no configured list", without("configured")],
   ])("rejects key events with %s (AC-009)", async (_label, bad) => {
     const ws = await workspace();
     await violates(row(ws.id, bad), SHAPE);
@@ -205,6 +212,7 @@ describe("analytics key events (feature 008)", () => {
     ["empty lists and zeros", { ...keyEvents, configured: [], total: 0, previousTotal: 0, organic: 0, previousOrganic: 0, organicByEvent: [] }],
     ["the stored example", keyEvents],
     ["a (not set) event and more configured", { ...keyEvents, configuredMore: true, organicByEvent: [{ event: "(not set)", keyEvents: 4 }] }],
+    ["decimal counts (TYPE_FLOAT, D009)", { ...keyEvents, organic: 2.5, organicByEvent: [{ event: "generate_lead", keyEvents: 2.5 }] }],
   ])("accepts key events with %s (AC-009)", async (_label, good) => {
     const ws = await workspace();
     await row(ws.id, good);
@@ -242,6 +250,16 @@ describe("analytics key events (feature 008)", () => {
     expect(rows[0]).toMatchObject({ status: "failed", errorKind: kind, keyEvents: null });
     const stored = JSON.stringify(rows[0]);
     for (const secret of secretsIn(calls)) expect(stored).not.toContain(secret);
+  });
+
+  it("keeps the last good capture visible after a new call fails (AC-005)", async () => {
+    const ws = await workspace();
+    await refreshAnalytics(db, ws.id, deps(OK));
+    const { deps: failing } = google({ match: (url) => url.includes("/keyEvents"), status: 429 });
+    await refreshAnalytics(db, ws.id, failing);
+    const { latest, latestCompleted } = await latestAnalytics(db, ws.id);
+    expect(latest).toMatchObject({ status: "failed", errorKind: "quota_exceeded", keyEvents: null });
+    expect(latestCompleted?.keyEvents).toEqual(keyEvents);
   });
 
   it("stores a real completed capture with key events and no secret (AC-001, AC-010)", async () => {

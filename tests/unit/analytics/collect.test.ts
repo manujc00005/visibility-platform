@@ -59,6 +59,7 @@ function google(routes: Routes) {
     fetchImpl: fetchImpl as unknown as typeof fetch,
     urls: () => fetchImpl.mock.calls.map(([u]) => String(u)),
     bodies: () => fetchImpl.mock.calls.filter(([u]) => String(u).startsWith(DATA_BASE)).map(([, i]) => JSON.parse(String(i?.body))),
+    rawBodies: () => fetchImpl.mock.calls.filter(([u]) => String(u).startsWith(DATA_BASE)).map(([, i]) => String(i?.body)),
   };
 }
 
@@ -329,7 +330,7 @@ describe("collectAnalytics key events (feature 008)", () => {
     ["the key event list", { keyEventList: leaky(401) }, "invalid_credentials"],
     ["the report by channel", { keyEventsByChannel: leaky(429) }, "quota_exceeded"],
     ["the organic breakdown", { organicEvents: leaky(500) }, "error"],
-    ["the report by channel", { keyEventsByChannel: { body: report(["sessionDefaultChannelGroup", "dateRange"], ["keyEvents"], [[["A", "current"], [1.5]]]) } }, "error"],
+    ["the report by channel", { keyEventsByChannel: { body: report(["sessionDefaultChannelGroup", "dateRange"], ["keyEvents"], [[["A", "current"], [Number.NaN]]]) } }, "error"],
     ["the key event list", { keyEventList: { body: { keyEvents: [{ name: "x" }] } } }, "error"],
   ])("fails the whole capture when %s fails, with no secret in the outcome (AC-005)", async (_label, routes, kind) => {
     const g = google(routes as Routes);
@@ -337,6 +338,82 @@ describe("collectAnalytics key events (feature 008)", () => {
     expect(outcome).toMatchObject({ ok: false, kind, property: "properties/123" });
     const assertion = new URLSearchParams(String((g.fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls[0]![1]?.body)).get("assertion")!;
     const text = JSON.stringify(outcome);
-    for (const secret of [TOKEN, assertion, PRIVATE_PEM.split("\n")[1]!]) expect(text).not.toContain(secret);
+    for (const secret of [TOKEN, assertion, PRIVATE_PEM.split("\n")[1]!, "googleapis.com"]) expect(text).not.toContain(secret);
+  });
+
+  it("keeps the three 006 request bodies identical as strings, key order included (review DOM-008)", async () => {
+    const g = google({});
+    await collectAnalytics(account, SITE, { fetchImpl: g.fetchImpl, now: NOW });
+    const raw = g.rawBodies().filter((b) => !b.includes('"keyEvents"'));
+    expect(raw).toEqual([
+      JSON.stringify({ dateRanges: RANGES, dimensions: [], metrics: [{ name: "activeUsers" }, { name: "sessions" }, { name: "screenPageViews" }], limit: "2" }),
+      JSON.stringify({ dateRanges: RANGES, dimensions: [{ name: "sessionDefaultChannelGroup" }], metrics: [{ name: "sessions" }], limit: "100" }),
+      JSON.stringify({
+        dateRanges: [RANGES[0]],
+        dimensions: [{ name: "pagePath" }],
+        metrics: [{ name: "screenPageViews" }, { name: "activeUsers" }],
+        orderBys: [{ metric: { metricName: "screenPageViews" }, desc: true }],
+        limit: "10",
+      }),
+    ]);
+  });
+
+  it.each([
+    ["a negative count", -1],
+    ["a count over 10^12", 2e12],
+  ])("fails on %s in a key event report (AC-005)", async (_label, value) => {
+    const bad = { body: report(["eventName"], ["keyEvents"], [[["generate_lead"], [value]]]) };
+    expect(await collectAnalytics(account, SITE, { fetchImpl: google({ organicEvents: bad }).fetchImpl, now: NOW })).toMatchObject({ ok: false, kind: "error" });
+  });
+
+  it("passes the time limit to the three new calls (AC-002)", async () => {
+    const slowWhen = (match: (url: string, body: string) => boolean) => {
+      const inner = google({}).fetchImpl;
+      return (async (input: string, init?: RequestInit) => {
+        if (!match(String(input), String(init?.body ?? ""))) return inner(input, init);
+        return new Promise((_resolve, reject) => init?.signal?.addEventListener("abort", () => reject(init.signal!.reason)));
+      }) as typeof fetch;
+    };
+    const list = await collectAnalytics(account, SITE, { fetchImpl: slowWhen((url) => url.includes("/keyEvents")), timeoutMs: 20, now: NOW });
+    expect(list).toMatchObject({ ok: false, kind: "error", message: "Google Analytics Admin API no respondió a tiempo" });
+    const reportCall = await collectAnalytics(account, SITE, { fetchImpl: slowWhen((url, body) => url.startsWith(DATA_BASE) && body.includes('"eventName"')), timeoutMs: 20, now: NOW });
+    expect(reportCall).toMatchObject({ ok: false, kind: "error", message: "Google Analytics Data API no respondió a tiempo" });
+  });
+
+  it("stops the other parallel calls as soon as one fails (review SEC-008-L1)", async () => {
+    const aborted: string[] = [];
+    const inner = google({}).fetchImpl;
+    const fetchImpl = (async (input: string, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/keyEvents")) return new Response(JSON.stringify({ error: { details: [{ reason: "SERVICE_DISABLED" }] } }), { status: 403 });
+      if (url.startsWith(DATA_BASE)) {
+        // Reports hang until their signal fires: the shared abort, not the 15 s limit.
+        return new Promise((_resolve, reject) =>
+          init?.signal?.addEventListener("abort", () => {
+            aborted.push(url);
+            reject(init.signal!.reason);
+          }),
+        );
+      }
+      return inner(input, init);
+    }) as typeof fetch;
+    const started = Date.now();
+    expect(await collectAnalytics(account, SITE, { fetchImpl, now: NOW })).toMatchObject({ ok: false, kind: "admin_api_disabled" });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(aborted).toHaveLength(5);
+    expect(Date.now() - started).toBeLessThan(5_000);
+  });
+
+  it("adds up a 100-row report and keeps a breakdown that does not reach the organic figure (AC-003)", async () => {
+    const rows: [string[], number[]][] = Array.from({ length: 99 }, (_, i) => [[`Canal ${i}`, "current"], [1]]);
+    rows.push([["Organic Search", "current"], [40]]);
+    const full = { body: report(["sessionDefaultChannelGroup", "dateRange"], ["keyEvents"], rows) };
+    const ten = { body: report(["eventName"], ["keyEvents"], Array.from({ length: 10 }, (_, i) => [[`evento_${i}`], [2]] as [string[], number[]])) };
+    const outcome = await collectAnalytics(account, SITE, { fetchImpl: google({ keyEventsByChannel: full, organicEvents: ten }).fetchImpl, now: NOW });
+    expect(outcome.ok && outcome.data.keyEvents.total).toBe(139);
+    expect(outcome.ok && outcome.data.keyEvents.organic).toBe(40);
+    expect(outcome.ok && outcome.data.keyEvents.organicByEvent).toHaveLength(10);
+    const breakdown = outcome.ok ? outcome.data.keyEvents.organicByEvent.reduce((sum, e) => sum + e.keyEvents, 0) : 0;
+    expect(breakdown).toBe(20);
   });
 });

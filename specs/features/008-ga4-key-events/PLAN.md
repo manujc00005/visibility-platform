@@ -82,7 +82,7 @@ No cambian: la búsqueda de propiedad, los tres informes de la 006 (cuerpo idén
 ## Rollback strategy
 
 - La columna es nullable y aditiva: el código anterior la ignora.
-- Quitar la feature en dos entregas: (1) código sin lectura ni escritura de `key_events` y sin la columna en el esquema de Drizzle, sin generar migración; (2) después, la migración que borra la columna. Entre las dos, vigilar que ningún `db:generate` meta ese `DROP` en otra migración.
+- Quitar la feature en dos entregas: (1) código sin lectura ni escritura de `key_events` y sin la columna ni sus dos `check` (`analytics_snapshots_failed_without_key_events` y `analytics_snapshots_key_events_shape`) en el esquema de Drizzle, sin generar migración; (2) después, la migración que borra la columna. Entre las dos, vigilar que ningún `db:generate` meta ese `DROP` en otra migración. `DROP COLUMN` elimina también sus `check`.
 - Revertir solo el código: la migración `0011`, su `snapshot` y su entrada en `_journal.json` se quedan.
 
 ## Deployment coupling

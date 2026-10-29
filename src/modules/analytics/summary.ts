@@ -36,6 +36,8 @@ export interface KeyEventsView {
   total: MetricView;
   /** Organic share of the total, or "—" when the total is zero. */
   organicShare: string;
+  /** The current total is above zero, so the share sentence makes sense. */
+  hasTotal: boolean;
   byEvent: { event: string; keyEvents: string }[];
   configured: string[];
   configuredMore: boolean;
@@ -99,10 +101,12 @@ function qualityText(q: Quality | null, t: Texts): string | null {
 }
 
 function keyEventsOf(k: KeyEvents, t: Texts, shared: Messages["searchConsole"], f: ReturnType<typeof formatters>): KeyEventsView {
+  // keyEvents is TYPE_FLOAT in GA4 (D009 of 008): whole numbers as such, fractions with one decimal.
+  const count = (n: number) => (Number.isInteger(n) ? f.integer(n) : f.decimal(n));
   // Each figure compares only against its own previous value (FR-008 of 008).
   const metric = (current: number, previous: number): MetricView => ({
-    value: f.integer(current),
-    previous: previous > 0 ? f.integer(previous) : null,
+    value: count(current),
+    previous: previous > 0 ? count(previous) : null,
     change: previous > 0 ? countChange(current, previous, t.keyEvents.unit, shared, f) : null,
   });
   const configured = k.configured.length > 0;
@@ -111,7 +115,8 @@ function keyEventsOf(k: KeyEvents, t: Texts, shared: Messages["searchConsole"], 
     organic: metric(k.organic, k.previousOrganic),
     total: metric(k.total, k.previousTotal),
     organicShare: k.total > 0 ? f.percent(k.organic / k.total) : "—",
-    byEvent: k.organicByEvent.map((e) => ({ event: e.event, keyEvents: f.integer(e.keyEvents) })),
+    hasTotal: k.total > 0,
+    byEvent: k.organicByEvent.map((e) => ({ event: e.event, keyEvents: count(e.keyEvents) })),
     configured: k.configured,
     configuredMore: k.configuredMore,
     allZero: k.total === 0 && k.previousTotal === 0,

@@ -32,6 +32,8 @@ export class Ga4Error extends Error {
 export interface ClientOptions {
   fetchImpl?: typeof fetch;
   timeoutMs?: number;
+  /** Cancels the call together with others of the same capture (feature 008 reviews). */
+  signal?: AbortSignal;
 }
 
 type Api = "admin" | "data";
@@ -48,7 +50,9 @@ async function call(api: Api, path: string, init: RequestInit, token: string, op
       headers: { ...init.headers, authorization: `Bearer ${token}`, accept: "application/json" },
       redirect: "error",
       cache: "no-store",
-      signal: AbortSignal.timeout(options.timeoutMs ?? 15_000),
+      signal: options.signal
+        ? AbortSignal.any([options.signal, AbortSignal.timeout(options.timeoutMs ?? 15_000)])
+        : AbortSignal.timeout(options.timeoutMs ?? 15_000),
     });
   } catch (error) {
     // The original error may quote the request, so it is dropped rather than kept as `cause`.
@@ -132,11 +136,22 @@ export async function listWebStreamHosts(token: string, property: string, option
 }
 
 const keyEventsSchema = z.object({
-  keyEvents: z.array(z.object({ eventName: z.string().min(1) })).optional(),
+  keyEvents: z
+    .array(z.object({ eventName: z.string().min(1).max(1000) }))
+    .max(200)
+    .optional(),
   nextPageToken: z.string().optional(),
 });
 
 export const MAX_KEY_EVENTS = 50;
+
+/**
+ * GA4 names cut to `max` characters by code point, without NUL: a cut in the middle of a
+ * surrogate pair or a NUL would make Postgres reject the jsonb and lose the attempt.
+ */
+export function clipName(name: string, max: number): string {
+  return Array.from(name.replaceAll("\u0000", "")).slice(0, max).join("");
+}
 const MAX_EVENT_NAME_LENGTH = 100;
 
 /**
@@ -149,7 +164,7 @@ export async function listKeyEvents(token: string, property: string, options: Cl
   const body = parse("keyEvents", keyEventsSchema, await call("admin", `/${property}/keyEvents?pageSize=200`, { method: "GET" }, token, options));
   const all = body.keyEvents ?? [];
   return {
-    events: all.slice(0, MAX_KEY_EVENTS).map((e) => e.eventName.slice(0, MAX_EVENT_NAME_LENGTH)),
+    events: all.slice(0, MAX_KEY_EVENTS).map((e) => clipName(e.eventName, MAX_EVENT_NAME_LENGTH)),
     more: Boolean(body.nextPageToken) || all.length > MAX_KEY_EVENTS,
   };
 }
@@ -158,7 +173,7 @@ export async function listKeyEvents(token: string, property: string, options: Cl
 export interface DimensionFilter {
   filter: {
     fieldName: "sessionDefaultChannelGroup";
-    stringFilter: { matchType: "EXACT"; value: string; caseSensitive: true };
+    stringFilter: { matchType: "EXACT"; value: "Organic Search"; caseSensitive: true };
   };
 }
 
@@ -207,6 +222,12 @@ const reportSchema = z.object({
 
 /** Counts arrive as text; they must be whole numbers small enough for exact sums. */
 const COUNT = /^\d{1,13}$/;
+/**
+ * GA4 declares `keyEvents` as TYPE_FLOAT (metadata of the real property, D009 of 008): it may
+ * come as "3.0" or with a fraction. Only that metric accepts decimals; the rest stay whole.
+ */
+const DECIMAL_METRICS: ReadonlySet<string> = new Set(["keyEvents"]);
+const DECIMAL = /^\d{1,13}(\.\d{1,12})?$/;
 
 export async function runReport(token: string, property: string, request: ReportRequest, options: ClientOptions = {}): Promise<{ rows: ReportRow[]; quality: Quality }> {
   if (!PROPERTY.test(property)) throw new Ga4Error("error", "Identificador de propiedad de Google Analytics no válido");
@@ -237,7 +258,10 @@ export async function runReport(token: string, property: string, request: Report
     const metrics: Record<string, number> = {};
     for (const name of request.metrics) {
       const value = row.metricValues?.[metricIndex.indexOf(name)]?.value ?? "";
-      if (!COUNT.test(value) || Number(value) > 1e12) throw new Ga4Error("error", `Respuesta de runReport con un valor no entero en ${name}`);
+      const decimal = DECIMAL_METRICS.has(name);
+      if (!(decimal ? DECIMAL : COUNT).test(value) || Number(value) > 1e12) {
+        throw new Ga4Error("error", `Respuesta de runReport con un valor no ${decimal ? "válido" : "entero"} en ${name}`);
+      }
       metrics[name] = Number(value);
     }
     return { dimensions, metrics };

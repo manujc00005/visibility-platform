@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ADMIN_BASE, DATA_BASE, Ga4Error, listKeyEvents, listPropertySummaries, listWebStreamHosts, runReport, type ClientOptions, type ReportRequest } from "@/modules/analytics/ga4";
+import { ADMIN_BASE, clipName, DATA_BASE, Ga4Error, listKeyEvents, listPropertySummaries, listWebStreamHosts, runReport, type ClientOptions, type ReportRequest } from "@/modules/analytics/ga4";
 import { scripted } from "../search-console/fixtures";
 
 const TOKEN = "ya29.secret-token-value";
@@ -227,7 +227,7 @@ describe("listKeyEvents (feature 008)", () => {
 });
 
 describe("runReport dimension filter (feature 008)", () => {
-  const filter = { filter: { fieldName: "sessionDefaultChannelGroup" as const, stringFilter: { matchType: "EXACT" as const, value: "Organic Search", caseSensitive: true as const } } };
+  const filter = { filter: { fieldName: "sessionDefaultChannelGroup" as const, stringFilter: { matchType: "EXACT" as const, value: "Organic Search" as const, caseSensitive: true as const } } };
 
   it("sends the filter only when given and leaves the previous body unchanged", async () => {
     const { calls, impl } = scripted([
@@ -242,5 +242,64 @@ describe("runReport dimension filter (feature 008)", () => {
     expect(without).not.toHaveProperty("dimensionFilter");
     delete withFilter.dimensionFilter;
     expect(withFilter).toEqual(without);
+  });
+});
+
+describe("feature 008 client details after the reviews (D009)", () => {
+  const keyEventReport = (value: string) => ({
+    dimensionHeaders: [{ name: "eventName" }],
+    metricHeaders: [{ name: "keyEvents" }],
+    rows: [{ dimensionValues: [{ value: "generate_lead" }], metricValues: [{ value }] }],
+  });
+  const KEY_REQUEST: ReportRequest = { dateRanges: [REQUEST.dateRanges[0]!], dimensions: ["eventName"], metrics: ["keyEvents"], limit: 10 };
+
+  it.each([
+    ["3", 3],
+    ["3.0", 3],
+    ["2.5", 2.5],
+  ])("accepts keyEvents %s, a TYPE_FLOAT metric in GA4", async (value, expected) => {
+    const { rows } = await runReport(TOKEN, "properties/1", KEY_REQUEST, { fetchImpl: respond(200, keyEventReport(value)).impl });
+    expect(rows[0]!.metrics.keyEvents).toBe(expected);
+  });
+
+  it.each(["-1", "", "1e3", "2000000000000", "NaN", "1.", ".5"])("rejects keyEvents %j", async (value) => {
+    const error = await failure(runReport(TOKEN, "properties/1", KEY_REQUEST, { fetchImpl: respond(200, keyEventReport(value)).impl }));
+    expect(error).toMatchObject({ kind: "error", message: "Respuesta de runReport con un valor no válido en keyEvents" });
+  });
+
+  it("keeps whole numbers only for the metrics of 006", async () => {
+    const sessions = { dimensionHeaders: [], metricHeaders: [{ name: "sessions" }], rows: [{ dimensionValues: [], metricValues: [{ value: "2.5" }] }] };
+    const error = await failure(runReport(TOKEN, "properties/1", { ...KEY_REQUEST, dimensions: [], metrics: ["sessions"] }, { fetchImpl: respond(200, sessions).impl }));
+    expect(error.message).toBe("Respuesta de runReport con un valor no entero en sessions");
+  });
+
+  it("fails on a key event list that is not JSON, too long, or with a huge name", async () => {
+    const notJson = (async () => new Response(`<html>${TOKEN}</html>`, { status: 200 })) as unknown as typeof fetch;
+    expect((await failure(listKeyEvents(TOKEN, "properties/1", { fetchImpl: notJson }))).kind).toBe("error");
+    const tooMany = Array.from({ length: 201 }, (_, i) => ({ eventName: `e${i}` }));
+    expect((await failure(listKeyEvents(TOKEN, "properties/1", { fetchImpl: respond(200, { keyEvents: tooMany }).impl }))).kind).toBe("error");
+    expect((await failure(listKeyEvents(TOKEN, "properties/1", { fetchImpl: respond(200, { keyEvents: [{ eventName: "x".repeat(1001) }] }).impl }))).kind).toBe("error");
+  });
+
+  it("times out the key event list like the other Admin calls (AC-002)", async () => {
+    const slow = ((_: string, init?: RequestInit) =>
+      new Promise((_resolve, reject) => init?.signal?.addEventListener("abort", () => reject(init.signal!.reason)))) as unknown as typeof fetch;
+    expect((await failure(listKeyEvents(TOKEN, "properties/1", { fetchImpl: slow, timeoutMs: 5 }))).message).toBe("Google Analytics Admin API no respondió a tiempo");
+  });
+
+  it("stops a call when the shared capture signal aborts", async () => {
+    const slow = ((_: string, init?: RequestInit) =>
+      new Promise((_resolve, reject) => init?.signal?.addEventListener("abort", () => reject(init.signal!.reason)))) as unknown as typeof fetch;
+    const capture = new AbortController();
+    const pending = failure(runReport(TOKEN, "properties/1", KEY_REQUEST, { fetchImpl: slow, signal: capture.signal }));
+    capture.abort();
+    expect((await pending).kind).toBe("error");
+  });
+
+  it("cuts names by code point and drops NUL, so Postgres can store them", () => {
+    expect(clipName("a\u0000b", 10)).toBe("ab");
+    const name = `${"x".repeat(99)}😀tail`;
+    expect(clipName(name, 100)).toBe(`${"x".repeat(99)}😀`);
+    expect(JSON.stringify(clipName(`${"x".repeat(99)}😀`, 100))).not.toContain("\\ud83d");
   });
 });

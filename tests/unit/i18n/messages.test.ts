@@ -85,6 +85,7 @@ const FUNCTION_CALLS: Record<string, unknown[][]> = {
   "analytics.keyEvents.unit": [[1], [25]],
   "analytics.keyEvents.share": [["25,0 %"]],
   "analytics.keyEvents.missing": [["Actualizar datos"]],
+  "analytics.keyEvents.noneConfigured": [["Actualizar datos"]],
   "bingWebmaster.setup.run": [["Traer datos de Bing"]],
   "bingWebmaster.reasons.noData": [["Traer datos de Bing"]],
   "bingWebmaster.failures.no_access": [["olessium.com"]],

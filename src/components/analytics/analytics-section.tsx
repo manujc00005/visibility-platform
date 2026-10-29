@@ -46,11 +46,12 @@ function Setup({ config, t }: { config: AnalyticsConfig; t: Texts }) {
 
 const cell = "px-3 py-2 text-right tabular-nums";
 
-function TableFrame({ caption, children }: { caption: string; children: ReactNode }) {
+function TableFrame({ caption, children, nested = false }: { caption: string; children: ReactNode; nested?: boolean }) {
+  // Inside the card (key events, D005 of 008) the table is a plain frame with a caption no larger than its h3.
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border/80 bg-card shadow-card">
+    <div className={nested ? "overflow-x-auto rounded-lg border border-border/80" : "overflow-x-auto rounded-2xl border border-border/80 bg-card shadow-card"}>
       <table className="w-full text-sm">
-        <caption className="px-4 pt-4 pb-2 text-left text-base font-semibold">{caption}</caption>
+        <caption className={nested ? "px-4 pt-3 pb-2 text-left text-sm font-semibold" : "px-4 pt-4 pb-2 text-left text-base font-semibold"}>{caption}</caption>
         {children}
       </table>
     </div>
@@ -61,7 +62,7 @@ const METRICS = ["users", "sessions", "views"] as const;
 const KEY_FIGURES = ["organic", "total"] as const;
 
 /** Key events (feature 008), inside the card so it also shows without visits (D005). Names are GA4 data: plain text. */
-function KeyEventsBlock({ v, t }: { v: KeyEventsView; t: Texts }) {
+function KeyEventsBlock({ v, t, button }: { v: KeyEventsView; t: Texts; button: string }) {
   const k = t.keyEvents;
   const note = "max-w-3xl text-xs text-muted-foreground";
   return (
@@ -71,7 +72,7 @@ function KeyEventsBlock({ v, t }: { v: KeyEventsView; t: Texts }) {
       </h3>
       <p className={note}>{k.scope}</p>
       {v.state === "none_configured" ? (
-        <p className="max-w-3xl text-sm text-muted-foreground">{k.noneConfigured}</p>
+        <p className="max-w-3xl text-sm text-muted-foreground">{k.noneConfigured(button)}</p>
       ) : (
         <>
           <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -80,17 +81,18 @@ function KeyEventsBlock({ v, t }: { v: KeyEventsView; t: Texts }) {
                 <dt className="text-xs font-medium text-muted-foreground">{k[key].label}</dt>
                 <dd className="text-2xl font-semibold tabular-nums">{v[key].value}</dd>
                 <dd>
-                  <ChangeLine change={v[key].change} note={v[key].change === null ? k.noPreviousValue : null} className="text-xs" />
+                  <ChangeLine change={v[key].change} note={v[key].change === null ? k[key].noPrevious : null} className="text-xs" />
                 </dd>
                 <dd className="hidden text-xs text-muted-foreground sm:block">{k[key].hint}</dd>
               </div>
             ))}
           </dl>
-          {v.allZero ? <p className="max-w-3xl text-sm text-muted-foreground">{k.allZero}</p> : <p className={note}>{k.share(v.organicShare)}</p>}
+          {v.allZero ? <p className="max-w-3xl text-sm text-muted-foreground">{k.allZero}</p> : null}
+          {v.hasTotal ? <p className={note}>{k.share(v.organicShare)}</p> : null}
           {v.organicMissing ? <p className={note}>{k.organicMissing}</p> : null}
           {v.noPrevious ? <p className={note}>{k.noPrevious}</p> : null}
           {v.byEvent.length > 0 ? (
-            <TableFrame caption={k.table.caption}>
+            <TableFrame caption={k.table.caption} nested>
               <thead>
                 <tr className="border-b text-left text-xs text-muted-foreground">
                   <th scope="col" className="px-4 py-2 font-medium">
@@ -112,18 +114,22 @@ function KeyEventsBlock({ v, t }: { v: KeyEventsView; t: Texts }) {
               </tbody>
             </TableFrame>
           ) : null}
-          {v.allZero ? null : <p className={note}>{k.limits}</p>}
+          {v.allZero ? null : <p className={note}>{k.limitsTotal}</p>}
+          {v.byEvent.length > 0 ? <p className={note}>{k.limitsTable}</p> : null}
         </>
       )}
       {v.configured.length > 0 ? (
-        <p className="flex max-w-3xl flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-          <span>{k.configured}</span>
-          {v.configured.map((name, i) => (
-            <span key={i} className="rounded bg-muted px-1.5 py-0.5 font-mono break-all text-foreground">
-              {name}
-            </span>
-          ))}
-        </p>
+        <div className="flex max-w-3xl flex-col gap-1.5 text-xs text-muted-foreground">
+          <p id="ga4-key-events-configured">{k.configured}</p>
+          {/* A list, so the names stay apart when copied or read aloud. */}
+          <ul aria-labelledby="ga4-key-events-configured" className="flex flex-wrap gap-1.5">
+            {v.configured.map((name, i) => (
+              <li key={i} className="rounded bg-muted px-1.5 py-0.5 font-mono break-all text-foreground">
+                {name}
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
       {v.configuredMore ? <p className={note}>{k.configuredMore}</p> : null}
     </section>
@@ -182,7 +188,7 @@ export function AnalyticsSection({
           <p className="max-w-3xl text-sm text-muted-foreground">{s.reason}</p>
         ) : null}
         {s.keyEvents ? (
-          <KeyEventsBlock v={s.keyEvents} t={t} />
+          <KeyEventsBlock v={s.keyEvents} t={t} button={t.button.update} />
         ) : hasData || s.state === "empty" ? (
           <p className="max-w-3xl text-sm text-muted-foreground">{canRun ? t.keyEvents.missing(t.button.update) : t.keyEvents.missingNotConfigured}</p>
         ) : null}

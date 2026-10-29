@@ -712,21 +712,29 @@ export const es = {
     keyEvents: {
       title: "Conversiones desde buscadores",
       scope: "Eventos clave de Google Analytics en las visitas que llegan desde Google, Bing y el resto de buscadores, que GA4 agrupa en el canal «Organic Search».",
-      organic: { label: "Desde buscadores", hint: "Eventos clave en sesiones que llegaron desde la búsqueda orgánica" },
-      total: { label: "En total", hint: "Suma de los eventos clave de los canales que devuelve Google Analytics" },
+      organic: {
+        label: "Desde buscadores",
+        hint: "Eventos clave en sesiones que llegaron desde la búsqueda orgánica",
+        noPrevious: "Sin eventos clave desde buscadores en el periodo anterior",
+      },
+      total: {
+        label: "En total (suma de canales)",
+        hint: "Suma de los eventos clave de los canales que devuelve Google Analytics",
+        noPrevious: "Sin eventos clave en el periodo anterior",
+      },
       unit: (count: number): string => (count === 1 ? "evento clave" : "eventos clave"),
       share: (share: string) => `${share} de los eventos clave llegan desde buscadores.`,
       table: { caption: "Eventos clave desde buscadores", event: "Evento", count: "Eventos clave" },
       configured: "Eventos clave configurados en Google Analytics:",
       configuredMore: "Google Analytics tiene más eventos clave configurados de los que se muestran.",
-      noneConfigured:
-        "Esta propiedad de Google Analytics no tiene eventos clave. Márcalos en Google Analytics (Administrar › Eventos clave) y vuelve a traer los datos.",
+      noneConfigured: (button: string) =>
+        `Esta propiedad de Google Analytics no tiene eventos clave. Márcalos en Google Analytics (Administrar › Visualización de datos › Eventos clave) y pulsa «${button}».`,
       allZero: "Google Analytics no devolvió eventos clave en estos periodos.",
-      noPreviousValue: "Sin eventos clave en el periodo anterior",
       noPrevious: "Si un evento se marcó como clave después del inicio del periodo anterior, Google Analytics no lo cuenta antes de esa fecha.",
-      organicMissing: "Hay eventos clave, pero ninguno llegó con el canal «Organic Search».",
-      limits:
-        "El total suma los canales que devuelve Google Analytics, hasta 100, y la tabla muestra los 10 eventos con más recuento, así que no tienen por qué cuadrar.",
+      organicMissing:
+        "Hay eventos clave, pero Google Analytics no devolvió ninguno con el nombre de canal exacto «Organic Search». Si tu propiedad usa otro nombre para ese canal, aquí sale cero.",
+      limitsTotal: "El total suma los canales que devuelve Google Analytics, hasta 100.",
+      limitsTable: "La tabla muestra los 10 eventos con más recuento, así que no tiene por qué sumar la cifra desde buscadores.",
       missing: (button: string) => `Pulsa «${button}» para ver las conversiones desde buscadores.`,
       missingNotConfigured: "Configura Google Analytics para ver las conversiones desde buscadores.",
     },

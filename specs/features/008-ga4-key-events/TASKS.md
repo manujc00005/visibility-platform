@@ -32,8 +32,16 @@
   - Hecho 2026-10-29 (D008): antes de capturar, la fila antigua mostraba «Pulsa «Actualizar datos» para ver las conversiones desde buscadores.» (AC-006 en real). La captura real es `completed` con tres eventos configurados y recuentos a cero; GA4 aceptó las tres llamadas nuevas.
   - En `es` y `en`, a 375 px, sin desbordamiento de página con la captura real y con una fila sintética con eventos y nombres largos, borrada después por su id. La revisión visual encontró dos fallos de la sección, corregidos con sus pruebas (D008).
   - La consola guardaba un error de consulta sobre `key_events`. El registro del servidor lo sitúa en el hueco entre editar el esquema y aplicar la `0011` (patrón D-22), y desde la migración no hay ninguno nuevo.
-- [ ] T009 - Revisiones de cierre y `/spec-review`. Covers: AC-005, AC-009, AC-010, AC-012. Verify: informes de seguridad, dominio (base de datos, API y frontend) y conformidad sin hallazgos críticos o altos sin resolver; los aceptados en DECISIONS con su motivo; `/spec-review` Pass.
+- [x] T009 - Revisiones de cierre y `/spec-review`. Covers: AC-005, AC-009, AC-010, AC-012. Verify: informes de seguridad, dominio (base de datos, API y frontend) y conformidad sin hallazgos críticos o altos sin resolver; los aceptados en DECISIONS con su motivo; `/spec-review` Pass.
+  - Hecho 2026-10-29 con tres revisiones independientes y D009:
+    - **Seguridad:** sin críticos, altos ni medios.
+    - **Dominio:** sin críticos ni altos; un medio, el tipo real de `keyEvents`.
+    - **Conformidad:** «conforme con observaciones».
+  - Los metadatos reales de la propiedad confirmaron que `keyEvents` es `TYPE_FLOAT`; se aceptan decimales solo en esa métrica. El resto de correcciones y lo aceptado está en D009.
+  - Pruebas en verde tras las correcciones: 38 en `ga4.test.ts`, 30 en `collect.test.ts`, 38 de integración de GA4, y 184 entre `tests/unit/analytics` y `tests/unit/i18n` antes de añadir las de cliente y recogida.
+  - La prueba de cancelación compartida se distingue sola: sin la señal, los informes esperarían 15 s y la prueba fallaría por tiempo.
+  - Vista otra vez a 375 px en `es` y `en` con una fila sintética con decimales y nombres largos, borrada después: página y tabla sin desbordar, y el registro del servidor sin errores nuevos.
 
 ## Follow-ups
 
-- Cuando olessium.com tenga la etiqueta, visitas y eventos clave: repetir la captura y comparar con los informes de GA4 del mismo periodo (mismo seguimiento que D011 de la 006).
+- Cuando olessium.com tenga la etiqueta, visitas y eventos clave: repetir la captura y comparar con los informes de GA4 del mismo periodo (mismo seguimiento que D011 de la 006). Comprobar además que el canal llega como `Organic Search` literal y en qué formato llega un `keyEvents` distinto de cero, entero o con decimales (D009).
