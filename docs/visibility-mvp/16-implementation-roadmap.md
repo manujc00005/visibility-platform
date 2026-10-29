@@ -1,6 +1,6 @@
 # 16 — Roadmap de implementación (referencia operativa)
 
-**Última actualización:** 2026-10-29: conectores de Search Console, Bing y GA4 cerrados (§8), seguimientos y backlog (§6, §9).
+**Última actualización:** 2026-10-29: conectores de Search Console, Bing y GA4 cerrados; búsquedas con marca y sin marca (spec 007) cerrada (§8); seguimientos y backlog (§6, §9).
 **Estado del diseño:** `00`–`12` siguen siendo referencia arquitectónica (versión 1, PROPUESTA). `13-codex-review.md` (REQUEST CHANGES) sigue siendo el registro de riesgos. **Este documento manda sobre el orden de trabajo y sobre las decisiones técnicas de construcción.** Donde contradiga a `00`–`12`, prevalece este y la contradicción se lista en §7.
 
 Nota: `14-architecture-sync.md` no llegó a escribirse; el cambio de estrategia lo sustituyó por este documento antes de redactarlo. Los hallazgos de Codex se gestionan aquí de forma progresiva (§4).
@@ -282,6 +282,7 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 | D-29 | **Cifras de Bing sin comparar.** La 005 se cerró con el estado «Procesando» (su D011): el 2026-10-29 Bing sigue devolviendo olessium.com sin filas | No se ha visto aún la forma real de `GetPageStats` ni de las filas por semana | Cuando Bing tenga datos: «Actualizar datos» y comparar con Search Performance en el mismo periodo (TASKS de la 005, Follow-ups) |
 | D-30 | **Cifras de GA4 sin comparar.** La 006 se verificó con el estado «Sin visitas» (su D011): la etiqueta `G-KF9XKPT07W` aún no está publicada en olessium.com | No se han visto aún tablas con filas reales | 24–48 h después de publicar la etiqueta: «Actualizar datos» y comparar con los informes de GA4 en el mismo periodo (TASKS de la 006, Follow-ups) |
 | D-31 | **Search Console a cero y sin estado vacío.** La propiedad es reciente y aún no tiene impresiones; la vista enseña «Conectado» con ceros sin explicar por qué, y le faltan el aviso de configuración y algunas pruebas que sí tienen Bing y GA4 (spec 003, D007) | Un propietario puede pensar que algo va mal | Iteración pequeña copiando el estado vacío y el aviso de GA4; comparar cifras cuando haya impresiones |
+| D-32 | **Expresión de marca sin comprobar con datos (spec 007, D007).** Sin impresiones, la API de Search Console responde 200 incluso a expresiones inválidas, así que no se sabe si interpreta `(?i)` y los literales escapados | Si la rechaza o la interpreta mal, el bloque «con tu marca» sale mal; si la rechaza, fallan todas las capturas de Search Console | Cuando olessium.com tenga impresiones: «Actualizar datos» y comparar «con tu marca» con la interfaz de Search Console filtrada por la misma expresión; si falla, la salida de D004 de la 007 |
 | D-07 | `neon init -y` instaló el plugin de Neon (skills y MCP) a nivel de usuario en Claude Code, Codex y VS Code | Configuración global del equipo, no del repo | Ninguno; el servidor MCP de Neon en Claude Code necesita autorizar OAuth con `/mcp` |
 | R-01 | Las fases 2–6 dependen de cuentas externas (PSI, DataForSEO, Stripe) aún no abiertas; la Fase 4 se cerró sin la de DataForSEO | Retraso de fases | Abrir PSI antes de Fase 2; DataForSEO antes de Fase 4; Stripe test antes de Fase 5 |
 | R-02 | El NORTE del workspace `lead-platform` sigue en mantenimiento | Conflicto de foco del único desarrollador | Decisión del owner; este repo no depende de ello técnicamente |
@@ -422,6 +423,16 @@ Los tres conectores siguen el mismo patrón: credencial del operador en el entor
 | Google Analytics 4: usuarios, sesiones, vistas, canales y páginas | `006-google-analytics` (`56ca665`…`cc8f58a`) | La misma cuenta de servicio, con el permiso `analytics.readonly` | `0008` | Implementada y verificada con la propiedad real `Olessium web` (`properties/561384888`, ID de medición `G-KF9XKPT07W`). Hecha el 2026-10-29; riesgos aceptados en su D012. Seguimiento D-30 |
 
 **Lo que se vio con las APIs reales:** Bing devuelve el sitio verificado sin filas mientras procesa (hasta 48 h). GA4 responde 403 con `SERVICE_DISABLED` si falta activar una API, y 400 si se pide `dateRange` como dimensión (spec 006, D010).
+
+### Búsquedas con marca y sin marca (spec `specs/features/007-branded-queries`) — 2026-10-29, hecha
+
+**Alcance:** cada captura de Search Console separa clics e impresiones de las búsquedas que contienen la marca (nombre, alias y dominio de la empresa) de las que no, en el periodo actual y en el anterior. Usa cuatro consultas más con `includingRegex` y `excludingRegex` sobre una expresión RE2 de literales escapados. La página SEO muestra el bloque «Con tu marca y sin ella», la parte que Google no clasifica al filtrar y la etiqueta «marca» en la tabla de búsquedas. Sin proveedor nuevo ni coste.
+
+**Commits:** `2833f93`…`894951e`. **Migraciones:** `0009` (columna `segments`) y `0010` (su `check` en modo `strict`), aplicadas en `test` y `dev`; `production` sin tocar.
+
+**Verificación:** 837 pruebas, lint, typecheck y build sobre el árbol commiteado. Captura real de olessium.com `completed` con segmentos a cero, y maquetación a 375 px en `es` y `en` con una fila sintética que se borró después. Tres revisiones independientes: seguridad (APPROVE), dominio y conformidad, con las correcciones en su D008.
+
+**Seguimiento:** D-32.
 
 ### Categorías de Lighthouse (spec `specs/features/004-lighthouse-categories`) — 2026-10-28, en progreso
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress (2026-10-29). T001–T007 hechas. Plan, tareas y decisiones en esta carpeta; análisis previo y su validación en `ANALYSIS.md`.
+Done (2026-10-29). T001–T010 hechas; `/spec-review` Pass y revisiones de seguridad, dominio y conformidad aplicadas (D008). Seguimiento abierto: comprobar con impresiones que Google interpreta la expresión (D007, TASKS › Follow-ups).
 
 ## Problem
 
@@ -145,7 +145,14 @@ Migración `0009_search_console_segments.sql` (siguiente a `0008_analytics.sql`,
 
 ## Open questions
 
-- Ninguna decisión de diseño pendiente para planificar. La posición visual de la etiqueta se decide en `/spec-plan` siempre que cumpla AC-011. La aceptación de la sintaxis por Google es una comprobación bloqueante para cerrar la implementación (AC-014), no para escribir el plan.
+- **Posición de la etiqueta «marca».** Resolved: junto al texto de la búsqueda, con un espacio antes (D005, D008).
+- **Si Google acepta e interpreta `(?i)` y los literales escapados.** Deferred: sin impresiones, la API responde 200 incluso a expresiones inválidas (D007). Se comprueba cuando olessium.com tenga datos (TASKS › Follow-ups).
+
+## Implementation summary
+
+`brand-terms.ts` construye los términos de marca desde la ficha de la empresa y una expresión RE2 de literales escapados, con lista blanca por variante y límite de 4096 bytes. `collectSearchConsole` añade cuatro consultas filtradas a las cuatro de la 003, en el mismo `Promise.all`. El resultado se guarda en la columna `segments`, añadida por la migración `0009`, con un `check` en modo `strict` desde la `0010`. La página SEO muestra el bloque «Con tu marca y sin ella» con porcentajes, cambio, parte sin clasificar y términos, y la etiqueta «marca» en la tabla de búsquedas.
+
+Comportamiento añadido sobre el texto original, recogido en las enmiendas: la lista blanca y la guarda de dominio vacío lanzan `BrandTermsError`; si los términos guardados no compilan, la tabla se queda sin etiquetas en lugar de fallar; en el estado vacío se mantienen los bloques y su cambio.
 
 ## Decisions pre-registered for DECISIONS.md
 
