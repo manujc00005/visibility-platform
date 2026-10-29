@@ -131,12 +131,45 @@ export async function listWebStreamHosts(token: string, property: string, option
   return [...new Set(hosts)];
 }
 
+const keyEventsSchema = z.object({
+  keyEvents: z.array(z.object({ eventName: z.string().min(1) })).optional(),
+  nextPageToken: z.string().optional(),
+});
+
+export const MAX_KEY_EVENTS = 50;
+const MAX_EVENT_NAME_LENGTH = 100;
+
+/**
+ * Key events configured in the property now (feature 008, D002): one page of 200, at most 50
+ * names kept, `more` when GA4 has another page or there were more than 50. An entry without an
+ * event name is a malformed answer, not a name to invent.
+ */
+export async function listKeyEvents(token: string, property: string, options: ClientOptions = {}): Promise<{ events: string[]; more: boolean }> {
+  if (!PROPERTY.test(property)) throw new Ga4Error("error", "Identificador de propiedad de Google Analytics no válido");
+  const body = parse("keyEvents", keyEventsSchema, await call("admin", `/${property}/keyEvents?pageSize=200`, { method: "GET" }, token, options));
+  const all = body.keyEvents ?? [];
+  return {
+    events: all.slice(0, MAX_KEY_EVENTS).map((e) => e.eventName.slice(0, MAX_EVENT_NAME_LENGTH)),
+    more: Boolean(body.nextPageToken) || all.length > MAX_KEY_EVENTS,
+  };
+}
+
+/** The only filter this app sends: sessions from one exact channel (feature 008, D003). */
+export interface DimensionFilter {
+  filter: {
+    fieldName: "sessionDefaultChannelGroup";
+    stringFilter: { matchType: "EXACT"; value: string; caseSensitive: true };
+  };
+}
+
 export interface ReportRequest {
   dateRanges: { name: string; startDate: string; endDate: string }[];
   dimensions: string[];
   metrics: string[];
   /** Metric to sort by, descending. */
   orderBy?: string;
+  /** Left out of the request body when absent, so the reports of feature 006 are unchanged. */
+  dimensionFilter?: DimensionFilter;
   limit: number;
 }
 
@@ -183,6 +216,7 @@ export async function runReport(token: string, property: string, request: Report
     dimensions: request.dimensions.filter((name) => name !== "dateRange").map((name) => ({ name })),
     metrics: request.metrics.map((name) => ({ name })),
     ...(request.orderBy ? { orderBys: [{ metric: { metricName: request.orderBy }, desc: true }] } : {}),
+    ...(request.dimensionFilter ? { dimensionFilter: request.dimensionFilter } : {}),
     limit: String(request.limit),
   };
   const body = parse(

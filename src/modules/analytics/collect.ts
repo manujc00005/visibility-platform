@@ -2,18 +2,21 @@ import type { ServiceAccount } from "@/modules/search-console/credentials";
 import { fetchAccessToken, GscError } from "@/modules/search-console/google";
 import {
   Ga4Error,
+  listKeyEvents,
   listPropertySummaries,
   listWebStreamHosts,
   runReport,
   SCOPE,
   type ClientOptions,
+  type DimensionFilter,
   type Ga4ErrorKind,
   type Quality,
 } from "@/modules/analytics/ga4";
 
 /**
- * One Google Analytics 4 capture: token, property by domain (Admin API, in series), then three
- * Data API reports in parallel. At most 1 + 1 + 20 + 3 requests (NFR).
+ * One Google Analytics 4 capture: token, property by domain (Admin API, in series), then six
+ * calls in parallel: the three Data API reports of feature 006, the configured key events
+ * (Admin API) and two key event reports (feature 008). At most 1 + 1 + 20 + 6 requests.
  */
 
 export interface Totals {
@@ -40,6 +43,22 @@ export interface Period {
   end: string;
 }
 
+/**
+ * Key events of the capture (feature 008). `total` and `organic` add up the rows GA4 returned
+ * per period in the report by channel, `(other)` included in the total; they are not an
+ * independent total. `configured` is the property's configuration when capturing.
+ */
+export interface KeyEvents {
+  version: 1;
+  configured: string[];
+  configuredMore: boolean;
+  total: number;
+  previousTotal: number;
+  organic: number;
+  previousOrganic: number;
+  organicByEvent: { event: string; keyEvents: number }[];
+}
+
 export interface CollectedData {
   /** `properties/<id>`. */
   property: string;
@@ -51,6 +70,7 @@ export interface CollectedData {
   channels: ChannelRow[];
   pages: PageRow[];
   quality: Quality;
+  keyEvents: KeyEvents;
 }
 
 export type CollectFailure = {
@@ -75,6 +95,13 @@ export const TOP_PAGES = 10;
 const MAX_PAGE_LENGTH = 500;
 const MAX_CHANNEL_LENGTH = 100;
 const MAX_NAME_LENGTH = 200;
+/** Exact channel name for organic search (D003 of 008). */
+export const ORGANIC = "Organic Search";
+export const TOP_EVENTS = 10;
+const MAX_EVENT_NAME_LENGTH = 100;
+/** Same ceiling as one metric (FR-010 of 006); sums above it are rejected (D007 of 008). */
+const MAX_COUNT = 1e12;
+const ORGANIC_FILTER: DimensionFilter = { filter: { fieldName: "sessionDefaultChannelGroup", stringFilter: { matchType: "EXACT", value: ORGANIC, caseSensitive: true } } };
 
 const DAY_MS = 86_400_000;
 const isoDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
@@ -135,7 +162,7 @@ export async function collectAnalytics(
       { name: "previous", startDate: previous.start, endDate: previous.end },
     ];
     const id = property;
-    const [totalsReport, channelsReport, pagesReport] = await Promise.all([
+    const [totalsReport, channelsReport, pagesReport, configuredKeyEvents, keyEventsReport, organicEventsReport] = await Promise.all([
       runReport(token, id, { dateRanges: ranges, dimensions: ["dateRange"], metrics: ["activeUsers", "sessions", "screenPageViews"], limit: 2 }, options),
       runReport(token, id, { dateRanges: ranges, dimensions: ["sessionDefaultChannelGroup", "dateRange"], metrics: ["sessions"], limit: 100 }, options),
       runReport(
@@ -144,7 +171,27 @@ export async function collectAnalytics(
         { dateRanges: [ranges[0]!], dimensions: ["pagePath"], metrics: ["screenPageViews", "activeUsers"], orderBy: "screenPageViews", limit: TOP_PAGES },
         options,
       ),
+      listKeyEvents(token, id, options),
+      runReport(token, id, { dateRanges: ranges, dimensions: ["sessionDefaultChannelGroup", "dateRange"], metrics: ["keyEvents"], limit: 100 }, options),
+      runReport(
+        token,
+        id,
+        { dateRanges: [ranges[0]!], dimensions: ["eventName"], metrics: ["keyEvents"], orderBy: "keyEvents", limit: TOP_EVENTS, dimensionFilter: ORGANIC_FILTER },
+        options,
+      ),
     ]);
+
+    // Every row of the period counts in the total, `(other)` included; organic only the exact channel.
+    const keyEventSum = (range: string, organicOnly: boolean): number => {
+      let sum = 0;
+      for (const row of keyEventsReport.rows) {
+        if (row.dimensions.dateRange !== range) continue;
+        if (organicOnly && row.dimensions.sessionDefaultChannelGroup !== ORGANIC) continue;
+        sum += row.metrics.keyEvents!;
+      }
+      if (sum > MAX_COUNT) throw new Ga4Error("error", "La suma de eventos clave de Google Analytics supera el máximo admitido");
+      return sum;
+    };
 
     const totalsFor = (range: string): Totals => {
       const row = totalsReport.rows.find((r) => r.dimensions.dateRange === range);
@@ -161,7 +208,7 @@ export async function collectAnalytics(
       channels.set(channel, entry);
     }
 
-    const reports = [totalsReport, channelsReport, pagesReport];
+    const reports = [totalsReport, channelsReport, pagesReport, keyEventsReport, organicEventsReport];
     return {
       ok: true,
       data: {
@@ -180,6 +227,19 @@ export async function collectAnalytics(
           otherRow: reports.some((r) => r.quality.otherRow),
           thresholded: reports.some((r) => r.quality.thresholded),
           sampled: reports.some((r) => r.quality.sampled),
+        },
+        keyEvents: {
+          version: 1,
+          configured: configuredKeyEvents.events,
+          configuredMore: configuredKeyEvents.more,
+          total: keyEventSum("current", false),
+          previousTotal: keyEventSum("previous", false),
+          organic: keyEventSum("current", true),
+          previousOrganic: keyEventSum("previous", true),
+          organicByEvent: organicEventsReport.rows
+            .filter((r) => r.metrics.keyEvents! > 0)
+            .slice(0, TOP_EVENTS)
+            .map((r) => ({ event: r.dimensions.eventName!.slice(0, MAX_EVENT_NAME_LENGTH), keyEvents: r.metrics.keyEvents! })),
         },
       },
     };

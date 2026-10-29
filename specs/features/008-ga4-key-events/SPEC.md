@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready (2026-10-29). Plan, tareas y decisiones en esta carpeta; análisis previo y su validación en `ANALYSIS.md`.
+In Progress (2026-10-29). T001–T003 hechas. Plan, tareas y decisiones en esta carpeta; análisis previo y su validación en `ANALYSIS.md`.
 
 ## Problem
 

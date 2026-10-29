@@ -1,8 +1,26 @@
 import { sql } from "drizzle-orm";
 import { boolean, check, date, index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import type { ChannelRow, PageRow, Totals } from "@/modules/analytics/collect";
+import type { ChannelRow, KeyEvents, PageRow, Totals } from "@/modules/analytics/collect";
 import type { Quality } from "@/modules/analytics/ga4";
 import { workspaces } from "@/modules/workspaces/schema";
+
+/**
+ * Shape of `key_events` (feature 008), in strict JSON path mode like `segments` of 007 (its
+ * D008): lax mode would unwrap arrays where a value or an object is expected.
+ */
+const KEY_EVENTS_SHAPE = [
+  "@.version == 1",
+  '@.configured.type() == "array"',
+  '!exists(@.configured[*] ? (@.type() != "string"))',
+  '@.configuredMore.type() == "boolean"',
+  ...["total", "previousTotal", "organic", "previousOrganic"].map((key) => `@.${key}.type() == "number"`),
+  '@.organicByEvent.type() == "array"',
+].join(" && ");
+/**
+ * Well-formed breakdown items. An item missing `event` makes its filter unknown, which only
+ * leaves the item out; so the check compares how many items pass with how many there are.
+ */
+const GOOD_EVENT = 'strict $.organicByEvent[*] ? (@.type() == "object" && @.event.type() == "string" && @.keyEvents.type() == "number")';
 
 /**
  * One row per Google Analytics 4 capture attempt, successful or not. Owner data from GA4's
@@ -28,6 +46,8 @@ export const analyticsSnapshots = pgTable(
     channels: jsonb("channels").$type<ChannelRow[]>().notNull().default(sql`'[]'::jsonb`),
     pages: jsonb("pages").$type<PageRow[]>().notNull().default(sql`'[]'::jsonb`),
     quality: jsonb("quality").$type<Quality>(),
+    /** Key events (feature 008). Null in failed rows and in captures taken before it. */
+    keyEvents: jsonb("key_events").$type<KeyEvents>(),
     errorKind: text("error_kind", { enum: ["invalid_credentials", "admin_api_disabled", "data_api_disabled", "no_access", "quota_exceeded", "error"] }),
     errorMessage: text("error_message"),
     accessibleProperties: integer("accessible_properties"),
@@ -47,6 +67,12 @@ export const analyticsSnapshots = pgTable(
     ),
     check("analytics_snapshots_failed_has_reason", sql`${t.status} <> 'failed' or (${t.errorKind} is not null and ${t.errorMessage} is not null)`),
     check("analytics_snapshots_rows_are_arrays", sql`jsonb_typeof(${t.channels}) = 'array' and jsonb_typeof(${t.pages}) = 'array'`),
+    check("analytics_snapshots_failed_without_key_events", sql`${t.status} <> 'failed' or ${t.keyEvents} is null`),
+    check(
+      "analytics_snapshots_key_events_shape",
+      // CASE fixes the order: jsonb_array_length would raise on a value that is not an array.
+      sql`${t.keyEvents} is null or (jsonb_typeof(${t.keyEvents}) = 'object' and jsonb_path_exists(${t.keyEvents}, ${sql.raw(`'strict $ ? (${KEY_EVENTS_SHAPE})'`)}) and case when jsonb_typeof(${t.keyEvents} -> 'organicByEvent') = 'array' then jsonb_array_length(${t.keyEvents} -> 'organicByEvent') = jsonb_array_length(jsonb_path_query_array(${t.keyEvents}, ${sql.raw(`'${GOOD_EVENT}'`)})) else false end)`,
+    ),
   ],
 );
 

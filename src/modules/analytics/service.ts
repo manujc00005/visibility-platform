@@ -35,6 +35,7 @@ export async function refreshAnalytics(db: Database, workspaceId: string, deps: 
         channels: outcome.data.channels,
         pages: outcome.data.pages,
         quality: outcome.data.quality,
+        keyEvents: outcome.data.keyEvents,
       }
     : {
         workspaceId: workspace.id,

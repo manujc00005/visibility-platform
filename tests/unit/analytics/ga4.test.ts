@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ADMIN_BASE, DATA_BASE, Ga4Error, listPropertySummaries, listWebStreamHosts, runReport, type ClientOptions, type ReportRequest } from "@/modules/analytics/ga4";
+import { ADMIN_BASE, DATA_BASE, Ga4Error, listKeyEvents, listPropertySummaries, listWebStreamHosts, runReport, type ClientOptions, type ReportRequest } from "@/modules/analytics/ga4";
 import { scripted } from "../search-console/fixtures";
 
 const TOKEN = "ya29.secret-token-value";
@@ -170,5 +170,77 @@ describe("errors", () => {
     const slow = ((_: string, init?: RequestInit) =>
       new Promise((_resolve, reject) => init?.signal?.addEventListener("abort", () => reject(init.signal!.reason)))) as unknown as typeof fetch;
     expect((await failure(listPropertySummaries(TOKEN, { fetchImpl: slow, timeoutMs: 5 }))).message).toBe("Google Analytics Admin API no respondió a tiempo");
+  });
+});
+
+describe("listKeyEvents (feature 008)", () => {
+  const events = (n: number) => Array.from({ length: n }, (_, i) => ({ name: `properties/1/keyEvents/${i}`, eventName: `evento_${i}` }));
+
+  it("asks for one page of 200 with the bearer token and keeps the order", async () => {
+    const { calls, impl } = respond(200, { keyEvents: [{ eventName: "generate_lead" }, { eventName: "purchase" }, { eventName: "form_submit" }] });
+    await expect(listKeyEvents(TOKEN, "properties/123", { fetchImpl: impl })).resolves.toEqual({ events: ["generate_lead", "purchase", "form_submit"], more: false });
+    expect(calls[0]!.url).toBe(`${ADMIN_BASE}/properties/123/keyEvents?pageSize=200`);
+    expect(calls[0]!.headers.authorization).toBe(`Bearer ${TOKEN}`);
+  });
+
+  it("reads a missing list as no key events, not as an error", async () => {
+    await expect(listKeyEvents(TOKEN, "properties/1", { fetchImpl: respond(200, {}).impl })).resolves.toEqual({ events: [], more: false });
+  });
+
+  it("keeps 50 names and says there are more, also when GA4 has another page", async () => {
+    const many = await listKeyEvents(TOKEN, "properties/1", { fetchImpl: respond(200, { keyEvents: events(60) }).impl });
+    expect(many.events).toHaveLength(50);
+    expect(many.events[49]).toBe("evento_49");
+    expect(many.more).toBe(true);
+    const paged = await listKeyEvents(TOKEN, "properties/1", { fetchImpl: respond(200, { keyEvents: events(3), nextPageToken: "x" }).impl });
+    expect(paged).toEqual({ events: ["evento_0", "evento_1", "evento_2"], more: true });
+  });
+
+  it("cuts names to 100 characters", async () => {
+    const result = await listKeyEvents(TOKEN, "properties/1", { fetchImpl: respond(200, { keyEvents: [{ eventName: "x".repeat(150) }] }).impl });
+    expect(result.events[0]).toHaveLength(100);
+  });
+
+  it("rejects an entry without an event name instead of inventing one", async () => {
+    for (const keyEvents of [[{ name: "properties/1/keyEvents/9" }], [{ eventName: "" }], [{ eventName: 7 }]]) {
+      expect((await failure(listKeyEvents(TOKEN, "properties/1", { fetchImpl: respond(200, { keyEvents }).impl }))).kind).toBe("error");
+    }
+  });
+
+  it("refuses a malformed property before calling", async () => {
+    const { calls, impl } = respond(200, {});
+    expect((await failure(listKeyEvents(TOKEN, "properties/../x", { fetchImpl: impl }))).kind).toBe("error");
+    expect(calls).toHaveLength(0);
+  });
+
+  it.each([
+    [401, { error: { message: TOKEN } }, "invalid_credentials"],
+    [403, disabled, "admin_api_disabled"],
+    [403, denied, "no_access"],
+    [429, {}, "quota_exceeded"],
+    [500, {}, "error"],
+  ])("maps HTTP %i to %s without the token", async (status, body, kind) => {
+    const error = await failure(listKeyEvents(TOKEN, "properties/1", { fetchImpl: respond(status, body).impl }));
+    expect(error.kind).toBe(kind);
+    expect(`${error.message} ${JSON.stringify(error)}`).not.toContain(TOKEN);
+  });
+});
+
+describe("runReport dimension filter (feature 008)", () => {
+  const filter = { filter: { fieldName: "sessionDefaultChannelGroup" as const, stringFilter: { matchType: "EXACT" as const, value: "Organic Search", caseSensitive: true as const } } };
+
+  it("sends the filter only when given and leaves the previous body unchanged", async () => {
+    const { calls, impl } = scripted([
+      { match: () => true, status: 200, body: {} },
+      { match: () => true, status: 200, body: {} },
+    ]);
+    await runReport(TOKEN, "properties/1", { ...REQUEST, dimensionFilter: filter }, { fetchImpl: impl });
+    await runReport(TOKEN, "properties/1", REQUEST, { fetchImpl: impl });
+    const withFilter = JSON.parse(calls[0]!.body);
+    const without = JSON.parse(calls[1]!.body);
+    expect(withFilter.dimensionFilter).toEqual(filter);
+    expect(without).not.toHaveProperty("dimensionFilter");
+    delete withFilter.dimensionFilter;
+    expect(withFilter).toEqual(without);
   });
 });

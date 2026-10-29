@@ -43,6 +43,7 @@ function completed(overrides: Partial<AnalyticsSnapshot> = {}): AnalyticsSnapsho
     errorMessage: null,
     accessibleProperties: null,
     propertiesSkipped: null,
+    keyEvents: null,
     createdAt: new Date("2026-10-28T10:00:00Z"),
     ...overrides,
   };
