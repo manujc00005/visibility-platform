@@ -2,9 +2,14 @@ import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { analyticsSnapshots, workspaces } from "@/db/schema";
 import type { CollectOutcome } from "@/modules/analytics/collect";
+import { createAnalyticsDeps } from "@/modules/analytics/deps";
 import { latestAnalytics, refreshAnalytics, type AnalyticsDeps } from "@/modules/analytics/service";
+import { TOKEN_ENDPOINT } from "@/modules/search-console/google";
 import { createWorkspace } from "@/modules/workspaces/service";
+import { PRIVATE_PEM, serviceAccountJson } from "../unit/search-console/fixtures";
 import { createTestDb } from "./db";
+
+const TOKEN = "ya29.integration-secret-token";
 
 const { pool, db } = createTestDb();
 afterAll(() => pool.end());
@@ -100,6 +105,21 @@ describe("refreshAnalytics", () => {
     await refreshAnalytics(db, ws.id, deps(OK));
     await db.delete(workspaces).where(eq(workspaces.id, ws.id));
     expect(await db.select().from(analyticsSnapshots)).toHaveLength(0);
+  });
+
+  it("never stores the token or the private key, even when Google quotes them back (AC-006)", async () => {
+    const ws = await workspace();
+    const leaky = (status: number) => new Response(JSON.stringify({ error: { message: `${TOKEN} ${PRIVATE_PEM}` } }), { status });
+    // Token refused, then token granted but the Admin API refusing: both end as stored failures.
+    for (const tokenReply of [() => leaky(400), () => new Response(JSON.stringify({ access_token: TOKEN }))]) {
+      const fetchImpl = (async (input: string | URL | Request) => (String(input) === TOKEN_ENDPOINT ? tokenReply() : leaky(403))) as unknown as typeof fetch;
+      expect((await refreshAnalytics(db, ws.id, createAnalyticsDeps(() => serviceAccountJson(), { fetchImpl }))).ok).toBe(true);
+    }
+    const rows = await db.select().from(analyticsSnapshots);
+    expect(rows.map((r) => r.errorKind).sort()).toEqual(["invalid_credentials", "no_access"]);
+    const text = JSON.stringify(rows);
+    expect(text).not.toContain(TOKEN);
+    expect(text).not.toContain("PRIVATE KEY");
   });
 
   it("rejects a failure without reason and a completed capture without property", async () => {
