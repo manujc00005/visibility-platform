@@ -9,3 +9,4 @@ export * from "@/modules/geo/schema";
 export * from "@/modules/geo/competitors/schema";
 export * from "@/modules/search-console/schema";
 export * from "@/modules/bing-webmaster/schema";
+export * from "@/modules/analytics/schema";
