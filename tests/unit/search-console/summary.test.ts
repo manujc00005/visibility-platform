@@ -174,3 +174,100 @@ describe("summarizeSearchConsole keeps the Spanish output of acba536 (D007, D020
     expect(s.cardLine).toContain("12.345 clics");
   });
 });
+
+describe("summarizeSearchConsole brand segments (feature 007)", () => {
+  const t = (clicks: number, impressions: number) => ({ clicks, impressions, ctr: impressions ? clicks / impressions : 0, position: 5 });
+  const segments = (overrides: Partial<NonNullable<SearchConsoleSnapshot["segments"]>> = {}) => ({
+    version: 1 as const,
+    terms: ["Olessium", "olessium.com"],
+    termsTruncated: false,
+    branded: t(30, 120),
+    nonBranded: t(50, 700),
+    previousBranded: t(20, 100),
+    previousNonBranded: t(40, 650),
+    ...overrides,
+  });
+  const summarize = (overrides: Partial<SearchConsoleSnapshot>, locale: "es" | "en" = "es") => {
+    const snapshot = completed({ totals: t(100, 1000), previousTotals: t(80, 900), ...overrides });
+    return summarizeSearchConsole({ latest: snapshot, latestCompleted: snapshot }, READY, "olessium.com", locale);
+  };
+
+  it("shows both blocks with their share of the total and the unclassified gap (AC-001, AC-004)", () => {
+    const s = summarize({ segments: segments() });
+    expect(s.segments).toMatchObject({
+      empty: false,
+      branded: { clicks: "30 clics", impressions: "120 impresiones", clicksShare: "30,0 %", impressionsShare: "12,0 %" },
+      nonBranded: { clicks: "50 clics", impressions: "700 impresiones", clicksShare: "50,0 %", impressionsShare: "70,0 %" },
+      hidden: { clicks: "20 clics", impressions: "180 impresiones" },
+      previousHidden: { clicks: "20 clics", impressions: "150 impresiones" },
+      mismatch: false,
+      terms: ["Olessium", "olessium.com"],
+      truncated: false,
+    });
+    expect(s.segments?.branded.change?.text).toBe("Antes: 20 clics (+50 %)");
+    expect(s.segments?.nonBranded.change?.text).toBe("Antes: 40 clics (+25 %)");
+  });
+
+  it("shows zero and flags a mismatch when the blocks add up to more than the total (AC-004)", () => {
+    const now = summarize({ segments: segments({ branded: t(70, 400), nonBranded: t(50, 700) }) });
+    expect(now.segments?.hidden).toEqual({ clicks: "0 clics", impressions: "0 impresiones" });
+    expect(now.segments?.mismatch).toBe(true);
+    // A mismatch in the previous period only also counts, for impressions alone too.
+    const before = summarize({ segments: segments({ previousNonBranded: t(40, 850) }) });
+    expect(before.segments?.previousHidden.impressions).toBe("0 impresiones");
+    expect(before.segments?.hidden).toEqual({ clicks: "20 clics", impressions: "180 impresiones" });
+    expect(before.segments?.mismatch).toBe(true);
+  });
+
+  it("marks the period empty and drops shares without impressions (AC-013)", () => {
+    const s = summarize({ totals: t(0, 0), segments: segments({ branded: t(0, 0), nonBranded: t(0, 0) }) });
+    expect(s.segments).toMatchObject({ empty: true, branded: { clicksShare: "—", impressionsShare: "—" }, nonBranded: { clicksShare: "—", impressionsShare: "—" } });
+  });
+
+  it("shows no click share when there were no clicks, but keeps the impression share (AC-013)", () => {
+    const s = summarize({ totals: t(0, 1000), segments: segments({ branded: t(0, 120), nonBranded: t(0, 700) }) });
+    expect(s.segments?.branded).toMatchObject({ clicksShare: "—", impressionsShare: "12,0 %" });
+  });
+
+  it("compares a block only when it had impressions before, and from zero clicks with the base-zero phrase (AC-013)", () => {
+    const none = summarize({ segments: segments({ previousBranded: t(0, 0) }) });
+    expect(none.segments?.branded.change).toBeNull();
+    expect(none.segments?.nonBranded.change).not.toBeNull();
+    const zeroClicks = summarize({ segments: segments({ previousBranded: t(0, 60) }) });
+    expect(zeroClicks.segments?.branded.change).toEqual({ direction: "better", text: "Antes: 0 clics" });
+  });
+
+  it("carries the truncation flag (AC-012)", () => {
+    expect(summarize({ segments: segments({ termsTruncated: true }) }).segments?.truncated).toBe(true);
+  });
+
+  it("labels the stored queries that contain a brand term (AC-005)", () => {
+    const s = summarize({
+      segments: segments(),
+      queries: [
+        { query: "olessium opiniones", clicks: 3, impressions: 9, ctr: 0.33, position: 1.2 },
+        { query: "OLESSIUM.COM", clicks: 2, impressions: 5, ctr: 0.4, position: 1 },
+        { query: "crm agencias", clicks: 5, impressions: 50, ctr: 0.1, position: 4.2 },
+      ],
+    });
+    expect(s.queries.map((q) => [q.query, q.branded])).toEqual([
+      ["olessium opiniones", true],
+      ["OLESSIUM.COM", true],
+      ["crm agencias", false],
+    ]);
+  });
+
+  it("leaves a capture without segments as before: no block, no labels, same card line (AC-006)", () => {
+    const old = summarize({ segments: null });
+    expect(old.segments).toBeNull();
+    expect(old.queries.every((q) => !("branded" in q))).toBe(true);
+    const fresh = summarize({ segments: segments() });
+    expect(fresh.cardLine).toBe(old.cardLine);
+    expect(fresh.metrics).toEqual(old.metrics);
+  });
+
+  it("formats the blocks in English", () => {
+    const s = summarize({ segments: segments() }, "en");
+    expect(s.segments?.branded).toMatchObject({ clicks: "30 clicks", clicksShare: "30.0%" });
+  });
+});

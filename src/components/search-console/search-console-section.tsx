@@ -6,7 +6,7 @@ import type { Locale } from "@/i18n/locale";
 import { getMessages, type Messages } from "@/i18n/messages";
 import type { Tone } from "@/modules/audits/status";
 import type { SearchConsoleConfig } from "@/modules/search-console/deps";
-import { displayDay, type SearchConsoleState, type SearchConsoleSummary } from "@/modules/search-console/summary";
+import { displayDay, type SearchConsoleState, type SearchConsoleSummary, type SegmentsView } from "@/modules/search-console/summary";
 import { displayDate } from "@/modules/workspaces/presentation";
 import type { RefreshSearchConsoleState } from "@/app/workspaces/[id]/seo/actions";
 import { RefreshSearchConsoleButton } from "./refresh-button";
@@ -41,7 +41,7 @@ function Setup({ config, t }: { config: SearchConsoleConfig; t: Texts }) {
   );
 }
 
-type Row = { key: string; label: string; clicks: number; impressions: number; ctr: number; position: number };
+type Row = { key: string; label: string; badge?: string; clicks: number; impressions: number; ctr: number; position: number };
 
 function Table({ caption, head, rows, t, locale }: { caption: string; head: string; rows: Row[]; t: Texts; locale: Locale }) {
   const num = (n: number) => formatNumber(Math.round(n), locale, { maximumFractionDigits: 0 });
@@ -74,7 +74,15 @@ function Table({ caption, head, rows, t, locale }: { caption: string; head: stri
           {rows.map((r) => (
             <tr key={r.key}>
               {/* Search terms and URLs are data from Google: plain text, never links (B08b). */}
-              <td className="max-w-[16rem] px-4 py-2 break-words sm:max-w-md">{r.label}</td>
+              <td className="max-w-[16rem] px-4 py-2 break-words sm:max-w-md">
+                {r.label}
+                {/* A word, not only a colour, so it reads without styles (D005 of 007). */}
+                {r.badge ? (
+                  <span className="ml-2 inline-block rounded-full bg-brand-soft px-1.5 py-0.5 align-middle text-[11px] font-medium text-brand ring-1 ring-brand/15">
+                    {r.badge}
+                  </span>
+                ) : null}
+              </td>
               <td className="px-3 py-2 text-right tabular-nums">{num(r.clicks)}</td>
               <td className="px-3 py-2 text-right tabular-nums">{num(r.impressions)}</td>
               <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">{pct(r.ctr)}</td>
@@ -88,6 +96,53 @@ function Table({ caption, head, rows, t, locale }: { caption: string; head: stri
 }
 
 const METRICS = ["clicks", "impressions", "ctr", "position"] as const;
+const BLOCKS = ["branded", "nonBranded"] as const;
+
+/** Brand split of the capture (feature 007). Terms are company data: plain text, never markup. */
+function Segments({ v, t }: { v: SegmentsView; t: Texts }) {
+  return (
+    <section aria-labelledby="gsc-segments" className="flex flex-col gap-3 border-t border-border/60 pt-4">
+      <h3 id="gsc-segments" className="text-sm font-semibold">
+        {t.segments.title}
+      </h3>
+      {v.empty ? (
+        <p className="text-sm text-muted-foreground">{t.noQueries}</p>
+      ) : (
+        <>
+          <dl className="grid gap-3 sm:grid-cols-2">
+            {BLOCKS.map((key) => (
+              <div key={key} className="flex flex-col gap-1 rounded-lg bg-muted/50 p-3">
+                <dt className="text-xs font-medium text-muted-foreground">{t.segments[key].label}</dt>
+                <dd className="text-2xl font-semibold tabular-nums">{v[key].clicks}</dd>
+                <dd className="text-sm tabular-nums">{v[key].impressions}</dd>
+                <dd className="text-xs text-muted-foreground">
+                  {t.segments.clicksShare(v[key].clicksShare)} · {t.segments.impressionsShare(v[key].impressionsShare)}
+                </dd>
+                <dd>
+                  <ChangeLine change={v[key].change} note={v[key].change === null ? t.metrics.noPrevious : null} className="text-xs" />
+                </dd>
+                <dd className="hidden text-xs text-muted-foreground sm:block">{t.segments[key].hint}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="max-w-3xl text-xs text-muted-foreground">
+            {t.segments.hidden(v.hidden.clicks, v.hidden.impressions)} {t.segments.previousHidden(v.previousHidden.clicks, v.previousHidden.impressions)}
+          </p>
+        </>
+      )}
+      {v.mismatch ? <p className="max-w-3xl text-xs text-muted-foreground">{t.segments.mismatch}</p> : null}
+      {v.truncated ? <p className="max-w-3xl text-xs text-muted-foreground">{t.segments.truncated}</p> : null}
+      <p className="flex max-w-3xl flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+        <span>{t.segments.terms}</span>
+        {v.terms.map((term, i) => (
+          <span key={i} className="rounded bg-muted px-1.5 py-0.5 font-mono break-all text-foreground">
+            {term}
+          </span>
+        ))}
+      </p>
+    </section>
+  );
+}
 
 export function SearchConsoleSection({
   s,
@@ -134,6 +189,11 @@ export function SearchConsoleSection({
                 </div>
               ))}
             </dl>
+            {s.segments ? (
+              <Segments v={s.segments} t={t} />
+            ) : (
+              <p className="max-w-3xl text-sm text-muted-foreground">{canRun ? t.segments.missing(t.button.update) : t.segments.missingNotConfigured}</p>
+            )}
             <NoticeList notices={notices} />
             <p className="text-xs text-muted-foreground">
               {t.source.prefix}
@@ -155,7 +215,7 @@ export function SearchConsoleSection({
             <Table
               caption={t.tables.queries}
               head={t.tables.query}
-              rows={s.queries.map((q, i) => ({ key: `q${i}`, label: q.query, ...q }))}
+              rows={s.queries.map((q, i) => ({ key: `q${i}`, label: q.query, badge: q.branded ? t.segments.badge : undefined, ...q }))}
               t={t}
               locale={locale}
             />

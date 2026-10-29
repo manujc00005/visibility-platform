@@ -2,7 +2,8 @@ import { formatDate, formatNumber } from "@/i18n/format";
 import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
 import { getMessages, type Messages } from "@/i18n/messages";
 import type { Change } from "@/modules/overview/types";
-import type { PageRow, Period, QueryRow, Totals } from "@/modules/search-console/collect";
+import { isBrandedQuery } from "@/modules/search-console/brand-terms";
+import type { PageRow, Period, QueryRow, Segments, Totals } from "@/modules/search-console/collect";
 import type { SearchConsoleConfig } from "@/modules/search-console/deps";
 import type { LatestSearchConsole } from "@/modules/search-console/service";
 
@@ -21,6 +22,34 @@ export interface MetricView {
   change: Change | null;
 }
 
+/** One brand block of the capture (feature 007): formatted figures, share of the total and change. */
+export interface SegmentBlockView {
+  clicks: string;
+  impressions: string;
+  /** Share of the period's total clicks, or "—" when there were none. */
+  clicksShare: string;
+  impressionsShare: string;
+  /** Clicks against the previous period; null when this block had no impressions before. */
+  change: Change | null;
+}
+
+export interface SegmentsView {
+  /** No impressions in the current period: show the empty phrase, no shares. */
+  empty: boolean;
+  branded: SegmentBlockView;
+  nonBranded: SegmentBlockView;
+  /** What Google did not classify, never below zero (D003). */
+  hidden: { clicks: string; impressions: string };
+  previousHidden: { clicks: string; impressions: string };
+  /** Branded plus non-branded exceeded the total in some period and metric. */
+  mismatch: boolean;
+  terms: string[];
+  truncated: boolean;
+}
+
+/** A stored query row; `branded` is only present when the capture has segments (FR-007). */
+export type QueryView = QueryRow & { branded?: boolean };
+
 export interface SearchConsoleSummary {
   state: SearchConsoleState;
   /** Owner-readable explanation for every state but "ok". */
@@ -29,8 +58,10 @@ export interface SearchConsoleSummary {
   period: Period | null;
   capturedAt: Date | null;
   metrics: { clicks: MetricView; impressions: MetricView; ctr: MetricView; position: MetricView } | null;
-  queries: QueryRow[];
+  queries: QueryView[];
   pages: PageRow[];
+  /** Brand split of the latest good capture; null without one or when it predates feature 007. */
+  segments: SegmentsView | null;
   /** Set when the newest attempt failed after (or without) a good capture. */
   lastFailure: { text: string; at: Date } | null;
   /** One line for the overview card, or null when there is nothing measured. */
@@ -106,6 +137,41 @@ function metricsOf(totals: Totals, previous: Totals, t: Texts, f: Format): NonNu
   };
 }
 
+function segmentsOf(segments: Segments, totals: Totals, previousTotals: Totals, t: Texts, f: Format): SegmentsView {
+  const share = (part: number, whole: number) => (whole > 0 ? f.percent(part / whole) : "—");
+  const count = (n: number, unit: (count: number) => string) => `${f.integer(n)} ${unit(Math.round(n))}`;
+  const block = (current: Totals, previous: Totals): SegmentBlockView => ({
+    clicks: count(current.clicks, t.units.clicks),
+    impressions: count(current.impressions, t.units.impressions),
+    clicksShare: share(current.clicks, totals.clicks),
+    impressionsShare: share(current.impressions, totals.impressions),
+    // FR-006: compare only against a block that had impressions before.
+    change: previous.impressions > 0 ? countChange(current.clicks, previous.clicks, t.units.clicks, t, f) : null,
+  });
+  // FR-004: what the two filtered answers leave out of the total, from the raw figures.
+  const deltas = [
+    [totals.clicks - segments.branded.clicks - segments.nonBranded.clicks, totals.impressions - segments.branded.impressions - segments.nonBranded.impressions],
+    [
+      previousTotals.clicks - segments.previousBranded.clicks - segments.previousNonBranded.clicks,
+      previousTotals.impressions - segments.previousBranded.impressions - segments.previousNonBranded.impressions,
+    ],
+  ] as const;
+  const gap = ([clicks, impressions]: readonly [number, number]) => ({
+    clicks: count(Math.max(0, clicks), t.units.clicks),
+    impressions: count(Math.max(0, impressions), t.units.impressions),
+  });
+  return {
+    empty: totals.impressions === 0,
+    branded: block(segments.branded, segments.previousBranded),
+    nonBranded: block(segments.nonBranded, segments.previousNonBranded),
+    hidden: gap(deltas[0]),
+    previousHidden: gap(deltas[1]),
+    mismatch: deltas.some(([clicks, impressions]) => clicks < 0 || impressions < 0),
+    terms: segments.terms,
+    truncated: segments.termsTruncated,
+  };
+}
+
 function failureText(s: NonNullable<LatestSearchConsole["latest"]>, config: SearchConsoleConfig, domain: string, t: Texts): string {
   const email = config.state === "ready" ? config.clientEmail : t.failures.thisAccount;
   switch (s.errorKind) {
@@ -140,6 +206,7 @@ export function summarizeSearchConsole(
     metrics: null,
     queries: [],
     pages: [],
+    segments: null,
     lastFailure: null,
     cardLine: null,
   };
@@ -147,6 +214,7 @@ export function summarizeSearchConsole(
 
   if (latestCompleted?.totals && latestCompleted.previousTotals && latestCompleted.currentStart && latestCompleted.currentEnd) {
     const totals = latestCompleted.totals;
+    const segments = latestCompleted.segments;
     const clicks = `${f.integer(totals.clicks)} ${t.units.clicks(Math.round(totals.clicks))}`;
     const impressions = `${f.integer(totals.impressions)} ${t.units.impressions(Math.round(totals.impressions))}`;
     return {
@@ -156,8 +224,9 @@ export function summarizeSearchConsole(
       period: { start: latestCompleted.currentStart, end: latestCompleted.currentEnd },
       capturedAt: latestCompleted.createdAt,
       metrics: metricsOf(totals, latestCompleted.previousTotals, t, f),
-      queries: latestCompleted.queries,
+      queries: segments ? latestCompleted.queries.map((q) => ({ ...q, branded: isBrandedQuery(q.query, segments.terms) })) : latestCompleted.queries,
       pages: latestCompleted.pages,
+      segments: segments ? segmentsOf(segments, totals, latestCompleted.previousTotals, t, f) : null,
       lastFailure: failed,
       cardLine: totals.impressions > 0 ? t.card.line(clicks, impressions, f.decimal(totals.position)) : t.card.noImpressions,
     };

@@ -848,7 +848,23 @@ export const es = {
     },
     noQueries: "Sin búsquedas en este periodo.",
     privacyNote:
-      "Las búsquedas que se hacen pocas veces no aparecen en la lista porque Google las oculta para proteger la privacidad, así que la suma de la tabla puede ser menor que el total. La posición es una media de todas las apariciones, no un puesto fijo.",
+      "Las búsquedas que se hacen pocas veces no aparecen en la lista porque Google las oculta para proteger la privacidad, así que la suma de la tabla puede ser menor que el total. La posición es una media de todas las apariciones, no un puesto fijo. Al separar las búsquedas con y sin marca, Google tampoco clasifica todas: la diferencia con el total aparece como «sin clasificar».",
+    segments: {
+      title: "Con tu marca y sin ella",
+      branded: { label: "Con tu marca", hint: "Búsquedas que contienen el nombre de la empresa, un alias o el dominio" },
+      nonBranded: { label: "Sin tu marca", hint: "Búsquedas que no contienen ninguno de esos términos" },
+      clicksShare: (share: string) => `${share} de los clics`,
+      impressionsShare: (share: string) => `${share} de las impresiones`,
+      hidden: (clicks: string, impressions: string) => `Sin clasificar: ${clicks} y ${impressions}. Al separarlas, Google no clasifica todas las búsquedas.`,
+      previousHidden: (clicks: string, impressions: string) => `En los 28 días anteriores quedaron sin clasificar ${clicks} y ${impressions}.`,
+      mismatch:
+        "En algún periodo, las búsquedas con y sin marca suman más que el total que da Google, así que la parte sin clasificar se muestra como cero.",
+      truncated: "Algunos alias no se incluyeron porque la expresión superaba el límite de Search Console.",
+      terms: "Cuentan como marca las búsquedas que contienen:",
+      badge: "marca",
+      missing: (button: string) => `Pulsa «${button}» para separar las búsquedas con tu marca de las demás.`,
+      missingNotConfigured: "Configura Search Console para separar las búsquedas con tu marca de las demás.",
+    },
     card: {
       line: (clicks: string, impressions: string, position: string) =>
         `En Google: ${clicks} y ${impressions} en los últimos 28 días, posición media ${position} (Search Console).`,

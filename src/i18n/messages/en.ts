@@ -843,7 +843,22 @@ export const en = {
     },
     noQueries: "No searches in this period.",
     privacyNote:
-      "Searches made only a few times are not listed because Google hides them to protect privacy, so the table can add up to less than the total. The position is an average of every appearance, not a fixed place.",
+      "Searches made only a few times are not listed because Google hides them to protect privacy, so the table can add up to less than the total. The position is an average of every appearance, not a fixed place. When splitting searches with and without the brand, Google does not classify all of them either: the difference from the total appears as “unclassified”.",
+    segments: {
+      title: "With your brand and without it",
+      branded: { label: "With your brand", hint: "Searches that contain the company name, an alias or the domain" },
+      nonBranded: { label: "Without your brand", hint: "Searches that contain none of those terms" },
+      clicksShare: (share: string) => `${share} of clicks`,
+      impressionsShare: (share: string) => `${share} of impressions`,
+      hidden: (clicks: string, impressions: string) => `Unclassified: ${clicks} and ${impressions}. When splitting them, Google does not classify every search.`,
+      previousHidden: (clicks: string, impressions: string) => `In the previous 28 days, ${clicks} and ${impressions} were left unclassified.`,
+      mismatch: "In some period, searches with and without the brand add up to more than Google's total, so the unclassified part is shown as zero.",
+      truncated: "Some aliases were left out because the expression exceeded the Search Console limit.",
+      terms: "Searches count as branded when they contain:",
+      badge: "brand",
+      missing: (button: string) => `Press “${button}” to split searches with your brand from the rest.`,
+      missingNotConfigured: "Set up Search Console to split searches with your brand from the rest.",
+    },
     card: {
       line: (clicks: string, impressions: string, position: string) =>
         `On Google: ${clicks} and ${impressions} in the last 28 days, average position ${position} (Search Console).`,
