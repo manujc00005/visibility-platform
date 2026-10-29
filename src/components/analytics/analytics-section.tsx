@@ -80,7 +80,7 @@ function KeyEventsBlock({ v, t }: { v: KeyEventsView; t: Texts }) {
                 <dt className="text-xs font-medium text-muted-foreground">{k[key].label}</dt>
                 <dd className="text-2xl font-semibold tabular-nums">{v[key].value}</dd>
                 <dd>
-                  <ChangeLine change={v[key].change} note={v[key].change === null ? t.metrics.noPrevious : null} className="text-xs" />
+                  <ChangeLine change={v[key].change} note={v[key].change === null ? k.noPreviousValue : null} className="text-xs" />
                 </dd>
                 <dd className="hidden text-xs text-muted-foreground sm:block">{k[key].hint}</dd>
               </div>
@@ -96,7 +96,7 @@ function KeyEventsBlock({ v, t }: { v: KeyEventsView; t: Texts }) {
                   <th scope="col" className="px-4 py-2 font-medium">
                     {k.table.event}
                   </th>
-                  <th scope="col" className="px-4 py-2 text-right font-medium">
+                  <th scope="col" className="px-4 py-2 text-right font-medium whitespace-nowrap">
                     {k.table.count}
                   </th>
                 </tr>
@@ -104,14 +104,15 @@ function KeyEventsBlock({ v, t }: { v: KeyEventsView; t: Texts }) {
               <tbody className="divide-y">
                 {v.byEvent.map((row, i) => (
                   <tr key={`e${i}`}>
-                    <td className="max-w-[16rem] px-4 py-2 break-words sm:max-w-md">{row.event}</td>
+                    {/* Event names have no spaces (envio_formulario_…): break anywhere so the count stays in view at 375 px. */}
+                    <td className="px-4 py-2 break-all">{row.event}</td>
                     <td className="px-4 py-2 text-right tabular-nums">{row.keyEvents}</td>
                   </tr>
                 ))}
               </tbody>
             </TableFrame>
           ) : null}
-          <p className={note}>{k.limits}</p>
+          {v.allZero ? null : <p className={note}>{k.limits}</p>}
         </>
       )}
       {v.configured.length > 0 ? (

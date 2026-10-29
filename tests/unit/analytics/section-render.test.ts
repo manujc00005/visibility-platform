@@ -177,6 +177,10 @@ describe("AnalyticsSection key events (feature 008)", () => {
     const { html } = render(completed({ keyEvents: { ...KE, total: 0, previousTotal: 0, organic: 0, previousOrganic: 0, organicByEvent: [] } }), READY);
     expect(html).toContain(k.allZero);
     expect(html).toContain(k.noPrevious);
+    // The figures' own note speaks of key events, not of visits, and there is no table to explain.
+    expect(html).toContain(k.noPreviousValue);
+    expect(html).not.toContain(t.metrics.noPrevious);
+    expect(html).not.toContain(k.limits);
     expect(html).toContain(`>${k.organic.label}</dt>`);
     expect(html).not.toContain(k.table.caption);
   });

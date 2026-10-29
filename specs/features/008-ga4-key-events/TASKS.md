@@ -26,8 +26,12 @@
 
 ## Phase 4: Verificación
 
-- [ ] T007 - Lint, typecheck, unitarias, integración y build sobre el árbol commiteado. Covers: AC-012. Verify: en un worktree desechable del último commit, `npm run lint`, `npm run typecheck`, `npm test` y `npm run build` sin errores, con los totales apuntados aquí; las pruebas previas de GA4 solo cambian para añadir campos.
-- [ ] T008 - Captura real de olessium.com y maquetación. Covers: AC-013. Verify: tras «Actualizar datos» en Analytics, la fila nueva en `dev` es `completed` con `key_events` o `failed` con su motivo, apuntado en DECISIONS junto a lo que respondió cada llamada nueva; en `es` y `en`, a 375 px, `scrollWidth` igual a `clientWidth` con la captura real y con una fila sintética con eventos, que se borra después por su id; sin errores de consola.
+- [x] T007 - Lint, typecheck, unitarias, integración y build sobre el árbol commiteado. Covers: AC-012. Verify: en un worktree desechable del último commit, `npm run lint`, `npm run typecheck`, `npm test` y `npm run build` sin errores, con los totales apuntados aquí; las pruebas previas de GA4 solo cambian para añadir campos.
+  - Hecho 2026-10-29 sobre `090e4c0` en un worktree desechable: lint sin errores (el aviso previo de `_formatted`), typecheck limpio, 903 pruebas en 78 archivos y build correcto.
+- [x] T008 - Captura real de olessium.com y maquetación. Covers: AC-013. Verify: tras «Actualizar datos» en Analytics, la fila nueva en `dev` es `completed` con `key_events` o `failed` con su motivo, apuntado en DECISIONS junto a lo que respondió cada llamada nueva; en `es` y `en`, a 375 px, `scrollWidth` igual a `clientWidth` con la captura real y con una fila sintética con eventos, que se borra después por su id; sin errores de consola.
+  - Hecho 2026-10-29 (D008): antes de capturar, la fila antigua mostraba «Pulsa «Actualizar datos» para ver las conversiones desde buscadores.» (AC-006 en real). La captura real es `completed` con tres eventos configurados y recuentos a cero; GA4 aceptó las tres llamadas nuevas.
+  - En `es` y `en`, a 375 px, sin desbordamiento de página con la captura real y con una fila sintética con eventos y nombres largos, borrada después por su id. La revisión visual encontró dos fallos de la sección, corregidos con sus pruebas (D008).
+  - La consola guardaba un error de consulta sobre `key_events`. El registro del servidor lo sitúa en el hueco entre editar el esquema y aplicar la `0011` (patrón D-22), y desde la migración no hay ninguno nuevo.
 - [ ] T009 - Revisiones de cierre y `/spec-review`. Covers: AC-005, AC-009, AC-010, AC-012. Verify: informes de seguridad, dominio (base de datos, API y frontend) y conformidad sin hallazgos críticos o altos sin resolver; los aceptados en DECISIONS con su motivo; `/spec-review` Pass.
 
 ## Follow-ups

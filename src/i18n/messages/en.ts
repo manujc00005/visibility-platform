@@ -717,6 +717,7 @@ export const en = {
       configuredMore: "Google Analytics has more key events configured than shown.",
       noneConfigured: "This Google Analytics property has no key events. Mark them in Google Analytics (Admin › Key events) and get the data again.",
       allZero: "Google Analytics returned no key events in these periods.",
+      noPreviousValue: "No key events in the previous period",
       noPrevious: "If an event was marked as key after the previous period started, Google Analytics does not count it before that date.",
       organicMissing: "There are key events, but none came with the “Organic Search” channel.",
       limits: "The total adds up the channels Google Analytics returns, up to 100, and the table shows the 10 events with the highest count, so they need not match.",

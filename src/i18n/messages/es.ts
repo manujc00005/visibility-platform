@@ -722,6 +722,7 @@ export const es = {
       noneConfigured:
         "Esta propiedad de Google Analytics no tiene eventos clave. Márcalos en Google Analytics (Administrar › Eventos clave) y vuelve a traer los datos.",
       allZero: "Google Analytics no devolvió eventos clave en estos periodos.",
+      noPreviousValue: "Sin eventos clave en el periodo anterior",
       noPrevious: "Si un evento se marcó como clave después del inicio del periodo anterior, Google Analytics no lo cuenta antes de esa fecha.",
       organicMissing: "Hay eventos clave, pero ninguno llegó con el canal «Organic Search».",
       limits:
