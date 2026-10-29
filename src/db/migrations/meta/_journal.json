@@ -64,6 +64,13 @@
       "when": 1793224674306,
       "tag": "0008_analytics",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793290912676,
+      "tag": "0009_search_console_segments",
+      "breakpoints": true
     }
   ]
 }

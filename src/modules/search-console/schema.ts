@@ -1,7 +1,20 @@
 import { sql } from "drizzle-orm";
 import { check, date, index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
-import type { PageRow, QueryRow, Totals } from "@/modules/search-console/collect";
+import type { PageRow, QueryRow, Segments, Totals } from "@/modules/search-console/collect";
 import { workspaces } from "@/modules/workspaces/schema";
+
+const SEGMENT_TOTALS = ["branded", "nonBranded", "previousBranded", "previousNonBranded"] as const;
+const METRICS = ["clicks", "impressions", "ctr", "position"] as const;
+/**
+ * JSON path predicate for a well-formed `segments` (feature 007, D006). A missing key makes
+ * its comparison false, so absent fields fail too.
+ */
+const SEGMENTS_SHAPE = [
+  "@.version == 1",
+  '@.termsTruncated.type() == "boolean"',
+  '@.terms.type() == "array"',
+  ...SEGMENT_TOTALS.flatMap((key) => METRICS.map((metric) => `@.${key}.${metric}.type() == "number"`)),
+].join(" && ");
 
 /**
  * One row per Search Console capture attempt, successful or not (D004). Owner data from
@@ -25,6 +38,8 @@ export const searchConsoleSnapshots = pgTable(
     previousTotals: jsonb("previous_totals").$type<Totals>(),
     queries: jsonb("queries").$type<QueryRow[]>().notNull().default(sql`'[]'::jsonb`),
     pages: jsonb("pages").$type<PageRow[]>().notNull().default(sql`'[]'::jsonb`),
+    /** Brand / non-brand totals (feature 007). Null in failed rows and in captures taken before it. */
+    segments: jsonb("segments").$type<Segments>(),
     errorKind: text("error_kind", { enum: ["invalid_credentials", "api_disabled", "no_access", "quota_exceeded", "error"] }),
     errorMessage: text("error_message"),
     accessibleProperties: integer("accessible_properties"),
@@ -43,6 +58,11 @@ export const searchConsoleSnapshots = pgTable(
     ),
     check("search_console_snapshots_failed_has_reason", sql`${t.status} <> 'failed' or (${t.errorKind} is not null and ${t.errorMessage} is not null)`),
     check("search_console_snapshots_rows_are_arrays", sql`jsonb_typeof(${t.queries}) = 'array' and jsonb_typeof(${t.pages}) = 'array'`),
+    check("search_console_snapshots_failed_without_segments", sql`${t.status} <> 'failed' or ${t.segments} is null`),
+    check(
+      "search_console_snapshots_segments_shape",
+      sql`${t.segments} is null or (jsonb_typeof(${t.segments}) = 'object' and jsonb_path_exists(${t.segments}, ${sql.raw(`'$ ? (${SEGMENTS_SHAPE})'`)}) and not jsonb_path_exists(${t.segments}, '$.terms[*] ? (@.type() != "string")'))`,
+    ),
   ],
 );
 

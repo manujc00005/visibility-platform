@@ -1,12 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { brandTerms } from "@/modules/search-console/brand-terms";
 import { collectSearchConsole, periodsFor, pickProperty } from "@/modules/search-console/collect";
 import { parseServiceAccount } from "@/modules/search-console/credentials";
-import { serviceAccountJson } from "./fixtures";
+import { PRIVATE_PEM, serviceAccountJson } from "./fixtures";
 
 const parsed = parseServiceAccount(serviceAccountJson());
 if (!parsed?.ok) throw new Error("fixture");
 const account = parsed.value;
-const site = { domain: "olessium.com", hostname: "olessium.com" };
+const site = { domain: "olessium.com", hostname: "olessium.com", name: "Olessium", brandAliases: ["Olessium Agency"] };
 const NOW = new Date("2026-10-27T10:00:00Z");
 
 describe("periodsFor", () => {
@@ -64,6 +65,7 @@ describe("collectSearchConsole", () => {
   it("collects totals for both periods and the top queries and pages", async () => {
     const { calls, impl } = google({ siteEntry: [{ siteUrl: "sc-domain:olessium.com", permissionLevel: "siteOwner" }] }, (body) => {
       const dims = body.dimensions as string[];
+      if (body.dimensionFilterGroups) return {};
       if (dims.length === 0) return body.startDate === "2026-09-27" ? totals(12, 400) : totals(8, 300);
       if (dims[0] === "query") return { rows: [{ keys: ["crm agencia ".repeat(30)], clicks: 5, impressions: 50, ctr: 0.1, position: 4.2 }] };
       return { rows: [{ keys: ["https://olessium.com/es"], clicks: 10, impressions: 300, ctr: 0.033, position: 8.1 }] };
@@ -79,8 +81,8 @@ describe("collectSearchConsole", () => {
       pages: [{ page: "https://olessium.com/es", clicks: 10 }],
     });
     expect(outcome.data.queries[0]!.query).toHaveLength(200);
-    // token + sites + 4 queries.
-    expect(calls).toHaveLength(6);
+    // token + sites + 4 queries + 4 brand-filtered totals (feature 007).
+    expect(calls).toHaveLength(10);
   });
 
   it("returns zeros, not an error, for a property without data", async () => {
@@ -105,5 +107,132 @@ describe("collectSearchConsole", () => {
     }) as typeof fetch;
     const outcome = await collectSearchConsole(account, site, { fetchImpl: impl, now: NOW });
     expect(outcome).toMatchObject({ ok: false, kind: "quota_exceeded", property: "sc-domain:olessium.com" });
+  });
+});
+
+describe("collectSearchConsole brand segments (feature 007)", () => {
+  const SECRET_TOKEN = "ya29.secret-access-token";
+  const owned = { siteEntry: [{ siteUrl: "sc-domain:olessium.com", permissionLevel: "siteOwner" }] };
+  const isFiltered = (body: Record<string, unknown>) => Boolean(body.dimensionFilterGroups);
+  const operatorOf = (body: Record<string, unknown>) =>
+    (body.dimensionFilterGroups as { filters: { operator: string }[] }[])[0]!.filters[0]!.operator;
+
+  /** Google double; `analytics` answers each Search Analytics body, `hold` lets a test delay them. */
+  function google(analytics: (body: Record<string, unknown>) => Response | unknown, hold?: (start: () => void) => Promise<void>) {
+    const calls: { url: string; body: string }[] = [];
+    const impl = (async (input: string, init?: RequestInit) => {
+      const url = String(input);
+      const body = String(init?.body ?? "");
+      calls.push({ url, body });
+      if (url.startsWith("https://oauth2.googleapis.com/token")) return Response.json({ access_token: SECRET_TOKEN });
+      if (url.endsWith("/sites")) return Response.json(owned);
+      if (hold) await hold(() => undefined);
+      const answer = analytics(JSON.parse(body));
+      return answer instanceof Response ? answer : Response.json(answer);
+    }) as typeof fetch;
+    const analyticsBodies = () => calls.filter((c) => c.url.includes("searchAnalytics")).map((c) => JSON.parse(c.body) as Record<string, unknown>);
+    return { calls, impl, analyticsBodies };
+  }
+
+  it("sends four brand-filtered totals next to the four unchanged queries (AC-003)", async () => {
+    const { calls, impl, analyticsBodies } = google(() => ({}));
+    const outcome = await collectSearchConsole(account, site, { fetchImpl: impl, now: NOW });
+    expect(outcome.ok).toBe(true);
+    expect(calls).toHaveLength(10);
+    const bodies = analyticsBodies();
+    const current = { startDate: "2026-09-27", endDate: "2026-10-24" };
+    const previous = { startDate: "2026-08-30", endDate: "2026-09-26" };
+    const common = { type: "web", dataState: "final" };
+    // The four queries of feature 003 keep exactly their previous body.
+    expect(bodies.filter((b) => !isFiltered(b))).toEqual([
+      { ...current, dimensions: [], rowLimit: 1, ...common },
+      { ...previous, dimensions: [], rowLimit: 1, ...common },
+      { ...current, dimensions: ["query"], rowLimit: 25, ...common },
+      { ...current, dimensions: ["page"], rowLimit: 10, ...common },
+    ]);
+    const filter = (operator: string) => [{ groupType: "and", filters: [{ dimension: "query", operator, expression: brandTerms(site).expression }] }];
+    expect(bodies.filter(isFiltered)).toEqual([
+      { ...current, dimensions: [], rowLimit: 1, dimensionFilterGroups: filter("includingRegex"), ...common },
+      { ...current, dimensions: [], rowLimit: 1, dimensionFilterGroups: filter("excludingRegex"), ...common },
+      { ...previous, dimensions: [], rowLimit: 1, dimensionFilterGroups: filter("includingRegex"), ...common },
+      { ...previous, dimensions: [], rowLimit: 1, dimensionFilterGroups: filter("excludingRegex"), ...common },
+    ]);
+    for (const c of calls.filter((c) => c.url.includes("searchAnalytics"))) {
+      expect(c.url).toBe("https://www.googleapis.com/webmasters/v3/sites/sc-domain%3Aolessium.com/searchAnalytics/query");
+    }
+  });
+
+  it("starts all eight Search Analytics queries before any of them answers (AC-003)", async () => {
+    let started = 0;
+    let maxWaiting = 0;
+    const waiting: (() => void)[] = [];
+    const hold = () =>
+      new Promise<void>((resolve) => {
+        started += 1;
+        waiting.push(resolve);
+        maxWaiting = Math.max(maxWaiting, waiting.length);
+        if (waiting.length === 8) waiting.splice(0).forEach((release) => release());
+        // Safety net so a sequential implementation fails the assertion instead of hanging.
+        else setTimeout(() => waiting.splice(0).forEach((release) => release()), 200);
+      });
+    const { impl } = google(() => ({}), hold);
+    const outcome = await collectSearchConsole(account, site, { fetchImpl: impl, now: NOW });
+    expect(outcome.ok).toBe(true);
+    expect(started).toBe(8);
+    expect(maxWaiting).toBe(8);
+  });
+
+  it("stores the terms and each segment's own totals, zero when Google returns no row (AC-001, AC-004)", async () => {
+    const { impl } = google((body) => {
+      if (!isFiltered(body)) return body.dimensions && (body.dimensions as string[]).length === 0 ? totals(100, 1000) : {};
+      const now = body.startDate === "2026-09-27";
+      if (operatorOf(body) === "includingRegex") return now ? { rows: [{ clicks: 30, impressions: 120, ctr: 0.25, position: 1.8 }] } : {};
+      return now ? { rows: [{ clicks: 50, impressions: 700, ctr: 0.071, position: 14.2 }] } : { rows: [{ clicks: 40, impressions: 650, ctr: 0.062, position: 15 }] };
+    });
+    const outcome = await collectSearchConsole(account, site, { fetchImpl: impl, now: NOW });
+    expect(outcome.ok && outcome.data.segments).toEqual({
+      version: 1,
+      terms: ["Olessium", "Olessium Agency", "olessium.com"],
+      termsTruncated: false,
+      branded: { clicks: 30, impressions: 120, ctr: 0.25, position: 1.8 },
+      nonBranded: { clicks: 50, impressions: 700, ctr: 0.071, position: 14.2 },
+      previousBranded: { clicks: 0, impressions: 0, ctr: 0, position: 0 },
+      previousNonBranded: { clicks: 40, impressions: 650, ctr: 0.062, position: 15 },
+    });
+  });
+
+  it("marks the segments as truncated when a long alias does not fit (AC-012)", async () => {
+    const { impl } = google(() => ({}));
+    const outcome = await collectSearchConsole(account, { ...site, brandAliases: ["a".repeat(4100), "olessium seo"] }, { fetchImpl: impl, now: NOW });
+    expect(outcome.ok && outcome.data.segments.terms).toEqual(["Olessium", "olessium seo", "olessium.com"]);
+    expect(outcome.ok && outcome.data.segments.termsTruncated).toBe(true);
+  });
+
+  it.each([
+    [403, { error: { details: [{ reason: "SERVICE_DISABLED" }] } }, "api_disabled"],
+    [403, { error: { message: "User does not have sufficient permission for site." } }, "no_access"],
+    [429, {}, "quota_exceeded"],
+    [500, {}, "error"],
+  ])("fails the whole capture when a brand query answers %i (AC-007)", async (status, body, kind) => {
+    const { calls, impl } = google((request) =>
+      isFiltered(request) && operatorOf(request) === "excludingRegex" && request.startDate === "2026-08-30" ? Response.json(body, { status }) : {},
+    );
+    const outcome = await collectSearchConsole(account, site, { fetchImpl: impl, now: NOW });
+    expect(outcome).toMatchObject({ ok: false, kind, property: "sc-domain:olessium.com" });
+    expect(outcome).not.toHaveProperty("data");
+    // Nothing secret travels in the failure: not the token, the signed JWT, the key or the expression.
+    const jwt = new URLSearchParams(calls[0]!.body).get("assertion")!;
+    const keyBody = PRIVATE_PEM.split("\n")[1]!;
+    const serialized = JSON.stringify(outcome);
+    for (const secret of [SECRET_TOKEN, jwt, keyBody, brandTerms(site).expression]) expect(serialized).not.toContain(secret);
+  });
+
+  it("fails without any request when the domain alone does not fit the expression limit (AC-012)", async () => {
+    const { calls, impl } = google(() => ({}));
+    const huge = { ...site, domain: `${"d".repeat(4100)}.es` };
+    const outcome = await collectSearchConsole(account, huge, { fetchImpl: impl, now: NOW });
+    expect(outcome).toMatchObject({ ok: false, kind: "error", property: null, accessibleProperties: null });
+    expect(calls).toHaveLength(0);
+    expect(JSON.stringify(outcome)).not.toContain("dddd");
   });
 });

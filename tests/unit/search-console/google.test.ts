@@ -102,6 +102,20 @@ describe("Search Console API", () => {
     expect(JSON.parse(calls[0]!.body)).toMatchObject({ type: "web", dataState: "final", rowLimit: 25, dimensions: ["query"] });
   });
 
+  it("sends a brand filter only when one is given (feature 007)", async () => {
+    const { calls, impl } = scripted([
+      { match: () => true, status: 200, body: {} },
+      { match: () => true, status: 200, body: {} },
+    ]);
+    const base = { startDate: "2026-09-27", endDate: "2026-10-24", dimensions: [] as [], rowLimit: 1 };
+    const filter = { groupType: "and" as const, filters: [{ dimension: "query" as const, operator: "includingRegex" as const, expression: "(?i)olessium" }] };
+    await querySearchAnalytics("tok", "sc-domain:e.es", { ...base, dimensionFilterGroups: [filter] }, { fetchImpl: impl });
+    await querySearchAnalytics("tok", "sc-domain:e.es", base, { fetchImpl: impl });
+    expect(JSON.parse(calls[0]!.body)).toEqual({ ...base, dimensionFilterGroups: [filter], type: "web", dataState: "final" });
+    expect(JSON.parse(calls[1]!.body)).toEqual({ ...base, type: "web", dataState: "final" });
+    expect(calls[1]!.body).not.toContain("dimensionFilterGroups");
+  });
+
   it("rejects impossible numbers instead of storing them", async () => {
     const { impl } = scripted([{ match: () => true, status: 200, body: { rows: [{ keys: ["x"], clicks: -1, impressions: 1, ctr: 0, position: 1 }] } }]);
     const error = await caught(querySearchAnalytics("tok", "sc-domain:e.es", { startDate: "a", endDate: "b", dimensions: [], rowLimit: 1 }, { fetchImpl: impl }));

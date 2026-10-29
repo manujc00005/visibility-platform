@@ -145,11 +145,19 @@ export interface AnalyticsRow {
   position: number;
 }
 
+/** The only filter this app sends: queries that do or do not match the brand expression (feature 007). */
+export interface DimensionFilterGroup {
+  groupType: "and";
+  filters: { dimension: "query"; operator: "includingRegex" | "excludingRegex"; expression: string }[];
+}
+
 export interface AnalyticsQuery {
   startDate: string;
   endDate: string;
   dimensions: ("query" | "page")[];
   rowLimit: number;
+  /** Absent keys are left out of the request body, so unfiltered queries are unchanged. */
+  dimensionFilterGroups?: DimensionFilterGroup[];
 }
 
 const metric = z.number().finite().nonnegative();

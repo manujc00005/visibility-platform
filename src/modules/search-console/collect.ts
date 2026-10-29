@@ -1,9 +1,11 @@
+import { BrandTermsError, brandTerms } from "@/modules/search-console/brand-terms";
 import type { ServiceAccount } from "@/modules/search-console/credentials";
 import {
   fetchAccessToken,
   GscError,
   listSites,
   querySearchAnalytics,
+  type AnalyticsQuery,
   type AnalyticsRow,
   type ClientOptions,
   type GscErrorKind,
@@ -11,8 +13,9 @@ import {
 } from "@/modules/search-console/google";
 
 /**
- * One Search Console capture: token, property, then four Search Analytics queries
- * (totals now and before, top queries, top pages). At most 6 requests (NFR).
+ * One Search Console capture: token, property, then eight Search Analytics queries started
+ * together: totals now and before, top queries, top pages, and totals with and without the
+ * brand in both periods (feature 007). At most 10 requests.
  */
 
 export interface Totals {
@@ -38,6 +41,22 @@ export interface Period {
   end: string;
 }
 
+/**
+ * Totals of queries that contain a brand term and of those that do not (feature 007). Each
+ * `Totals` is Google's answer to its own filtered query; they do not add up to `totals`
+ * because Google leaves some queries out when filtering by query (D003).
+ */
+export interface Segments {
+  version: 1;
+  /** Terms actually sent, as typed, in order: name, aliases, domain. */
+  terms: string[];
+  termsTruncated: boolean;
+  branded: Totals;
+  nonBranded: Totals;
+  previousBranded: Totals;
+  previousNonBranded: Totals;
+}
+
 export interface CollectedData {
   property: string;
   current: Period;
@@ -46,6 +65,15 @@ export interface CollectedData {
   previousTotals: Totals;
   queries: QueryRow[];
   pages: PageRow[];
+  segments: Segments;
+}
+
+/** What a capture needs from the company, read once when the attempt starts. */
+export interface CaptureSite {
+  domain: string;
+  hostname: string;
+  name: string;
+  brandAliases: string[];
 }
 
 export type CollectFailure = {
@@ -96,14 +124,12 @@ export function pickProperty(sites: SiteEntry[], site: { domain: string; hostnam
 const ZERO: Totals = { clicks: 0, impressions: 0, ctr: 0, position: 0 };
 const totalsOf = (r: AnalyticsRow): Totals => ({ clicks: r.clicks, impressions: r.impressions, ctr: r.ctr, position: r.position });
 
-export async function collectSearchConsole(
-  account: ServiceAccount,
-  site: { domain: string; hostname: string },
-  options: ClientOptions & { now?: Date } = {},
-): Promise<CollectOutcome> {
+export async function collectSearchConsole(account: ServiceAccount, site: CaptureSite, options: ClientOptions & { now?: Date } = {}): Promise<CollectOutcome> {
   const now = options.now ?? new Date();
   let property: string | null = null;
   try {
+    // Built before any request: an expression that cannot fit fails without touching Google.
+    const brand = brandTerms(site);
     const token = await fetchAccessToken(account, { ...options, nowSeconds: Math.floor(now.getTime() / 1000) });
     const sites = await listSites(token, options);
     property = pickProperty(sites, site);
@@ -119,25 +145,46 @@ export async function collectSearchConsole(
     const { current, previous } = periodsFor(now);
     const range = (p: Period) => ({ startDate: p.start, endDate: p.end });
     const siteUrl = property;
-    const [totals, previousTotals, queries, pages] = await Promise.all([
+    const filtered = (p: Period, operator: "includingRegex" | "excludingRegex"): AnalyticsQuery => ({
+      ...range(p),
+      dimensions: [],
+      rowLimit: 1,
+      dimensionFilterGroups: [{ groupType: "and", filters: [{ dimension: "query", operator, expression: brand.expression }] }],
+    });
+    const [totals, previousTotals, queries, pages, branded, nonBranded, previousBranded, previousNonBranded] = await Promise.all([
       querySearchAnalytics(token, siteUrl, { ...range(current), dimensions: [], rowLimit: 1 }, options),
       querySearchAnalytics(token, siteUrl, { ...range(previous), dimensions: [], rowLimit: 1 }, options),
       querySearchAnalytics(token, siteUrl, { ...range(current), dimensions: ["query"], rowLimit: TOP_QUERIES }, options),
       querySearchAnalytics(token, siteUrl, { ...range(current), dimensions: ["page"], rowLimit: TOP_PAGES }, options),
+      querySearchAnalytics(token, siteUrl, filtered(current, "includingRegex"), options),
+      querySearchAnalytics(token, siteUrl, filtered(current, "excludingRegex"), options),
+      querySearchAnalytics(token, siteUrl, filtered(previous, "includingRegex"), options),
+      querySearchAnalytics(token, siteUrl, filtered(previous, "excludingRegex"), options),
     ]);
+    const first = (rows: AnalyticsRow[]) => (rows[0] ? totalsOf(rows[0]) : ZERO);
     return {
       ok: true,
       data: {
         property,
         current,
         previous,
-        totals: totals[0] ? totalsOf(totals[0]) : ZERO,
-        previousTotals: previousTotals[0] ? totalsOf(previousTotals[0]) : ZERO,
+        totals: first(totals),
+        previousTotals: first(previousTotals),
         queries: queries.slice(0, TOP_QUERIES).map((r) => ({ query: (r.keys[0] ?? "").slice(0, MAX_QUERY_LENGTH), ...totalsOf(r) })),
         pages: pages.slice(0, TOP_PAGES).map((r) => ({ page: (r.keys[0] ?? "").slice(0, MAX_PAGE_LENGTH), ...totalsOf(r) })),
+        segments: {
+          version: 1,
+          terms: brand.terms,
+          termsTruncated: brand.truncated,
+          branded: first(branded),
+          nonBranded: first(nonBranded),
+          previousBranded: first(previousBranded),
+          previousNonBranded: first(previousNonBranded),
+        },
       },
     };
   } catch (error) {
+    if (error instanceof BrandTermsError) return { ok: false, kind: "error", message: error.message, property, accessibleProperties: null };
     if (error instanceof GscError) return { ok: false, kind: error.kind, message: error.message, property, accessibleProperties: null };
     return { ok: false, kind: "error", message: "Error inesperado al leer Search Console", property, accessibleProperties: null };
   }

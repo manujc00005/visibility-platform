@@ -1,12 +1,12 @@
 import { and, desc, eq } from "drizzle-orm";
 import type { Database } from "@/db/client";
-import type { CollectOutcome } from "@/modules/search-console/collect";
+import type { CaptureSite, CollectOutcome } from "@/modules/search-console/collect";
 import { searchConsoleSnapshots, type SearchConsoleSnapshot } from "@/modules/search-console/schema";
 import { getWorkspace } from "@/modules/workspaces/service";
 
 export interface SearchConsoleDeps {
   /** Null when no credential is configured: nothing is called and nothing is stored. */
-  collect(site: { domain: string; hostname: string }): Promise<CollectOutcome> | null;
+  collect(site: CaptureSite): Promise<CollectOutcome> | null;
 }
 
 export type RefreshResult = { ok: true; snapshot: SearchConsoleSnapshot } | { ok: false; error: "not_found" | "not_configured" };
@@ -16,7 +16,8 @@ const FK_VIOLATION = "23503";
 export async function refreshSearchConsole(db: Database, workspaceId: string, deps: SearchConsoleDeps): Promise<RefreshResult> {
   const workspace = await getWorkspace(db, workspaceId);
   if (!workspace) return { ok: false, error: "not_found" };
-  const pending = deps.collect({ domain: workspace.domain, hostname: workspace.hostname });
+  // Read once: name, aliases and domain come from the same moment (feature 007).
+  const pending = deps.collect({ domain: workspace.domain, hostname: workspace.hostname, name: workspace.name, brandAliases: workspace.brandAliases });
   if (!pending) return { ok: false, error: "not_configured" };
   const outcome = await pending;
 
@@ -33,6 +34,7 @@ export async function refreshSearchConsole(db: Database, workspaceId: string, de
         previousTotals: outcome.data.previousTotals,
         queries: outcome.data.queries,
         pages: outcome.data.pages,
+        segments: outcome.data.segments,
       }
     : {
         workspaceId: workspace.id,
