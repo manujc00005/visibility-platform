@@ -40,6 +40,7 @@
   - Los metadatos reales de la propiedad confirmaron que `keyEvents` es `TYPE_FLOAT`; se aceptan decimales solo en esa métrica. El resto de correcciones y lo aceptado está en D009.
   - Pruebas en verde tras las correcciones: 38 en `ga4.test.ts`, 30 en `collect.test.ts`, 38 de integración de GA4, y 184 entre `tests/unit/analytics` y `tests/unit/i18n` antes de añadir las de cliente y recogida.
   - La prueba de cancelación compartida se distingue sola: sin la señal, los informes esperarían 15 s y la prueba fallaría por tiempo.
+  - Comprobado sobre el árbol final `a472653` en un worktree desechable: lint sin errores (el aviso previo), typecheck limpio, 941 pruebas en 78 archivos y build correcto. Esto resuelve la observación de conformidad sobre AC-012.
   - Vista otra vez a 375 px en `es` y `en` con una fila sintética con decimales y nombres largos, borrada después: página y tabla sin desbordar, y el registro del servidor sin errores nuevos.
 
 ## Follow-ups

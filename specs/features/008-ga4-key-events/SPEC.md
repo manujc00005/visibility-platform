@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress (2026-10-29). T001–T008 hechas. Plan, tareas y decisiones en esta carpeta; análisis previo y su validación en `ANALYSIS.md`.
+Done (2026-10-29). T001–T009 hechas; `/spec-review` Pass y revisiones de seguridad, dominio y conformidad aplicadas (D009). Seguimiento abierto: con visitas, comparar con los informes de GA4, ver el literal `Organic Search` y el formato real de `keyEvents` (TASKS › Follow-ups).
 
 ## Problem
 
@@ -154,6 +154,17 @@ Migración `0011_analytics_key_events.sql`, siguiente a `0010_search_console_seg
 - **Compatibilidad de `keyEvents` con las dos dimensiones.** Resolved: GA4 aceptó las dos combinaciones y el filtro en la captura real; la Data API valida dimensiones y métricas aunque no haya datos (D008).
 - **Literal `Organic Search` y formato real de un `keyEvents` distinto de cero.** Deferred: con la propiedad sin visitas no hay filas que los muestren (D009, TASKS › Follow-ups).
 - **Ubicación de la tabla por evento.** Resolved: dentro de la tarjeta (D005), sin desbordar a 375 px (D008).
+
+## Implementation summary
+
+Cada captura de GA4 lista los eventos clave configurados (Admin API) y pide dos informes más: eventos clave por canal en los dos periodos y el desglose por evento del canal `Organic Search` exacto. Las seis llamadas posteriores a la propiedad van en paralelo, con una señal de cancelación compartida. El resultado se guarda en `key_events` (migración `0011`, con su `check` en modo `strict`). La página SEO muestra el bloque «Conversiones desde buscadores» dentro de la tarjeta: cifras orgánica y total con su cambio, parte orgánica, desglose y eventos configurados. El bloque se ve también sin visitas y distingue «sin eventos clave configurados» de «cero en el periodo».
+
+Comportamiento añadido sobre el texto original, recogido en D008 y D009:
+- `keyEvents` acepta decimales, porque GA4 la declara `TYPE_FLOAT`.
+- Las llamadas paralelas se cancelan juntas.
+- Los nombres se recortan por punto de código y sin NUL.
+- Las notas bajo cada cifra son propias de eventos clave.
+- La nota de límites solo aparece cuando aplica.
 
 ## Decisions pre-registered for DECISIONS.md
 

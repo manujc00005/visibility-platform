@@ -1,6 +1,6 @@
 # 16 — Roadmap de implementación (referencia operativa)
 
-**Última actualización:** 2026-10-29: conectores de Search Console, Bing y GA4 cerrados; búsquedas con marca y sin marca (spec 007) cerrada (§8); seguimientos y backlog (§6, §9).
+**Última actualización:** 2026-10-29: conectores de Search Console, Bing y GA4 cerrados; búsquedas con marca y sin marca (spec 007) y conversiones desde buscadores en GA4 (spec 008) cerradas (§8); seguimientos y backlog (§6, §9).
 **Estado del diseño:** `00`–`12` siguen siendo referencia arquitectónica (versión 1, PROPUESTA). `13-codex-review.md` (REQUEST CHANGES) sigue siendo el registro de riesgos. **Este documento manda sobre el orden de trabajo y sobre las decisiones técnicas de construcción.** Donde contradiga a `00`–`12`, prevalece este y la contradicción se lista en §7.
 
 Nota: `14-architecture-sync.md` no llegó a escribirse; el cambio de estrategia lo sustituyó por este documento antes de redactarlo. Los hallazgos de Codex se gestionan aquí de forma progresiva (§4).
@@ -283,6 +283,7 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 | D-30 | **Cifras de GA4 sin comparar.** La 006 se verificó con el estado «Sin visitas» (su D011): la etiqueta `G-KF9XKPT07W` aún no está publicada en olessium.com | No se han visto aún tablas con filas reales | 24–48 h después de publicar la etiqueta: «Actualizar datos» y comparar con los informes de GA4 en el mismo periodo (TASKS de la 006, Follow-ups) |
 | D-31 | **Search Console a cero y sin estado vacío.** La propiedad es reciente y aún no tiene impresiones; la vista enseña «Conectado» con ceros sin explicar por qué, y le faltan el aviso de configuración y algunas pruebas que sí tienen Bing y GA4 (spec 003, D007) | Un propietario puede pensar que algo va mal | Iteración pequeña copiando el estado vacío y el aviso de GA4; comparar cifras cuando haya impresiones |
 | D-32 | **Expresión de marca sin comprobar con datos (spec 007, D007).** Sin impresiones, la API de Search Console responde 200 incluso a expresiones inválidas, así que no se sabe si interpreta `(?i)` y los literales escapados | Si la rechaza o la interpreta mal, el bloque «con tu marca» sale mal; si la rechaza, fallan todas las capturas de Search Console | Cuando olessium.com tenga impresiones: «Actualizar datos» y comparar «con tu marca» con la interfaz de Search Console filtrada por la misma expresión; si falla, la salida de D004 de la 007 |
+| D-33 | **Eventos clave de GA4 sin datos (spec 008, D009).** Olessium no tiene visitas, así que no se ha visto el canal `Organic Search` literal en una respuesta ni el formato real de un `keyEvents` distinto de cero | Si el canal llegara con otro nombre, la cifra orgánica saldría a cero (la sección lo advierte) | Cuando GA4 tenga visitas y eventos clave: «Actualizar datos» y comparar con los informes de GA4 del mismo periodo |
 | D-07 | `neon init -y` instaló el plugin de Neon (skills y MCP) a nivel de usuario en Claude Code, Codex y VS Code | Configuración global del equipo, no del repo | Ninguno; el servidor MCP de Neon en Claude Code necesita autorizar OAuth con `/mcp` |
 | R-01 | Las fases 2–6 dependen de cuentas externas (PSI, DataForSEO, Stripe) aún no abiertas; la Fase 4 se cerró sin la de DataForSEO | Retraso de fases | Abrir PSI antes de Fase 2; DataForSEO antes de Fase 4; Stripe test antes de Fase 5 |
 | R-02 | El NORTE del workspace `lead-platform` sigue en mantenimiento | Conflicto de foco del único desarrollador | Decisión del owner; este repo no depende de ello técnicamente |
@@ -433,6 +434,18 @@ Los tres conectores siguen el mismo patrón: credencial del operador en el entor
 **Verificación:** 837 pruebas, lint, typecheck y build sobre el árbol commiteado. Captura real de olessium.com `completed` con segmentos a cero, y maquetación a 375 px en `es` y `en` con una fila sintética que se borró después. Tres revisiones independientes: seguridad (APPROVE), dominio y conformidad, con las correcciones en su D008.
 
 **Seguimiento:** D-32.
+
+### Conversiones desde buscadores en GA4 (spec `specs/features/008-ga4-key-events`) — 2026-10-29, hecha
+
+**Alcance:** cada captura de GA4 guarda los eventos clave en total y desde el canal `Organic Search`, en el periodo actual y en el anterior, el desglose orgánico por evento (los 10 primeros) y la lista de eventos clave configurados en la propiedad. Son tres llamadas más en paralelo, con la misma cuenta de servicio. La sección «Visitas a tu web» muestra el bloque «Conversiones desde buscadores», también sin visitas. Sin proveedor nuevo ni coste.
+
+**Commits:** `43f3baf`…`a472653`. **Migración:** `0011` (columna `key_events` y su `check` en modo `strict`), aplicada en `test` y `dev`; `production` sin tocar.
+
+**Verificación:** 941 pruebas, lint, typecheck y build sobre el árbol final. Captura real de olessium.com `completed`, con tres eventos clave configurados y recuentos a cero; GA4 aceptó las tres llamadas nuevas. Maquetación a 375 px en `es` y `en` con filas sintéticas que se borraron después.
+
+**Revisiones:** tres revisiones independientes. Los metadatos de la propiedad confirmaron que `keyEvents` es `TYPE_FLOAT`; se aceptan decimales solo ahí (D009).
+
+**Seguimiento:** D-33.
 
 ### Categorías de Lighthouse (spec `specs/features/004-lighthouse-categories`) — 2026-10-28, en progreso
 
