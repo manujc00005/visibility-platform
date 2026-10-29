@@ -15,6 +15,12 @@ export const MAX_EXPRESSION_LENGTH = 4096;
 const PREFIX = "(?i)";
 const MIN_KEY_CHARS = 3;
 const SPECIAL = /[\\^$.|?*+()[\]{}]/g;
+/**
+ * What an escaped variant may contain: plain characters, escaped special ones, and " +"
+ * between words. Checked on every variant so a future change to the builder that let any
+ * regex syntax through fails loudly instead of silently filtering wrong (review of 007).
+ */
+const SAFE_VARIANT = /^(?:[^\\^$.|?*+()[\]{}\s]|\\[\\^$.|?*+()[\]{}]| \+)+$/u;
 
 /** Fixed text: it never quotes the domain or any term. */
 export class BrandTermsError extends Error {
@@ -47,9 +53,16 @@ function literal(text: string): string {
 /** As typed, without accents, and in its nameKey form (punctuation as spaces); no repeats. */
 function variantsOf(term: string): string[] {
   const lower = term.trim().toLowerCase();
-  const variants = [literal(lower), literal(stripAccents(lower)), literal(nameKey(term))].filter(Boolean);
-  return [...new Set(variants)];
+  const variants = [...new Set([literal(lower), literal(stripAccents(lower)), literal(nameKey(term))].filter(Boolean))];
+  if (variants.some((v) => !SAFE_VARIANT.test(v))) throw new BrandTermsError();
+  return variants;
 }
+
+/**
+ * Google's limit is stated in characters; UTF-8 bytes are never fewer, so measuring bytes
+ * stays under it whichever unit Google counts (review of 007).
+ */
+const sizeOf = (text: string) => Buffer.byteLength(text, "utf8");
 
 const keyLength = (key: string) => key.replace(/ /g, "").length;
 
@@ -68,15 +81,16 @@ export function brandTerms(site: { name: string; brandAliases: readonly string[]
 
   // The domain is reserved first so a long name or alias can never push it out.
   const domainVariants = variantsOf(domain);
-  // String length counts UTF-16 units, never fewer than characters: a safe upper bound.
-  let length = PREFIX.length + domainVariants.join("|").length;
+  // Never an empty expression: with no domain variant, "(?i)" alone would match every query.
+  if (domainVariants.length === 0) throw new BrandTermsError();
+  let length = sizeOf(PREFIX) + sizeOf(domainVariants.join("|"));
   if (length > MAX_EXPRESSION_LENGTH) throw new BrandTermsError();
 
   const kept: { term: string; variants: string[] }[] = [];
   let truncated = false;
   for (const term of candidates) {
     const variants = variantsOf(term);
-    const cost = variants.join("|").length + 1;
+    const cost = sizeOf(variants.join("|")) + 1;
     if (length + cost > MAX_EXPRESSION_LENGTH) {
       truncated = true;
       continue;
@@ -94,11 +108,23 @@ export function brandTerms(site: { name: string; brandAliases: readonly string[]
 }
 
 /**
- * Whether a query contains one of the stored terms, with the same variants as the expression
- * sent to Google. `iu` replaces the `(?i)` prefix, which JavaScript does not accept.
+ * A matcher for the stored terms of one capture, with the same variants as the expression sent
+ * to Google; `iu` replaces the `(?i)` prefix, which JavaScript does not accept. Compiled once.
+ * If stored terms can no longer be turned into a pattern, nothing is labelled instead of the
+ * page failing: the label is a convenience, the figures come from Google.
  */
+export function brandMatcher(terms: readonly string[]): (query: string) => boolean {
+  try {
+    const variants = terms.flatMap(variantsOf);
+    if (variants.length === 0) return () => false;
+    const pattern = new RegExp(variants.join("|"), "iu");
+    return (query) => pattern.test(query);
+  } catch {
+    return () => false;
+  }
+}
+
+/** Whether a query contains one of the stored terms (single use of `brandMatcher`). */
 export function isBrandedQuery(query: string, terms: readonly string[]): boolean {
-  const variants = terms.flatMap(variantsOf);
-  if (variants.length === 0) return false;
-  return new RegExp(variants.join("|"), "iu").test(query);
+  return brandMatcher(terms)(query);
 }

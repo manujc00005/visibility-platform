@@ -76,9 +76,11 @@ function Table({ caption, head, rows, t, locale }: { caption: string; head: stri
               {/* Search terms and URLs are data from Google: plain text, never links (B08b). */}
               <td className="max-w-[16rem] px-4 py-2 break-words sm:max-w-md">
                 {r.label}
-                {/* A word, not only a colour, so it reads without styles (D005 of 007). */}
+                {/* A word, not only a colour, so it reads without styles (D005 of 007). The space keeps
+                    "opiniones" and "marca" apart when copied or read aloud. */}
+                {r.badge ? " " : null}
                 {r.badge ? (
-                  <span className="ml-2 inline-block rounded-full bg-brand-soft px-1.5 py-0.5 align-middle text-[11px] font-medium text-brand ring-1 ring-brand/15">
+                  <span className="ml-1 inline-block rounded-full bg-brand-soft px-1.5 py-0.5 align-middle text-[11px] font-medium text-brand ring-1 ring-brand/15">
                     {r.badge}
                   </span>
                 ) : null}
@@ -105,31 +107,29 @@ function Segments({ v, t }: { v: SegmentsView; t: Texts }) {
       <h3 id="gsc-segments" className="text-sm font-semibold">
         {t.segments.title}
       </h3>
-      {v.empty ? (
-        <p className="text-sm text-muted-foreground">{t.noQueries}</p>
-      ) : (
-        <>
-          <dl className="grid gap-3 sm:grid-cols-2">
-            {BLOCKS.map((key) => (
-              <div key={key} className="flex flex-col gap-1 rounded-lg bg-muted/50 p-3">
-                <dt className="text-xs font-medium text-muted-foreground">{t.segments[key].label}</dt>
-                <dd className="text-2xl font-semibold tabular-nums">{v[key].clicks}</dd>
-                <dd className="text-sm tabular-nums">{v[key].impressions}</dd>
-                <dd className="text-xs text-muted-foreground">
-                  {t.segments.clicksShare(v[key].clicksShare)} · {t.segments.impressionsShare(v[key].impressionsShare)}
-                </dd>
-                <dd>
-                  <ChangeLine change={v[key].change} note={v[key].change === null ? t.metrics.noPrevious : null} className="text-xs" />
-                </dd>
-                <dd className="hidden text-xs text-muted-foreground sm:block">{t.segments[key].hint}</dd>
-              </div>
-            ))}
-          </dl>
-          <p className="max-w-3xl text-xs text-muted-foreground">
-            {t.segments.hidden(v.hidden.clicks, v.hidden.impressions)} {t.segments.previousHidden(v.previousHidden.clicks, v.previousHidden.impressions)}
-          </p>
-        </>
-      )}
+      {/* Without impressions the blocks stay, without shares, so a drop to zero still shows its change. */}
+      {v.empty ? <p className="text-sm text-muted-foreground">{t.segments.empty}</p> : null}
+      <dl className="grid gap-3 sm:grid-cols-2">
+        {BLOCKS.map((key) => (
+          <div key={key} className="flex flex-col gap-1 rounded-lg bg-muted/50 p-3">
+            <dt className="text-xs font-medium text-muted-foreground">{t.segments[key].label}</dt>
+            <dd className="text-2xl font-semibold tabular-nums">{v[key].clicks}</dd>
+            <dd className="text-sm tabular-nums">{v[key].impressions}</dd>
+            {v.empty ? null : (
+              <dd className="text-xs text-muted-foreground">
+                {t.segments.clicksShare(v[key].clicksShare)} · {t.segments.impressionsShare(v[key].impressionsShare)}
+              </dd>
+            )}
+            <dd>
+              <ChangeLine change={v[key].change} note={v[key].change === null ? t.metrics.noPrevious : null} className="text-xs" />
+            </dd>
+            <dd className="hidden text-xs text-muted-foreground sm:block">{t.segments[key].hint}</dd>
+          </div>
+        ))}
+      </dl>
+      <p className="max-w-3xl text-xs text-muted-foreground">
+        {t.segments.hidden(v.hidden.clicks, v.hidden.impressions)} {t.segments.previousHidden(v.previousHidden.clicks, v.previousHidden.impressions)}
+      </p>
       {v.mismatch ? <p className="max-w-3xl text-xs text-muted-foreground">{t.segments.mismatch}</p> : null}
       {v.truncated ? <p className="max-w-3xl text-xs text-muted-foreground">{t.segments.truncated}</p> : null}
       <p className="flex max-w-3xl flex-wrap items-center gap-1.5 text-xs text-muted-foreground">

@@ -855,11 +855,13 @@ export const es = {
       nonBranded: { label: "Sin tu marca", hint: "Búsquedas que no contienen ninguno de esos términos" },
       clicksShare: (share: string) => `${share} de los clics`,
       impressionsShare: (share: string) => `${share} de las impresiones`,
-      hidden: (clicks: string, impressions: string) => `Sin clasificar: ${clicks} y ${impressions}. Al separarlas, Google no clasifica todas las búsquedas.`,
+      hidden: (clicks: string, impressions: string) =>
+        `Sin clasificar: ${clicks} y ${impressions}. Al separar las búsquedas con y sin marca, Google no las clasifica todas.`,
       previousHidden: (clicks: string, impressions: string) => `En los 28 días anteriores quedaron sin clasificar ${clicks} y ${impressions}.`,
       mismatch:
         "En algún periodo, las búsquedas con y sin marca suman más que el total que da Google, así que la parte sin clasificar se muestra como cero.",
-      truncated: "Algunos alias no se incluyeron porque la expresión superaba el límite de Search Console.",
+      truncated: "Algunos términos no se incluyeron porque la expresión superaba el límite de Search Console.",
+      empty: "Sin impresiones en este periodo: no hay búsquedas que separar.",
       terms: "Cuentan como marca las búsquedas que contienen:",
       badge: "marca",
       missing: (button: string) => `Pulsa «${button}» para separar las búsquedas con tu marca de las demás.`,

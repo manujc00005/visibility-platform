@@ -28,7 +28,7 @@
 
 **Reasoning:** es lo que un informe SEO entiende por «contiene la marca» y cubre errores de espaciado.
 
-**Consequences:** un nombre genérico («Moda») clasifica de más. Se acepta y se compensa enseñando los términos en la sección. La variante `nameKey` pierde los signos: «C++ Academy» se busca también como «c academy», que aparece dentro de «cc academy» (comprobado en T001).
+**Consequences:** un nombre genérico («Moda») clasifica de más. Se acepta y se compensa enseñando los términos en la sección. La variante `nameKey` pierde los signos: «C++ Academy» se busca también como «c academy», y eso también casa con «c academy cursos» o dentro de «cc academy» (la prueba de T001 comprueba «c academy»).
 
 ### D003 - El hueco se enseña, no se reparte
 
@@ -80,7 +80,7 @@
 
 **Context:** la SPEC pide que la base rechace un `segments` mal formado (versión, `terms` de cadenas, cuatro totales numéricos). Hasta ahora las tablas de Search Console, Bing y GA4 solo comprueban `jsonb_typeof`, y el roadmap acepta invariantes JSON solo en la aplicación (D-27).
 
-**Decision:** los `check` usan el operador `?&` para las claves y `jsonb_path_exists` para tipos de elementos y de métricas. Son funciones inmutables, válidas en un `check`. La migración se genera con `npm run db:generate` y se revisa a mano.
+**Decision:** un `check` con `jsonb_path_exists` comprueba claves, tipos de elementos y de métricas en un solo predicado (no se usa `?&`: una clave ausente ya hace fallar la ruta). Desde la migración `0010`, en modo `strict` (D008). Son funciones inmutables, válidas en un `check`. La migración se genera con `npm run db:generate` y se revisa a mano.
 
 **Reasoning:** la SPEC lo pide (AC-008) y el coste es una sola columna pequeña.
 
@@ -99,3 +99,28 @@
 **Reasoning:** con la propiedad vacía, un 200 no distingue una expresión válida de una inválida. Afirmar más sería presentar como verificado algo que no lo está.
 
 **Consequences:** el primer día con impresiones hay que repetir la captura y comparar el bloque «con tu marca» con la interfaz de Search Console filtrada por la misma expresión. Si no coincide, o si con datos Google rechaza `(?i)`, se aplica la salida de D004: quitar el prefijo y confiar en que el regex de la API no distingue mayúsculas, como el de la interfaz.
+
+### D008 - Resultado de las revisiones de cierre
+
+**Date:** 2026-10-29
+
+**Status:** Accepted
+
+**Context:** T010 se hizo con tres revisiones independientes: seguridad, dominio (base de datos y frontend) y conformidad con la spec. Ninguna encontró un hallazgo crítico. Conformidad marcó como alto que AC-011 no se había comprobado con datos.
+
+**Decision:** se corrige:
+- **Base de datos:** `check` de forma en modo `strict` con la migración `0010`; las pruebas de rechazo comprueban código y nombre de la restricción.
+- **Expresión:** lista blanca por variante, longitud en bytes UTF-8, guarda de dominio vacío y comparador compilado una vez que nunca rompe la página.
+- **Sección:** estado vacío con los bloques y su cambio, frase propia y espacio antes del distintivo; textos de recorte y de hueco.
+- **Pruebas:** los fallos sobre la fila, la captura `completed` sin secretos y AC-005 con otra empresa.
+- **AC-011:** comprobado con una fila sintética que se borró después.
+- **Documentos:** PLAN (rollback en dos entregas, ` +`, `deps.ts`), D002, D006 y las enmiendas de la SPEC.
+
+Se acepta sin cambio:
+- La forma de la fila `failed` cuando falla una de las tres consultas filtradas que no se fuerzan en la prueba unitaria: el camino de error es el mismo `Promise.all`, y la integración lo cubre con la consulta anterior `excludingRegex`.
+- El `id` fijo `gsc-segments`: la sección se pinta una vez por página, como otros `id` del proyecto.
+- `<section>` dentro de la tarjeta: es válido, aunque un `div` bastaría.
+- El nombre de la empresa como dato personal si es un autónomo: es lo mínimo para el fin y el borrado se propaga en cascada. La retención queda para la Fase 5 y el documento de privacidad.
+- El riesgo de D007: hasta que haya impresiones no se sabe si Google interpreta `(?i)` y los literales. Si Google rechazara la expresión, fallarían todas las capturas de Search Console, también los totales de la 003, como pide FR-009. La salida está en D004.
+
+**Consequences:** `brandTerms` puede lanzar `BrandTermsError` en dos casos nuevos imposibles con datos validados (variante fuera de la lista blanca y dominio vacío); los dos acaban en `failed/error` sin llamada a Google. Las migraciones de la siguiente feature empiezan en `0011`.

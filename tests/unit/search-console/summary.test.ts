@@ -257,6 +257,18 @@ describe("summarizeSearchConsole brand segments (feature 007)", () => {
     ]);
   });
 
+  it("labels the rows of another company with its own stored terms (AC-005)", () => {
+    const s = summarize({
+      segments: segments({ terms: ["Clínica García", "clinicagarcia", "clinicagarcia.es"] }),
+      queries: [
+        { query: "clínica garcía", clicks: 3, impressions: 9, ctr: 0.33, position: 1.2 },
+        { query: "clinica dental madrid", clicks: 5, impressions: 50, ctr: 0.1, position: 4.2 },
+        { query: "clinicagarcia.es citas", clicks: 1, impressions: 2, ctr: 0.5, position: 1 },
+      ],
+    });
+    expect(s.queries.map((q) => q.branded)).toEqual([true, false, true]);
+  });
+
   it("leaves a capture without segments as before: no block, no labels, same card line (AC-006)", () => {
     const old = summarize({ segments: null });
     expect(old.segments).toBeNull();

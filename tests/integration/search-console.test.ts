@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { searchConsoleSnapshots, workspaces } from "@/db/schema";
 import { brandTerms } from "@/modules/search-console/brand-terms";
@@ -125,8 +125,19 @@ describe("refreshSearchConsole", () => {
   });
 });
 
+/** The insert fails on exactly this check constraint, not on any other error. */
+async function violates(insert: Promise<unknown>, constraint: string) {
+  const error = await insert.then(
+    () => null,
+    (e: unknown) => e,
+  );
+  const cause = (error as { cause?: unknown } | null)?.cause ?? error;
+  expect(cause).toMatchObject({ code: "23514", constraint });
+}
+
 describe("search console brand segments (feature 007)", () => {
   const segments = OK.ok ? OK.data.segments : null;
+  const zero = { clicks: 0, impressions: 0, ctr: 0, position: 0 };
   /** A completed row written the way captures before feature 007 were, plus optional segments. */
   const row = (workspaceId: string, extra: Record<string, unknown> = {}) => ({
     workspaceId,
@@ -161,9 +172,10 @@ describe("search console brand segments (feature 007)", () => {
     await refreshSearchConsole(db, ws.id, deps(FAIL));
     const { latest } = await latestSearchConsole(db, ws.id);
     expect(latest).toMatchObject({ status: "failed", segments: null });
-    await expect(
+    await violates(
       db.insert(searchConsoleSnapshots).values({ workspaceId: ws.id, status: "failed", errorKind: "error", errorMessage: "x", segments }),
-    ).rejects.toThrow();
+      "search_console_snapshots_failed_without_segments",
+    );
   });
 
   it.each([
@@ -175,32 +187,79 @@ describe("search console brand segments (feature 007)", () => {
     ["termsTruncated as text", { ...segments, termsTruncated: "no" }],
     ["a metric as text", { ...segments, branded: { ...segments!.branded, clicks: "4" } }],
     ["a totals object without position", { ...segments, nonBranded: { clicks: 1, impressions: 2, ctr: 0.5 } }],
+    // Shapes that the lax JSON path mode let through (review of 007, DB-1).
+    ["the version inside an array", { ...segments, version: [1] }],
+    ["the version in a mixed array", { ...segments, version: [1, "x"] }],
+    ["a totals object inside an array", { ...segments, branded: [segments!.branded] }],
+    ["a good and a bad totals object in an array", { ...segments, branded: [segments!.branded, "x"] }],
+    ["terms nested in an array", { ...segments, terms: [["Olessium"]] }],
+    ["no terms at all", { ...segments, terms: [] }],
+    ["JSON null", null],
   ])("rejects segments with %s (AC-008)", async (_label, bad) => {
     const ws = await workspace();
-    await expect(db.insert(searchConsoleSnapshots).values(row(ws.id, { segments: bad }))).rejects.toThrow();
+    const value = bad === null ? sql`'null'::jsonb` : bad;
+    await violates(db.insert(searchConsoleSnapshots).values(row(ws.id, { segments: value })), "search_console_snapshots_segments_shape");
   });
 
-  it("stores no token, JWT, key or expression when a brand query fails (AC-007)", async () => {
-    const parsed = parseServiceAccount(serviceAccountJson());
-    if (!parsed?.ok) throw new Error("fixture");
-    const token = "ya29.integration-secret-token";
-    const calls: string[] = [];
+  it.each([
+    ["all zero, as the real Olessium capture", { ...segments, branded: zero, nonBranded: zero, previousBranded: zero, previousNonBranded: zero }],
+    ["a truncated term list", { ...segments, termsTruncated: true }],
+    ["a single term", { ...segments, terms: ["olessium.com"] }],
+    ["decimals and an extra key", { ...segments, branded: { clicks: 1, impressions: 3, ctr: 0.333, position: 2.75 }, note: "x" }],
+  ])("accepts segments with %s (AC-008)", async (_label, good) => {
+    const ws = await workspace();
+    await db.insert(searchConsoleSnapshots).values(row(ws.id, { segments: good }));
+    expect((await latestSearchConsole(db, ws.id)).latestCompleted?.segments).toEqual(good);
+  });
+
+  const parsedAccount = parseServiceAccount(serviceAccountJson());
+  if (!parsedAccount?.ok) throw new Error("fixture");
+  const account = parsedAccount.value;
+  const NOW = new Date("2026-10-27T10:00:00Z");
+  const SECRET = "ya29.integration-secret-token";
+  /** Google double: every brand query answers `brand(body)`; the rest answer an empty report. */
+  function google(brand: (body: string) => Response) {
+    const bodies: string[] = [];
     const fetchImpl = (async (input: string, init?: RequestInit) => {
       const url = String(input);
       const body = String(init?.body ?? "");
-      calls.push(body);
-      if (url.includes("oauth2")) return Response.json({ access_token: token });
+      bodies.push(body);
+      if (url.includes("oauth2")) return Response.json({ access_token: SECRET });
       if (url.endsWith("/sites")) return Response.json({ siteEntry: [{ siteUrl: "sc-domain:olessium.com", permissionLevel: "siteOwner" }] });
-      return body.includes("excludingRegex") ? Response.json({}, { status: 429 }) : Response.json({});
+      return body.includes("dimensionFilterGroups") ? brand(body) : Response.json({});
     }) as typeof fetch;
+    return { bodies, deps: { collect: (site: CaptureSite) => collectSearchConsole(account, site, { fetchImpl, now: NOW }) } };
+  }
+  const secretsIn = (bodies: string[]) => [
+    SECRET,
+    new URLSearchParams(bodies[0]!).get("assertion")!,
+    PRIVATE_PEM.split("\n")[1]!,
+    brandTerms({ name: "Olessium", brandAliases: [], domain: "olessium.com" }).expression,
+  ];
+
+  it.each([
+    [403, { error: { details: [{ reason: "SERVICE_DISABLED" }] } }, "api_disabled"],
+    [403, { error: { message: "User does not have sufficient permission for site." } }, "no_access"],
+    [429, {}, "quota_exceeded"],
+    [500, {}, "error"],
+  ])("stores one failed row and nothing secret when a brand query answers %i (AC-007)", async (status, body, kind) => {
     const ws = await workspace();
-    const result = await refreshSearchConsole(db, ws.id, { collect: (site) => collectSearchConsole(parsed.value, site, { fetchImpl, now: new Date("2026-10-27T10:00:00Z") }) });
-    expect(result.ok).toBe(true);
-    const { latest } = await latestSearchConsole(db, ws.id);
-    expect(latest).toMatchObject({ status: "failed", errorKind: "quota_exceeded", segments: null });
-    const jwt = new URLSearchParams(calls[0]!).get("assertion")!;
-    const expression = brandTerms({ name: "Olessium", brandAliases: [], domain: "olessium.com" }).expression;
-    const stored = JSON.stringify(latest);
-    for (const secret of [token, jwt, PRIVATE_PEM.split("\n")[1]!, expression]) expect(stored).not.toContain(secret);
+    const { bodies, deps } = google((request) => (request.includes("excludingRegex") ? Response.json(body, { status }) : Response.json({})));
+    expect((await refreshSearchConsole(db, ws.id, deps)).ok).toBe(true);
+    const rows = await db.select().from(searchConsoleSnapshots).where(eq(searchConsoleSnapshots.workspaceId, ws.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ status: "failed", errorKind: kind, segments: null });
+    const stored = JSON.stringify(rows[0]);
+    for (const secret of secretsIn(bodies)) expect(stored).not.toContain(secret);
+  });
+
+  it("stores terms but no token, JWT, key or expression in a real completed capture (AC-007)", async () => {
+    const ws = await workspace();
+    const { bodies, deps } = google(() => Response.json({ rows: [{ clicks: 1, impressions: 4, ctr: 0.25, position: 3 }] }));
+    await refreshSearchConsole(db, ws.id, deps);
+    const { latestCompleted } = await latestSearchConsole(db, ws.id);
+    expect(latestCompleted?.segments?.terms).toEqual(["Olessium", "olessium.com"]);
+    const stored = JSON.stringify(latestCompleted);
+    for (const secret of secretsIn(bodies)) expect(stored).not.toContain(secret);
   });
 });

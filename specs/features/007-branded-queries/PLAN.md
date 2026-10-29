@@ -16,7 +16,7 @@ Una función pura nueva construye los términos de marca y la expresión RE2. La
 | `src/modules/search-console/google.ts` | `AnalyticsQuery` gana `dimensionFilterGroups?`; el cuerpo solo lo incluye si viene |
 | `src/modules/search-console/collect.ts` | El sitio gana `name` y `brandAliases`; cuatro consultas filtradas en el mismo `Promise.all`; `CollectedData.segments` |
 | `src/modules/search-console/schema.ts`, `src/db/migrations/0009_*` y su `meta/` | Columna `segments` y sus `check` (D006) |
-| `src/modules/search-console/service.ts`, `deps.ts` | Pasar nombre y alias; guardar `segments` |
+| `src/modules/search-console/service.ts` | Pasar nombre y alias; guardar `segments` (`deps.ts` no cambia: pasa el sitio tal cual) |
 | `src/modules/search-console/summary.ts` | `segments` en el resumen; hueco; etiqueta `branded` proyectada en `queries` |
 | `src/components/search-console/search-console-section.tsx` | Bloque «Con tu marca y sin ella», distintivo en la tabla (D005), frase de actualizar |
 | `src/i18n/messages/es.ts`, `en.ts`, `tests/unit/i18n/messages.test.ts` | Claves nuevas en `searchConsole`; nota de privacidad ampliada |
@@ -45,7 +45,7 @@ No cambian: la página SEO (`seo/page.tsx`), la acción, la tarjeta del resumen 
 
 ## Proposed approach
 
-1. **`brand-terms.ts`.** `brandTerms({ name, brandAliases, domain })`: recorta, deduplica por `nameKey`, descarta nombre y alias con menos de 3 caracteres alfanuméricos, conserva el dominio siempre. Por término genera hasta tres variantes (original en minúsculas, sin acentos, forma `nameKey` con `\s+`), quita repetidas y las escapa con el conjunto de D004. Reserva primero el dominio y añade nombre y alias mientras la expresión con `(?i)` mida 4096 caracteres o menos; un término que no cabe se omite entero y se sigue con el siguiente. Devuelve `{ terms, expression, truncated }` o lanza `BrandTermsError` si el dominio solo no cabe. `isBrandedQuery(query, terms)` regenera las variantes de esos `terms` y prueba la alternancia con banderas `iu`.
+1. **`brand-terms.ts`.** `brandTerms({ name, brandAliases, domain })`: recorta, deduplica por `nameKey`, descarta nombre y alias con menos de 3 caracteres alfanuméricos, conserva el dominio siempre. Por término genera hasta tres variantes (original en minúsculas, sin acentos, forma `nameKey`; ` +` entre palabras en las tres, D004), quita repetidas y las escapa con el conjunto de D004. Reserva primero el dominio y añade nombre y alias mientras la expresión con `(?i)` mida 4096 caracteres o menos; un término que no cabe se omite entero y se sigue con el siguiente. Devuelve `{ terms, expression, truncated }` o lanza `BrandTermsError` si el dominio solo no cabe. `isBrandedQuery(query, terms)` regenera las variantes de esos `terms` y prueba la alternancia con banderas `iu`.
 2. **`google.ts`.** Tipo `DimensionFilterGroup` fijo (`groupType: "and"`, un filtro sobre `query` con `includingRegex` o `excludingRegex`). `querySearchAnalytics` lo copia al cuerpo solo si viene; sin él, el cuerpo es idéntico al actual.
 3. **`collect.ts`.** Llama a `brandTerms` antes del token; un `BrandTermsError` da `failed/error` sin red. Tras elegir propiedad, lanza las ocho consultas en un único `Promise.all`. Sin filas, un segmento vale ceros. Un `GscError` en cualquiera da el fallo de siempre.
 4. **Persistencia.** Columna `segments jsonb` nullable con los `check` de D006, generada con `npm run db:generate` y revisada. `service.ts` guarda `segments` en `completed`; `deps.ts` y `service.ts` pasan `name` y `brandAliases` leídos una sola vez.
@@ -86,12 +86,12 @@ No cambian: la página SEO (`seo/page.tsx`), la acción, la tarjeta del resumen 
 ## Rollback strategy
 
 - La columna es nullable y aditiva: el código anterior la ignora.
-- Orden para quitar la feature: (1) desplegar el código sin lectura ni escritura de `segments`; (2) solo después, si se quiere, una migración que borre la columna, aceptando perder los segmentos guardados. No borrar la columna mientras un despliegue la escriba.
-- Sin borrar nada, revertir el commit deja la sección como en la 003.
+- Orden para quitar la feature, en dos entregas: (1) código sin lectura ni escritura de `segments` y sin la columna en `schema.ts` de Drizzle (si sigue declarada, `select()` la nombra y falla en cuanto se borre), sin generar migración; (2) en una entrega posterior, la migración que borra la columna, aceptando perder los segmentos guardados. Entre las dos, cualquier `db:generate` metería ese `DROP` en una migración sin relación: hay que vigilarlo. No borrar la columna mientras un despliegue la escriba.
+- Revertir solo el código: las migraciones `0009` y `0010`, sus `snapshot` y su entrada en `_journal.json` se quedan, porque la base ya las tiene aplicadas y quitarlas del historial rompería la siguiente generación (revisión de base de datos, DB-2).
 
 ## Deployment coupling
 
-La migración `0009` se aplica antes de desplegar el código que escribe `segments` (D-22 del roadmap).
+Las migraciones `0009` y `0010` se aplican antes de desplegar el código que escribe `segments` (D-22 del roadmap).
 
 ## PLAN verification checklist
 

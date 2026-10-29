@@ -6,14 +6,18 @@ import { workspaces } from "@/modules/workspaces/schema";
 const SEGMENT_TOTALS = ["branded", "nonBranded", "previousBranded", "previousNonBranded"] as const;
 const METRICS = ["clicks", "impressions", "ctr", "position"] as const;
 /**
- * JSON path predicate for a well-formed `segments` (feature 007, D006). A missing key makes
- * its comparison false, so absent fields fail too.
+ * JSON path predicate for a well-formed `segments` (feature 007, D006), evaluated in `strict`
+ * mode: lax mode unwraps arrays, so `"version": [1]` or a totals object inside an array would
+ * pass. In strict mode a missing key or a wrong structure is an error inside the filter, which
+ * makes the predicate unknown and rejects the row with a plain check violation.
  */
 const SEGMENTS_SHAPE = [
   "@.version == 1",
   '@.termsTruncated.type() == "boolean"',
   '@.terms.type() == "array"',
-  ...SEGMENT_TOTALS.flatMap((key) => METRICS.map((metric) => `@.${key}.${metric}.type() == "number"`)),
+  "@.terms.size() > 0",
+  '!exists(@.terms[*] ? (@.type() != "string"))',
+  ...SEGMENT_TOTALS.flatMap((key) => [`@.${key}.type() == "object"`, ...METRICS.map((metric) => `@.${key}.${metric}.type() == "number"`)]),
 ].join(" && ");
 
 /**
@@ -61,7 +65,7 @@ export const searchConsoleSnapshots = pgTable(
     check("search_console_snapshots_failed_without_segments", sql`${t.status} <> 'failed' or ${t.segments} is null`),
     check(
       "search_console_snapshots_segments_shape",
-      sql`${t.segments} is null or (jsonb_typeof(${t.segments}) = 'object' and jsonb_path_exists(${t.segments}, ${sql.raw(`'$ ? (${SEGMENTS_SHAPE})'`)}) and not jsonb_path_exists(${t.segments}, '$.terms[*] ? (@.type() != "string")'))`,
+      sql`${t.segments} is null or (jsonb_typeof(${t.segments}) = 'object' and jsonb_path_exists(${t.segments}, ${sql.raw(`'strict $ ? (${SEGMENTS_SHAPE})'`)}))`,
     ),
   ],
 );

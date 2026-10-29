@@ -2,7 +2,7 @@ import { formatDate, formatNumber } from "@/i18n/format";
 import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
 import { getMessages, type Messages } from "@/i18n/messages";
 import type { Change } from "@/modules/overview/types";
-import { isBrandedQuery } from "@/modules/search-console/brand-terms";
+import { brandMatcher } from "@/modules/search-console/brand-terms";
 import type { PageRow, Period, QueryRow, Segments, Totals } from "@/modules/search-console/collect";
 import type { SearchConsoleConfig } from "@/modules/search-console/deps";
 import type { LatestSearchConsole } from "@/modules/search-console/service";
@@ -137,6 +137,11 @@ function metricsOf(totals: Totals, previous: Totals, t: Texts, f: Format): NonNu
   };
 }
 
+function labelled(queries: QueryRow[], terms: string[]): QueryView[] {
+  const branded = brandMatcher(terms);
+  return queries.map((q) => ({ ...q, branded: branded(q.query) }));
+}
+
 function segmentsOf(segments: Segments, totals: Totals, previousTotals: Totals, t: Texts, f: Format): SegmentsView {
   const share = (part: number, whole: number) => (whole > 0 ? f.percent(part / whole) : "—");
   const count = (n: number, unit: (count: number) => string) => `${f.integer(n)} ${unit(Math.round(n))}`;
@@ -224,7 +229,7 @@ export function summarizeSearchConsole(
       period: { start: latestCompleted.currentStart, end: latestCompleted.currentEnd },
       capturedAt: latestCompleted.createdAt,
       metrics: metricsOf(totals, latestCompleted.previousTotals, t, f),
-      queries: segments ? latestCompleted.queries.map((q) => ({ ...q, branded: isBrandedQuery(q.query, segments.terms) })) : latestCompleted.queries,
+      queries: segments ? labelled(latestCompleted.queries, segments.terms) : latestCompleted.queries,
       pages: latestCompleted.pages,
       segments: segments ? segmentsOf(segments, totals, latestCompleted.previousTotals, t, f) : null,
       lastFailure: failed,

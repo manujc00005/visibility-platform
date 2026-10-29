@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BrandTermsError, brandTerms, isBrandedQuery, MAX_EXPRESSION_LENGTH } from "@/modules/search-console/brand-terms";
+import { BrandTermsError, brandMatcher, brandTerms, isBrandedQuery, MAX_EXPRESSION_LENGTH } from "@/modules/search-console/brand-terms";
 
 const clinic = { name: "Clínica García", brandAliases: ["clinicagarcia"], domain: "clinicagarcia.es" };
 const olessium = { name: "Olessium", brandAliases: [], domain: "olessium.com" };
@@ -105,6 +105,21 @@ describe("brandTerms", () => {
     expect(over.truncated).toBe(true);
   });
 
+  it("measures the limit in UTF-8 bytes, so non-ASCII names cannot overshoot it (review of 007)", () => {
+    // "ж" has no NFKD decomposition, so its three variants collapse into one of 2100 UTF-16
+    // units (2118 with prefix and domain: fits) but 4200 bytes (does not fit).
+    const name = "ж".repeat(2100);
+    expect("(?i)".length + name.length + 1 + "ab\\.es|ab +es".length).toBeLessThanOrEqual(MAX_EXPRESSION_LENGTH);
+    const result = brandTerms({ name, brandAliases: [], domain: "ab.es" });
+    expect(result.terms).toEqual(["ab.es"]);
+    expect(result.truncated).toBe(true);
+    expect(Buffer.byteLength(result.expression, "utf8")).toBeLessThanOrEqual(MAX_EXPRESSION_LENGTH);
+  });
+
+  it("refuses an empty domain instead of sending an expression that matches everything (FR-002)", () => {
+    expect(() => brandTerms({ name: "Olessium", brandAliases: [], domain: "  " })).toThrow(BrandTermsError);
+  });
+
   it("fails with a typed error that does not name the domain when the domain alone does not fit (AC-012)", () => {
     const domain = `${"d".repeat(4100)}.es`;
     const error = caught(() => brandTerms({ name: "Olessium", brandAliases: [], domain }));
@@ -147,5 +162,13 @@ describe("isBrandedQuery", () => {
 
   it("is false without terms", () => {
     expect(isBrandedQuery("olessium", [])).toBe(false);
+  });
+
+  it("compiles once per capture and never throws on stored terms", () => {
+    const branded = brandMatcher(["Olessium", "olessium.com"]);
+    expect(["olessium seo", "crm"].map(branded)).toEqual([true, false]);
+    // Terms that no longer build a pattern label nothing instead of breaking the page.
+    expect(() => brandMatcher([" "])("x")).not.toThrow();
+    expect(brandMatcher([" "])("x")).toBe(false);
   });
 });

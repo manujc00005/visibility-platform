@@ -82,9 +82,10 @@ describe("SearchConsoleSection brand split", () => {
     expect(html).not.toContain(t.segments.truncated);
   });
 
-  it("puts the brand badge only on rows that contain a term (AC-005)", () => {
+  it("puts the brand badge only on rows that contain a term, separated from the query text (AC-005)", () => {
     const html = render(completed());
     expect(html.split(BADGE)).toHaveLength(2);
+    expect(html).toMatch(/olessium opiniones <span[^>]*>marca<\/span>/);
     const brandedRow = html.slice(html.indexOf("olessium opiniones"), html.indexOf("crm agencias"));
     expect(brandedRow).toContain(BADGE);
   });
@@ -105,12 +106,17 @@ describe("SearchConsoleSection brand split", () => {
     expect(html).not.toContain(t.segments.missing(t.button.update));
   });
 
-  it("shows the empty phrase instead of blocks for a period without impressions (AC-013)", () => {
-    const html = render(completed({ totals: tot(0, 0), segments: { ...SEGMENTS, branded: tot(0, 0), nonBranded: tot(0, 0) } }));
+  it("keeps the blocks and their change without shares for a period without impressions (AC-013)", () => {
+    const html = render(completed({ totals: tot(0, 0), queries: [], segments: { ...SEGMENTS, branded: tot(0, 0), nonBranded: tot(0, 0) } }));
     expect(html).toContain(t.segments.title);
-    expect(html).toContain(t.noQueries);
-    expect(html).not.toContain(`>${t.segments.branded.label}</dt>`);
+    expect(html.split(t.segments.empty)).toHaveLength(2);
+    expect(html).toContain(`>${t.segments.branded.label}</dt>`);
+    // A drop to zero still shows where it came from.
+    expect(html).toContain("Antes: 20 clics");
     expect(html).not.toContain(t.segments.clicksShare("—"));
+    expect(html).toContain(t.segments.previousHidden("20 clics", "150 impresiones"));
+    // The table's own empty phrase is a different text, shown once.
+    expect(html.split(t.noQueries)).toHaveLength(2);
   });
 
   it("explains a mismatch and a truncated term list (AC-004, AC-012)", () => {
