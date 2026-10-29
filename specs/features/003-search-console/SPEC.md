@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress (2026-10-27). Implementado y probado; falta la verificación con la credencial real y datos reales de olessium.com (T009).
+Done (2026-10-29). T009 con la credencial real: la captura coincide con Search Console, a cero porque la propiedad es reciente (D006). Pasó `/spec-review` y `/qa-review` (Pass tras repetir la suite en `HEAD` y actualizar los documentos) y `/review-all` sin hallazgos críticos ni altos. Mejoras de la vista y pruebas que faltan, para una iteración (D007, TASKS › Follow-ups).
 
 ## Problem
 
@@ -42,7 +42,7 @@ El operador pulsa un botón en la ficha de una empresa y obtiene, desde la API o
 ## Functional requirements
 
 - FR-001 La credencial es una clave JSON de cuenta de servicio en `GSC_SERVICE_ACCOUNT_JSON`, en crudo o en base64. Se valida al usarla; un JSON inválido da `invalid_credentials`, nunca un fallo de arranque.
-- FR-002 El token se obtiene con un JWT RS256 firmado con `node:crypto`, `aud` y endpoint fijos `https://oauth2.googleapis.com/token`, scope `webmasters.readonly`, vida de 1 hora. Se ignora `token_uri` del archivo.
+- FR-002 El token se obtiene con un JWT RS256 firmado con `node:crypto`, `aud` y endpoint fijos `https://oauth2.googleapis.com/token`, scope `webmasters.readonly`, vida de 1 hora. Se ignora `token_uri` del archivo. (Desde la spec 006, `signJwt` y `fetchAccessToken` aceptan otro scope de lectura para GA4 con la misma credencial; Search Console sigue usando este por defecto.)
 - FR-003 La propiedad se elige entre las que la cuenta puede leer (`siteOwner`, `siteFullUser`, `siteRestrictedUser`), por prioridad: `sc-domain:<dominio>`; `https://<host>/`; `https://<dominio>/`; `https://www.<dominio>/`; las mismas en `http://`.
 - FR-004 Periodo actual: 28 días que terminan 3 días antes de la fecha UTC de la captura. Periodo anterior: los 28 días previos. `dataState = final`, `type = web`.
 - FR-005 Cuatro consultas: totales actual, totales anterior, 25 búsquedas principales y 10 páginas principales, ordenadas por clics como devuelve Google.
@@ -95,7 +95,7 @@ Tabla `search_console_snapshots`, migración `0006`. Una fila por intento, borra
 |---|---|---|
 | Search Analytics: endpoint, cuerpo, `dataState`, fechas en hora del Pacífico, `rowLimit` | developers.google.com/webmaster-tools/v1/searchanalytics/query | 2026-10-27 |
 | Token de cuenta de servicio por JWT | developers.google.com/identity/protocols/oauth2/service-account | 2026-10-27 |
-| Cuota 1.200 consultas/min por sitio | doc 08 §3 | UNVERIFIED |
+| Cuota 1.200 consultas/min por sitio | doc 08 §3 | UNVERIFIED; aceptado: un operador hace 4 consultas por clic (D007) |
 
 ## Assumptions
 
@@ -104,4 +104,4 @@ Tabla `search_console_snapshots`, migración `0006`. Una fila por intento, borra
 
 ## Open questions
 
-- Para clientes externos (Fase 5), OAuth del propietario sustituirá o convivirá con la cuenta de servicio.
+- Para clientes externos (Fase 5), OAuth del propietario sustituirá o convivirá con la cuenta de servicio. Status: Deferred al backlog del roadmap (BL-02).
