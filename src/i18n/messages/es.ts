@@ -709,6 +709,26 @@ export const es = {
       sampled: "calculó parte de las cifras con una muestra",
       separator: "; ",
     },
+    keyEvents: {
+      title: "Conversiones desde buscadores",
+      scope: "Eventos clave de Google Analytics en las visitas que llegan desde Google, Bing y el resto de buscadores, que GA4 agrupa en el canal «Organic Search».",
+      organic: { label: "Desde buscadores", hint: "Eventos clave en sesiones que llegaron desde la búsqueda orgánica" },
+      total: { label: "En total", hint: "Suma de los eventos clave de los canales que devuelve Google Analytics" },
+      unit: (count: number): string => (count === 1 ? "evento clave" : "eventos clave"),
+      share: (share: string) => `${share} de los eventos clave llegan desde buscadores.`,
+      table: { caption: "Eventos clave desde buscadores", event: "Evento", count: "Eventos clave" },
+      configured: "Eventos clave configurados en Google Analytics:",
+      configuredMore: "Google Analytics tiene más eventos clave configurados de los que se muestran.",
+      noneConfigured:
+        "Esta propiedad de Google Analytics no tiene eventos clave. Márcalos en Google Analytics (Administrar › Eventos clave) y vuelve a traer los datos.",
+      allZero: "Google Analytics no devolvió eventos clave en estos periodos.",
+      noPrevious: "Si un evento se marcó como clave después del inicio del periodo anterior, Google Analytics no lo cuenta antes de esa fecha.",
+      organicMissing: "Hay eventos clave, pero ninguno llegó con el canal «Organic Search».",
+      limits:
+        "El total suma los canales que devuelve Google Analytics, hasta 100, y la tabla muestra los 10 eventos con más recuento, así que no tienen por qué cuadrar.",
+      missing: (button: string) => `Pulsa «${button}» para ver las conversiones desde buscadores.`,
+      missingNotConfigured: "Configura Google Analytics para ver las conversiones desde buscadores.",
+    },
     note: "Las cifras cuentan todas las visitas a la web, vengan de donde vengan, de quien acepta la analítica si la web pide consentimiento. No se comparan con los clics de Search Console o Bing.",
   },
   bingWebmaster: {

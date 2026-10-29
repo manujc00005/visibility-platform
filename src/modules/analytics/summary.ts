@@ -1,6 +1,6 @@
 import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
 import { getMessages, type Messages } from "@/i18n/messages";
-import type { Period, Totals } from "@/modules/analytics/collect";
+import type { KeyEvents, Period, Totals } from "@/modules/analytics/collect";
 import type { AnalyticsConfig } from "@/modules/analytics/deps";
 import type { Quality } from "@/modules/analytics/ga4";
 import { MAX_PROPERTIES } from "@/modules/analytics/collect";
@@ -28,6 +28,25 @@ export interface PageView {
   users: string;
 }
 
+/** The key event block (feature 008). */
+export interface KeyEventsView {
+  /** `none_configured`: the property has no key events now; the block shows no figures. */
+  state: "none_configured" | "ok";
+  organic: MetricView;
+  total: MetricView;
+  /** Organic share of the total, or "—" when the total is zero. */
+  organicShare: string;
+  byEvent: { event: string; keyEvents: string }[];
+  configured: string[];
+  configuredMore: boolean;
+  /** Both periods add up to zero. */
+  allZero: boolean;
+  /** Key events are configured and the previous period is zero: marking may be recent. */
+  noPrevious: boolean;
+  /** Key events exist but none came under the exact `Organic Search` channel (D003). */
+  organicMissing: boolean;
+}
+
 export interface AnalyticsSummary {
   state: AnalyticsState;
   /** Owner-readable explanation for every state but "ok". */
@@ -46,6 +65,8 @@ export interface AnalyticsSummary {
   lastFailure: { text: string; at: Date } | null;
   /** Stored data stays visible when the credential is later removed or broken (D007). */
   configWarning: string | null;
+  /** Key events of the latest good capture; null without one or when it predates feature 008. */
+  keyEvents: KeyEventsView | null;
 }
 
 type Texts = Messages["analytics"];
@@ -77,6 +98,28 @@ function qualityText(q: Quality | null, t: Texts): string | null {
   return items.length > 0 ? t.quality.intro(items.join(t.quality.separator)) : null;
 }
 
+function keyEventsOf(k: KeyEvents, t: Texts, shared: Messages["searchConsole"], f: ReturnType<typeof formatters>): KeyEventsView {
+  // Each figure compares only against its own previous value (FR-008 of 008).
+  const metric = (current: number, previous: number): MetricView => ({
+    value: f.integer(current),
+    previous: previous > 0 ? f.integer(previous) : null,
+    change: previous > 0 ? countChange(current, previous, t.keyEvents.unit, shared, f) : null,
+  });
+  const configured = k.configured.length > 0;
+  return {
+    state: configured ? "ok" : "none_configured",
+    organic: metric(k.organic, k.previousOrganic),
+    total: metric(k.total, k.previousTotal),
+    organicShare: k.total > 0 ? f.percent(k.organic / k.total) : "—",
+    byEvent: k.organicByEvent.map((e) => ({ event: e.event, keyEvents: f.integer(e.keyEvents) })),
+    configured: k.configured,
+    configuredMore: k.configuredMore,
+    allZero: k.total === 0 && k.previousTotal === 0,
+    noPrevious: configured && k.previousTotal === 0,
+    organicMissing: k.total > 0 && k.organic === 0,
+  };
+}
+
 const isZero = (x: Totals) => x.users === 0 && x.sessions === 0 && x.views === 0;
 
 export function summarizeAnalytics(stored: LatestAnalytics, config: AnalyticsConfig, domain: string, locale: Locale = DEFAULT_LOCALE): AnalyticsSummary {
@@ -99,6 +142,7 @@ export function summarizeAnalytics(stored: LatestAnalytics, config: AnalyticsCon
     quality: null,
     lastFailure: null,
     configWarning: null,
+    keyEvents: null,
   };
   // Same variable as Search Console (D002), so the same explanation.
   const configReason =
@@ -116,6 +160,9 @@ export function summarizeAnalytics(stored: LatestAnalytics, config: AnalyticsCon
       capturedAt: c.createdAt,
       lastFailure: failed,
       configWarning: configReason ? `${configReason} ${t.reasons.storedData}` : null,
+      // Shown in the no-visits state too, with the quality notice of its reports (D006 of 008).
+      keyEvents: c.keyEvents ? keyEventsOf(c.keyEvents, t, shared, f) : null,
+      quality: qualityText(c.quality, t),
     };
     if (isZero(c.totals) && isZero(c.previousTotals)) return { ...captured, state: "empty", reason: t.reasons.empty };
 
@@ -136,7 +183,6 @@ export function summarizeAnalytics(stored: LatestAnalytics, config: AnalyticsCon
         change: comparable ? countChange(row.sessions, row.previousSessions, t.units.sessions, shared, f) : null,
       })),
       pages: c.pages.map((row) => ({ page: row.page, views: f.integer(row.views), users: f.integer(row.users) })),
-      quality: qualityText(c.quality, t),
     };
   }
 

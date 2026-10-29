@@ -146,3 +146,87 @@ describe("summarizeAnalytics", () => {
     expect(summarizeAnalytics(none, READY, "olessium.com")).toMatchObject({ state: "no_data", reason: "Pulsa «Traer datos de Analytics» para ver cuánta gente visita tu web." });
   });
 });
+
+describe("summarizeAnalytics key events (feature 008)", () => {
+  const KE = {
+    version: 1 as const,
+    configured: ["generate_lead", "purchase"],
+    configuredMore: false,
+    total: 100,
+    previousTotal: 80,
+    organic: 25,
+    previousOrganic: 20,
+    organicByEvent: [
+      { event: "generate_lead", keyEvents: 18 },
+      { event: "(not set)", keyEvents: 4 },
+    ],
+  };
+  const view = (keyEvents: Partial<typeof KE> | null, overrides: Partial<AnalyticsSnapshot> = {}, locale: "es" | "en" = "es") =>
+    summarizeAnalytics(both(completed({ keyEvents: keyEvents === null ? null : { ...KE, ...keyEvents }, ...overrides })), READY, "olessium.com", locale).keyEvents;
+
+  it("formats both figures, their changes, the organic share and the breakdown (AC-001, AC-008)", () => {
+    expect(view({})).toEqual({
+      state: "ok",
+      organic: { value: "25", previous: "20", change: { direction: "better", text: "Antes: 20 eventos clave (+25 %)" } },
+      total: { value: "100", previous: "80", change: { direction: "better", text: "Antes: 80 eventos clave (+25 %)" } },
+      organicShare: "25,0 %",
+      byEvent: [
+        { event: "generate_lead", keyEvents: "18" },
+        { event: "(not set)", keyEvents: "4" },
+      ],
+      configured: ["generate_lead", "purchase"],
+      configuredMore: false,
+      allZero: false,
+      noPrevious: false,
+      organicMissing: false,
+    });
+  });
+
+  it("hides each change on its own when its previous value is zero (AC-008)", () => {
+    const noOrganicBefore = view({ previousOrganic: 0 })!;
+    expect(noOrganicBefore.organic.change).toBeNull();
+    expect(noOrganicBefore.total.change).not.toBeNull();
+    const noTotalBefore = view({ previousTotal: 0, previousOrganic: 0 })!;
+    expect(noTotalBefore.total.change).toBeNull();
+    expect(noTotalBefore.noPrevious).toBe(true);
+  });
+
+  it("shows «—» as the share of a zero total and flags all-zero periods (AC-007, AC-008)", () => {
+    const zero = view({ total: 0, previousTotal: 0, organic: 0, previousOrganic: 0, organicByEvent: [] })!;
+    expect(zero.organicShare).toBe("—");
+    expect(zero.allZero).toBe(true);
+  });
+
+  it("says when key events exist but none came under Organic Search (AC-003)", () => {
+    expect(view({ organic: 0, previousOrganic: 0 })!.organicMissing).toBe(true);
+    expect(view({})!.organicMissing).toBe(false);
+  });
+
+  it("marks a property without configured key events, whatever its counts (AC-007)", () => {
+    expect(view({ configured: [], total: 5, organic: 2 })!.state).toBe("none_configured");
+    expect(view({ configured: [] })!.noPrevious).toBe(false);
+  });
+
+  it("carries the flag for more configured key events than kept (AC-008)", () => {
+    expect(view({ configuredMore: true })!.configuredMore).toBe(true);
+  });
+
+  it("keeps the block and the quality notice in the no-visits state (AC-003, AC-006)", () => {
+    const s = summarizeAnalytics(
+      both(completed({ totals: ZERO, previousTotals: ZERO, channels: [], pages: [], quality: { otherRow: false, thresholded: true, sampled: false }, keyEvents: KE })),
+      READY,
+      "olessium.com",
+    );
+    expect(s.state).toBe("empty");
+    expect(s.keyEvents?.organic.value).toBe("25");
+    expect(s.quality).toContain("ocultó algunas filas");
+  });
+
+  it("has no block for a capture taken before feature 008 (AC-006)", () => {
+    expect(view(null)).toBeNull();
+  });
+
+  it("formats in English", () => {
+    expect(view({}, {}, "en")).toMatchObject({ organicShare: "25.0%", total: { change: { text: "Before: 80 key events (+25%)" } } });
+  });
+});

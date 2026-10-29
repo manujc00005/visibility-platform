@@ -134,3 +134,88 @@ describe("AnalyticsSection", () => {
     expect(html).toContain(en.quality.thresholded);
   });
 });
+
+describe("AnalyticsSection key events (feature 008)", () => {
+  const KE = {
+    version: 1 as const,
+    configured: ["generate_lead", "purchase"],
+    configuredMore: false,
+    total: 100,
+    previousTotal: 80,
+    organic: 25,
+    previousOrganic: 20,
+    organicByEvent: [{ event: "generate_lead", keyEvents: 18 }],
+  };
+  const k = t.keyEvents;
+  const zero = { users: 0, sessions: 0, views: 0 };
+
+  it("paints both figures, their changes, the share, the breakdown and the configured events (AC-001, AC-008)", () => {
+    const { html } = render(completed({ keyEvents: KE }), READY);
+    expect(html).toContain(k.title);
+    expect(html).toContain(k.scope);
+    expect(html).toContain(`>${k.organic.label}</dt>`);
+    expect(html).toContain(`>${k.total.label}</dt>`);
+    expect(html).toContain("Antes: 20 eventos clave (+25 %)");
+    expect(html).toContain(k.share("25,0 %"));
+    expect(html).toContain(k.table.caption);
+    expect(html).toContain(">generate_lead</td>");
+    expect(html).toContain(k.configured);
+    expect(html).toContain(">purchase</span>");
+    expect(html).toContain(k.limits);
+    expect(html).not.toContain(k.noneConfigured);
+    expect(html).not.toContain(k.missing(t.button.update));
+  });
+
+  it("explains how to mark key events, without figures, when none are configured (AC-007)", () => {
+    const { html } = render(completed({ keyEvents: { ...KE, configured: [] } }), READY);
+    expect(html).toContain(k.noneConfigured);
+    expect(html).not.toContain(`>${k.organic.label}</dt>`);
+    expect(html).not.toContain(k.table.caption);
+  });
+
+  it("says GA4 returned no key events when both periods are zero, with zero figures (AC-007)", () => {
+    const { html } = render(completed({ keyEvents: { ...KE, total: 0, previousTotal: 0, organic: 0, previousOrganic: 0, organicByEvent: [] } }), READY);
+    expect(html).toContain(k.allZero);
+    expect(html).toContain(k.noPrevious);
+    expect(html).toContain(`>${k.organic.label}</dt>`);
+    expect(html).not.toContain(k.table.caption);
+  });
+
+  it("warns about a missing organic count and more configured events (AC-003, AC-008)", () => {
+    const { html } = render(completed({ keyEvents: { ...KE, organic: 0, previousOrganic: 0, organicByEvent: [], configuredMore: true } }), READY);
+    expect(html).toContain(k.organicMissing);
+    expect(html).toContain(k.configuredMore);
+  });
+
+  it("keeps the block and the quality notice in the no-visits state (AC-003, AC-006)", () => {
+    const { html } = render(
+      completed({ totals: zero, previousTotals: zero, channels: [], pages: [], quality: { otherRow: false, thresholded: true, sampled: false }, keyEvents: KE }),
+      READY,
+    );
+    expect(html).toContain(t.reasons.empty);
+    expect(html).toContain(k.title);
+    expect(html).toContain("ocultó algunas filas");
+  });
+
+  it("asks to update a capture taken before feature 008, or to set up when there is no button (AC-006)", () => {
+    expect(render(completed({ keyEvents: null }), READY).html).toContain(k.missing(t.button.update));
+    const invalid = render(completed({ keyEvents: null }), INVALID).html;
+    expect(invalid).toContain(k.missingNotConfigured);
+    expect(invalid).not.toContain(k.title);
+  });
+
+  it("paints hostile event and configured names as text: no script element and no link (AC-010)", () => {
+    const hostile = '<script>alert(1)</script><a href="https://x.example">x</a>';
+    const { html } = render(completed({ channels: [{ channel: hostile, sessions: 5, previousSessions: 1 }], keyEvents: { ...KE, configured: [hostile], organicByEvent: [{ event: hostile, keyEvents: 3 }] } }), READY);
+    expect(html.split("&lt;script&gt;alert(1)&lt;/script&gt;").length).toBe(4);
+    expect(html).not.toContain("<script>alert");
+    expect(html).not.toContain('<a href="https://x.example"');
+  });
+
+  it("renders in English", () => {
+    const en = getMessages("en").analytics.keyEvents;
+    const { html } = render(completed({ keyEvents: KE }), READY, "en");
+    expect(html).toContain(en.title);
+    expect(html).toContain(en.share("25.0%"));
+  });
+});

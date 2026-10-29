@@ -7,7 +7,7 @@ import type { Locale } from "@/i18n/locale";
 import { getMessages, type Messages } from "@/i18n/messages";
 import type { Tone } from "@/modules/audits/status";
 import type { AnalyticsConfig } from "@/modules/analytics/deps";
-import type { AnalyticsState, AnalyticsSummary } from "@/modules/analytics/summary";
+import type { AnalyticsState, AnalyticsSummary, KeyEventsView } from "@/modules/analytics/summary";
 import { displayDay } from "@/modules/search-console/summary";
 import { displayDate } from "@/modules/workspaces/presentation";
 import type { RefreshAnalyticsState } from "@/app/workspaces/[id]/seo/actions";
@@ -58,6 +58,76 @@ function TableFrame({ caption, children }: { caption: string; children: ReactNod
 }
 
 const METRICS = ["users", "sessions", "views"] as const;
+const KEY_FIGURES = ["organic", "total"] as const;
+
+/** Key events (feature 008), inside the card so it also shows without visits (D005). Names are GA4 data: plain text. */
+function KeyEventsBlock({ v, t }: { v: KeyEventsView; t: Texts }) {
+  const k = t.keyEvents;
+  const note = "max-w-3xl text-xs text-muted-foreground";
+  return (
+    <section aria-labelledby="ga4-key-events" className="flex flex-col gap-3 border-t border-border/60 pt-4">
+      <h3 id="ga4-key-events" className="text-sm font-semibold">
+        {k.title}
+      </h3>
+      <p className={note}>{k.scope}</p>
+      {v.state === "none_configured" ? (
+        <p className="max-w-3xl text-sm text-muted-foreground">{k.noneConfigured}</p>
+      ) : (
+        <>
+          <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {KEY_FIGURES.map((key) => (
+              <div key={key} className="flex flex-col gap-1 rounded-lg bg-muted/50 p-3">
+                <dt className="text-xs font-medium text-muted-foreground">{k[key].label}</dt>
+                <dd className="text-2xl font-semibold tabular-nums">{v[key].value}</dd>
+                <dd>
+                  <ChangeLine change={v[key].change} note={v[key].change === null ? t.metrics.noPrevious : null} className="text-xs" />
+                </dd>
+                <dd className="hidden text-xs text-muted-foreground sm:block">{k[key].hint}</dd>
+              </div>
+            ))}
+          </dl>
+          {v.allZero ? <p className="max-w-3xl text-sm text-muted-foreground">{k.allZero}</p> : <p className={note}>{k.share(v.organicShare)}</p>}
+          {v.organicMissing ? <p className={note}>{k.organicMissing}</p> : null}
+          {v.noPrevious ? <p className={note}>{k.noPrevious}</p> : null}
+          {v.byEvent.length > 0 ? (
+            <TableFrame caption={k.table.caption}>
+              <thead>
+                <tr className="border-b text-left text-xs text-muted-foreground">
+                  <th scope="col" className="px-4 py-2 font-medium">
+                    {k.table.event}
+                  </th>
+                  <th scope="col" className="px-4 py-2 text-right font-medium">
+                    {k.table.count}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {v.byEvent.map((row, i) => (
+                  <tr key={`e${i}`}>
+                    <td className="max-w-[16rem] px-4 py-2 break-words sm:max-w-md">{row.event}</td>
+                    <td className="px-4 py-2 text-right tabular-nums">{row.keyEvents}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </TableFrame>
+          ) : null}
+          <p className={note}>{k.limits}</p>
+        </>
+      )}
+      {v.configured.length > 0 ? (
+        <p className="flex max-w-3xl flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+          <span>{k.configured}</span>
+          {v.configured.map((name, i) => (
+            <span key={i} className="rounded bg-muted px-1.5 py-0.5 font-mono break-all text-foreground">
+              {name}
+            </span>
+          ))}
+        </p>
+      ) : null}
+      {v.configuredMore ? <p className={note}>{k.configuredMore}</p> : null}
+    </section>
+  );
+}
 
 export function AnalyticsSection({
   s,
@@ -110,6 +180,13 @@ export function AnalyticsSection({
         ) : s.reason ? (
           <p className="max-w-3xl text-sm text-muted-foreground">{s.reason}</p>
         ) : null}
+        {s.keyEvents ? (
+          <KeyEventsBlock v={s.keyEvents} t={t} />
+        ) : hasData || s.state === "empty" ? (
+          <p className="max-w-3xl text-sm text-muted-foreground">{canRun ? t.keyEvents.missing(t.button.update) : t.keyEvents.missingNotConfigured}</p>
+        ) : null}
+        {/* Without visits the tables below are hidden; the notice still covers the key event reports (D006 of 008). */}
+        {s.state === "empty" && s.keyEvents && s.quality ? <p className="max-w-3xl text-xs text-muted-foreground">{s.quality}</p> : null}
         {s.state === "not_configured" || s.state === "invalid_config" || s.state === "error" || s.configWarning ? <Setup config={config} t={t} /> : null}
         {s.configWarning ? <p className="max-w-3xl text-sm text-muted-foreground">{s.configWarning}</p> : null}
         <NoticeList notices={notices} />
