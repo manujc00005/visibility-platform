@@ -283,3 +283,63 @@ describe("summarizeSearchConsole brand segments (feature 007)", () => {
     expect(s.segments?.branded).toMatchObject({ clicks: "30 clicks", clicksShare: "30.0%" });
   });
 });
+
+describe("summarizeSearchConsole position change per query (feature 009)", () => {
+  const row = (position: number, previous: { position: number } | null | undefined) => ({
+    query: "crm agencias",
+    clicks: 5,
+    impressions: 50,
+    ctr: 0.1,
+    position,
+    ...(previous === undefined ? {} : { previous: previous && { clicks: 2, impressions: 20, ctr: 0.1, position: previous.position } }),
+  });
+  const summarize = (queries: ReturnType<typeof row>[], locale: "es" | "en" = "es", overrides: Partial<SearchConsoleSnapshot> = {}) => {
+    const snapshot = completed({ queries, ...overrides });
+    return summarizeSearchConsole({ latest: snapshot, latestCompleted: snapshot }, READY, "olessium.com", locale);
+  };
+  const change = (position: number, previous: { position: number } | null | undefined) => summarize([row(position, previous)]).queries[0]!.positionChange;
+
+  it("goes up when the position number falls, and down when it rises (AC-003)", () => {
+    expect(change(8, { position: 12 })).toEqual({ direction: "better", text: "Sube 4,0" });
+    expect(change(12, { position: 8 })).toEqual({ direction: "worse", text: "Baja 4,0" });
+  });
+
+  it("uses the same threshold as the overall position (AC-003)", () => {
+    expect(change(8.3, { position: 8 })).toEqual({ direction: "same", text: "Igual" });
+    expect(change(8.5, { position: 8 })).toEqual({ direction: "worse", text: "Baja 0,5" });
+    expect(change(7.5, { position: 8 })).toEqual({ direction: "better", text: "Sube 0,5" });
+  });
+
+  it("tells apart no previous data from a capture without the key (AC-004)", () => {
+    expect(change(8, null)).toEqual({ direction: "same", text: "Sin dato anterior" });
+    expect(change(8, undefined)).toBeNull();
+  });
+
+  it("projects the change with and without segments, leaving branded as in feature 007", () => {
+    const segments = {
+      version: 1 as const,
+      terms: ["crm"],
+      termsTruncated: false,
+      branded: { clicks: 0, impressions: 0, ctr: 0, position: 0 },
+      nonBranded: { clicks: 0, impressions: 0, ctr: 0, position: 0 },
+      previousBranded: { clicks: 0, impressions: 0, ctr: 0, position: 0 },
+      previousNonBranded: { clicks: 0, impressions: 0, ctr: 0, position: 0 },
+    };
+    const withSegments = summarize([row(8, { position: 12 })], "es", { segments }).queries[0]!;
+    expect(withSegments).toMatchObject({ branded: true, positionChange: { text: "Sube 4,0" } });
+    const without = summarize([row(8, { position: 12 })]).queries[0]!;
+    expect(without).not.toHaveProperty("branded");
+    expect(without.positionChange?.text).toBe("Sube 4,0");
+  });
+
+  it("does not change the wording of the overall position (regression)", () => {
+    const s = summarize([row(8, { position: 12 })]);
+    expect(s.metrics?.position.change?.text).toBe("Antes: 12,1 (sube 2,7 puestos)");
+  });
+
+  it("writes the change in English", () => {
+    expect(summarize([row(8, { position: 12 })], "en").queries[0]!.positionChange?.text).toBe("Up 4.0");
+    expect(summarize([row(12, { position: 8 })], "en").queries[0]!.positionChange?.text).toBe("Down 4.0");
+    expect(summarize([row(8, null)], "en").queries[0]!.positionChange?.text).toBe("No previous data");
+  });
+});

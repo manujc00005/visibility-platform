@@ -855,6 +855,10 @@ export const en = {
       positionUp: (before: string, places: string) => `Before: ${before} (up ${places} places)`,
       positionDown: (before: string, places: string) => `Before: ${before} (down ${places} places)`,
       ctrChanged: (before: string, signedPoints: string) => `Before: ${before} (${signedPoints} points)`,
+      queryUp: (places: string) => `Up ${places}`,
+      queryDown: (places: string) => `Down ${places}`,
+      querySame: "Same",
+      queryNoPrevious: "No previous data",
     },
     source: {
       prefix: "Google Search Console · property ",
@@ -872,7 +876,11 @@ export const en = {
     },
     noQueries: "No searches in this period.",
     privacyNote:
-      "Searches made only a few times are not listed because Google hides them to protect privacy, so the table can add up to less than the total. The position is an average of every appearance, not a fixed place. When splitting searches with and without the brand, Google does not classify all of them either: the difference from the total appears as “unclassified”.",
+      "Searches made only a few times are not listed because Google hides them to protect privacy, so the table can add up to less than the total. The position is an average of every appearance, not a fixed place. When splitting searches with and without the brand, Google does not classify all of them either: the difference from the total appears as “unclassified”. The change under each position compares the average of two 28-day periods, and a search with no previous data may not be among the first 1,000 of that period.",
+    positionChanges: {
+      missing: (button: string) => `Press “${button}” to see whether each search goes up or down.`,
+      missingNotConfigured: "Set up Search Console to see whether each search goes up or down.",
+    },
     segments: {
       title: "With your brand and without it",
       branded: { label: "With your brand", hint: "Searches that contain the company name, an alias or the domain" },

@@ -149,3 +149,66 @@ describe("SearchConsoleSection brand split", () => {
     expect(html).toContain(`>${en.segments.badge}</span>`);
   });
 });
+
+describe("SearchConsoleSection position change per query (feature 009)", () => {
+  const before = (position: number) => ({ clicks: 2, impressions: 20, ctr: 0.1, position });
+  const row = (query: string, position: number, previous: ReturnType<typeof before> | null) => ({ query, clicks: 5, impressions: 50, ctr: 0.1, position, previous });
+  const queries = [row("sube", 8, before(12)), row("baja", 12, before(8)), row("igual", 8, before(8.2)), row("olessium opiniones", 3, null)];
+  const columns = (html: string) => (html.slice(0, html.indexOf("</thead>")).match(/<th /g) ?? []).length;
+
+  it("paints the four texts under the position, without a new column (AC-003, AC-004, AC-008)", () => {
+    const html = render(completed({ queries }));
+    for (const text of ["Sube 4,0", "Baja 4,0", t.changes.querySame, t.changes.queryNoPrevious]) expect(html).toContain(text);
+    expect(columns(html)).toBe(5);
+    expect(html).not.toContain(t.positionChanges.missing(t.button.update));
+  });
+
+  it("shows the brand badge and the change in the same row (AC-008)", () => {
+    const html = render(completed({ queries }));
+    const brandedRow = html.slice(html.indexOf("olessium opiniones"), html.indexOf("</tr>", html.indexOf("olessium opiniones")));
+    expect(brandedRow).toContain(BADGE);
+    expect(brandedRow).toContain(t.changes.queryNoPrevious);
+  });
+
+  it("paints no change in the pages table (AC-008)", () => {
+    const html = render(completed({ queries: [], pages: [{ page: "https://olessium.com/", clicks: 1, impressions: 2, ctr: 0.5, position: 3 }] }));
+    expect(html).toContain("https://olessium.com/");
+    expect(html).not.toContain(t.changes.querySame);
+    expect(html).not.toContain(t.changes.queryNoPrevious);
+  });
+
+  it("asks to update a capture whose rows lack the comparison, or to set up without a button (AC-006)", () => {
+    const old = [{ query: "crm agencias", clicks: 5, impressions: 50, ctr: 0.1, position: 4.2 }];
+    expect(render(completed({ queries: old })).includes(t.positionChanges.missing(t.button.update))).toBe(true);
+    const none = render(completed({ queries: old }), NOT_CONFIGURED);
+    expect(none).toContain(t.positionChanges.missingNotConfigured);
+    expect(none).not.toContain(t.positionChanges.missing(t.button.update));
+  });
+
+  it("asks nothing without rows (AC-006)", () => {
+    const html = render(completed({ queries: [] }));
+    expect(html).not.toContain(t.positionChanges.missing(t.button.update));
+    expect(html).not.toContain(t.positionChanges.missingNotConfigured);
+  });
+
+  it("keeps a hostile query as text (AC-008)", () => {
+    const html = render(completed({ queries: [row('<script>alert(1)</script><a href="https://x.example">x</a>', 8, before(12))] }));
+    expect(html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
+    expect(html).not.toContain("<script>alert");
+    expect(html).not.toContain('<a href="https://x.example"');
+  });
+
+  it("keeps the previous sentences of the note and adds the comparison one (AC-009)", () => {
+    expect(t.privacyNote).toContain("la suma de la tabla puede ser menor que el total");
+    expect(t.privacyNote).toContain("La posición es una media de todas las apariciones");
+    expect(t.privacyNote).toContain("sin clasificar");
+    expect(t.privacyNote).toContain("compara la media de dos periodos de 28 días");
+  });
+
+  it("renders in English", () => {
+    const en = getMessages("en").searchConsole;
+    const html = render(completed({ queries }), READY, "en");
+    expect(html).toContain("Up 4.0");
+    expect(html).toContain(en.changes.queryNoPrevious);
+  });
+});

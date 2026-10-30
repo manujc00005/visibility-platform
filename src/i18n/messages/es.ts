@@ -860,6 +860,10 @@ export const es = {
       positionUp: (before: string, places: string) => `Antes: ${before} (sube ${places} puestos)`,
       positionDown: (before: string, places: string) => `Antes: ${before} (baja ${places} puestos)`,
       ctrChanged: (before: string, signedPoints: string) => `Antes: ${before} (${signedPoints} puntos)`,
+      queryUp: (places: string) => `Sube ${places}`,
+      queryDown: (places: string) => `Baja ${places}`,
+      querySame: "Igual",
+      queryNoPrevious: "Sin dato anterior",
     },
     source: {
       prefix: "Google Search Console · propiedad ",
@@ -877,7 +881,11 @@ export const es = {
     },
     noQueries: "Sin búsquedas en este periodo.",
     privacyNote:
-      "Las búsquedas que se hacen pocas veces no aparecen en la lista porque Google las oculta para proteger la privacidad, así que la suma de la tabla puede ser menor que el total. La posición es una media de todas las apariciones, no un puesto fijo. Al separar las búsquedas con y sin marca, Google tampoco clasifica todas: la diferencia con el total aparece como «sin clasificar».",
+      "Las búsquedas que se hacen pocas veces no aparecen en la lista porque Google las oculta para proteger la privacidad, así que la suma de la tabla puede ser menor que el total. La posición es una media de todas las apariciones, no un puesto fijo. Al separar las búsquedas con y sin marca, Google tampoco clasifica todas: la diferencia con el total aparece como «sin clasificar». El cambio bajo cada posición compara la media de dos periodos de 28 días, y una búsqueda sin dato anterior puede no estar entre las 1000 primeras de ese periodo.",
+    positionChanges: {
+      missing: (button: string) => `Pulsa «${button}» para ver si cada búsqueda sube o baja.`,
+      missingNotConfigured: "Configura Search Console para ver si cada búsqueda sube o baja.",
+    },
     segments: {
       title: "Con tu marca y sin ella",
       branded: { label: "Con tu marca", hint: "Búsquedas que contienen el nombre de la empresa, un alias o el dominio" },

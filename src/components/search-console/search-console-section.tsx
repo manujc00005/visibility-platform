@@ -5,6 +5,7 @@ import { formatNumber } from "@/i18n/format";
 import type { Locale } from "@/i18n/locale";
 import { getMessages, type Messages } from "@/i18n/messages";
 import type { Tone } from "@/modules/audits/status";
+import type { Change } from "@/modules/overview/types";
 import type { SearchConsoleConfig } from "@/modules/search-console/deps";
 import { displayDay, type SearchConsoleState, type SearchConsoleSummary, type SegmentsView } from "@/modules/search-console/summary";
 import { displayDate } from "@/modules/workspaces/presentation";
@@ -41,7 +42,7 @@ function Setup({ config, t }: { config: SearchConsoleConfig; t: Texts }) {
   );
 }
 
-type Row = { key: string; label: string; badge?: string; clicks: number; impressions: number; ctr: number; position: number };
+type Row = { key: string; label: string; badge?: string; change?: Change | null; clicks: number; impressions: number; ctr: number; position: number };
 
 function Table({ caption, head, rows, t, locale }: { caption: string; head: string; rows: Row[]; t: Texts; locale: Locale }) {
   const num = (n: number) => formatNumber(Math.round(n), locale, { maximumFractionDigits: 0 });
@@ -88,7 +89,11 @@ function Table({ caption, head, rows, t, locale }: { caption: string; head: stri
               <td className="px-3 py-2 text-right tabular-nums">{num(r.clicks)}</td>
               <td className="px-3 py-2 text-right tabular-nums">{num(r.impressions)}</td>
               <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">{pct(r.ctr)}</td>
-              <td className="px-4 py-2 text-right tabular-nums">{pos(r.position)}</td>
+              <td className="px-4 py-2 text-right tabular-nums">
+                {pos(r.position)}
+                {/* Short text under the number: at 375 px the table has no room for another column (D004 of 009). */}
+                {r.change ? <ChangeLine change={r.change} className="flex justify-end text-xs font-normal" /> : null}
+              </td>
             </tr>
           ))}
         </tbody>
@@ -215,13 +220,16 @@ export function SearchConsoleSection({
             <Table
               caption={t.tables.queries}
               head={t.tables.query}
-              rows={s.queries.map((q, i) => ({ key: `q${i}`, label: q.query, badge: q.branded ? t.segments.badge : undefined, ...q }))}
+              rows={s.queries.map((q, i) => ({ key: `q${i}`, label: q.query, badge: q.branded ? t.segments.badge : undefined, change: q.positionChange, ...q }))}
               t={t}
               locale={locale}
             />
           ) : (
             <p className="text-sm text-muted-foreground">{t.noQueries}</p>
           )}
+          {s.queries.length > 0 && s.queries.every((q) => q.positionChange === null) ? (
+            <p className="max-w-3xl text-sm text-muted-foreground">{canRun ? t.positionChanges.missing(t.button.update) : t.positionChanges.missingNotConfigured}</p>
+          ) : null}
           {s.pages.length > 0 ? (
             <Table caption={t.tables.pages} head={t.tables.page} rows={s.pages.map((p, i) => ({ key: `p${i}`, label: p.page, ...p }))} t={t} locale={locale} />
           ) : null}

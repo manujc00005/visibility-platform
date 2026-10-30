@@ -47,8 +47,11 @@ export interface SegmentsView {
   truncated: boolean;
 }
 
-/** A stored query row; `branded` is only present when the capture has segments (FR-007). */
-export type QueryView = QueryRow & { branded?: boolean };
+/**
+ * A stored query row. `branded` is only present when the capture has segments (007, FR-007).
+ * `positionChange` is null only for captures taken before feature 009.
+ */
+export type QueryView = QueryRow & { branded?: boolean; positionChange: Change | null };
 
 export interface SearchConsoleSummary {
   state: SearchConsoleState;
@@ -137,9 +140,18 @@ function metricsOf(totals: Totals, previous: Totals, t: Texts, f: Format): NonNu
   };
 }
 
-function labelled(queries: QueryRow[], terms: string[]): QueryView[] {
-  const branded = brandMatcher(terms);
-  return queries.map((q) => ({ ...q, branded: branded(q.query) }));
+/** Short text for the table cell (D004 of 009); same threshold as the overall position. */
+function queryPositionChange(q: QueryRow, t: Texts, f: Format): Change | null {
+  if (q.previous === undefined) return null;
+  if (q.previous === null) return { direction: "same", text: t.changes.queryNoPrevious };
+  const delta = q.position - q.previous.position;
+  if (Math.abs(delta) < POSITION_SAME) return { direction: "same", text: t.changes.querySame };
+  return delta < 0 ? { direction: "better", text: t.changes.queryUp(f.decimal(-delta)) } : { direction: "worse", text: t.changes.queryDown(f.decimal(delta)) };
+}
+
+function projected(queries: QueryRow[], terms: string[] | null, t: Texts, f: Format): QueryView[] {
+  const branded = terms ? brandMatcher(terms) : null;
+  return queries.map((q) => ({ ...q, ...(branded ? { branded: branded(q.query) } : {}), positionChange: queryPositionChange(q, t, f) }));
 }
 
 function segmentsOf(segments: Segments, totals: Totals, previousTotals: Totals, t: Texts, f: Format): SegmentsView {
@@ -229,7 +241,7 @@ export function summarizeSearchConsole(
       period: { start: latestCompleted.currentStart, end: latestCompleted.currentEnd },
       capturedAt: latestCompleted.createdAt,
       metrics: metricsOf(totals, latestCompleted.previousTotals, t, f),
-      queries: segments ? labelled(latestCompleted.queries, segments.terms) : latestCompleted.queries,
+      queries: projected(latestCompleted.queries, segments?.terms ?? null, t, f),
       pages: latestCompleted.pages,
       segments: segments ? segmentsOf(segments, totals, latestCompleted.previousTotals, t, f) : null,
       lastFailure: failed,
