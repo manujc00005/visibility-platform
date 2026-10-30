@@ -54,19 +54,19 @@ function Table({ caption, head, rows, t, locale }: { caption: string; head: stri
         <caption className="px-4 pt-4 pb-2 text-left text-base font-semibold">{caption}</caption>
         <thead>
           <tr className="border-b text-left text-xs text-muted-foreground">
-            <th scope="col" className="px-4 py-2 font-medium">
+            <th scope="col" className="px-3 py-2 font-medium sm:px-4">
               {head}
             </th>
-            <th scope="col" className="px-3 py-2 text-right font-medium">
+            <th scope="col" className="px-2 py-2 text-right font-medium sm:px-3">
               {t.tables.clicks}
             </th>
-            <th scope="col" className="px-3 py-2 text-right font-medium">
+            <th scope="col" className="px-2 py-2 text-right font-medium sm:px-3">
               {t.tables.impressions}
             </th>
             <th scope="col" className="hidden px-3 py-2 text-right font-medium sm:table-cell">
               {t.tables.ctr}
             </th>
-            <th scope="col" className="px-4 py-2 text-right font-medium">
+            <th scope="col" className="px-3 py-2 text-right font-medium sm:px-4">
               {t.tables.position}
             </th>
           </tr>
@@ -75,7 +75,7 @@ function Table({ caption, head, rows, t, locale }: { caption: string; head: stri
           {rows.map((r) => (
             <tr key={r.key}>
               {/* Search terms and URLs are data from Google: plain text, never links (B08b). */}
-              <td className="max-w-[16rem] px-4 py-2 break-words sm:max-w-md">
+              <td className="max-w-[16rem] px-3 py-2 break-words sm:max-w-md sm:px-4">
                 {r.label}
                 {/* A word, not only a colour, so it reads without styles (D005 of 007). The space keeps
                     "opiniones" and "marca" apart when copied or read aloud. */}
@@ -85,14 +85,23 @@ function Table({ caption, head, rows, t, locale }: { caption: string; head: stri
                     {r.badge}
                   </span>
                 ) : null}
+                {/* On phones the change goes here: under the position it pushed that column out of view (D004 of 009). */}
+                {r.change ? (
+                  <div className="sm:hidden">
+                    <ChangeLine change={r.change} className="text-xs font-normal" />
+                  </div>
+                ) : null}
               </td>
-              <td className="px-3 py-2 text-right tabular-nums">{num(r.clicks)}</td>
-              <td className="px-3 py-2 text-right tabular-nums">{num(r.impressions)}</td>
+              <td className="px-2 py-2 text-right tabular-nums sm:px-3">{num(r.clicks)}</td>
+              <td className="px-2 py-2 text-right tabular-nums sm:px-3">{num(r.impressions)}</td>
               <td className="hidden px-3 py-2 text-right tabular-nums sm:table-cell">{pct(r.ctr)}</td>
-              <td className="px-4 py-2 text-right tabular-nums">
+              <td className="px-3 py-2 text-right tabular-nums sm:px-4">
                 {pos(r.position)}
-                {/* Short text under the number: at 375 px the table has no room for another column (D004 of 009). */}
-                {r.change ? <ChangeLine change={r.change} className="flex justify-end text-xs font-normal" /> : null}
+                {r.change ? (
+                  <div className="hidden justify-end sm:flex">
+                    <ChangeLine change={r.change} className="text-xs font-normal" />
+                  </div>
+                ) : null}
               </td>
             </tr>
           ))}

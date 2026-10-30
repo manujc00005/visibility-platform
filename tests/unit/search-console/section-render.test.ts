@@ -163,6 +163,16 @@ describe("SearchConsoleSection position change per query (feature 009)", () => {
     expect(html).not.toContain(t.positionChanges.missing(t.button.update));
   });
 
+  it("places the change under the search on phones and under the position from sm up (D004)", () => {
+    const html = render(completed({ queries: [row("sube", 8, before(12))] }));
+    const firstCell = html.slice(html.indexOf(">sube"), html.indexOf("</td>", html.indexOf(">sube")));
+    expect(firstCell).toContain('class="sm:hidden"');
+    expect(firstCell).toContain("Sube 4,0");
+    const cells = html.slice(html.indexOf(">sube")).split("</tr>")[0]!.split("<td ");
+    expect(cells.at(-1)).toContain('class="hidden justify-end sm:flex"');
+    expect(cells.at(-1)).toContain("Sube 4,0");
+  });
+
   it("shows the brand badge and the change in the same row (AC-008)", () => {
     const html = render(completed({ queries }));
     const brandedRow = html.slice(html.indexOf("olessium opiniones"), html.indexOf("</tr>", html.indexOf("olessium opiniones")));
