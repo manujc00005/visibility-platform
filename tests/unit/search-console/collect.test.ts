@@ -279,6 +279,21 @@ describe("collectSearchConsole previous position per query (feature 009)", () =>
     const current = range("2026-09-27", "2026-10-24");
     const previous = range("2026-08-30", "2026-09-26");
     expect(raw.slice(0, 4)).toEqual([body(current, [], 1), body(previous, [], 1), body(current, ["query"], 25), body(current, ["page"], 10)]);
+    const filtered = (period: object, operator: string) =>
+      JSON.stringify({
+        ...period,
+        dimensions: [],
+        rowLimit: 1,
+        dimensionFilterGroups: [{ groupType: "and", filters: [{ dimension: "query", operator, expression: brandTerms(site).expression }] }],
+        type: "web",
+        dataState: "final",
+      });
+    expect(raw.slice(4, 8)).toEqual([
+      filtered(current, "includingRegex"),
+      filtered(current, "excludingRegex"),
+      filtered(previous, "includingRegex"),
+      filtered(previous, "excludingRegex"),
+    ]);
     expect(raw[8]).toBe(body(previous, ["query"], 1000));
   });
 
@@ -291,6 +306,27 @@ describe("collectSearchConsole previous position per query (feature 009)", () =>
     expect(queries[0]!.query).toHaveLength(200);
     expect(queries[0]!.previous?.position).toBe(9);
     expect(queries[1]!.previous).toBeNull();
+  });
+
+  it("keeps 25 rows out of 30 and finds their match among 1000 previous rows (AC-001)", async () => {
+    const now = Array.from({ length: 30 }, (_, i) => row(`busqueda ${i}`, 30 - i, 5));
+    const before = Array.from({ length: 1000 }, (_, i) => row(`anterior ${i}`, 1, 20));
+    before[999] = row("busqueda 24", 1, 9);
+    const { impl } = google(now, before);
+    const outcome = await collectSearchConsole(account, site, { fetchImpl: impl, now: NOW });
+    const queries = outcome.ok ? outcome.data.queries : [];
+    expect(queries).toHaveLength(25);
+    expect(queries[24]!.previous?.position).toBe(9);
+    expect(queries[0]!.previous).toBeNull();
+  });
+
+  it("treats hostile query texts as plain Map keys", async () => {
+    const { impl } = google([row("__proto__", 5, 8), row("constructor", 4, 8), row("toString", 3, 8)], [row("__proto__", 2, 12)]);
+    const outcome = await collectSearchConsole(account, site, { fetchImpl: impl, now: NOW });
+    const queries = outcome.ok ? outcome.data.queries : [];
+    expect(queries[0]!.previous?.position).toBe(12);
+    expect(queries[1]!.previous).toBeNull();
+    expect(queries[2]!.previous).toBeNull();
   });
 
   it("does not match texts that differ only in case or spacing (AC-005)", async () => {
@@ -306,6 +342,19 @@ describe("collectSearchConsole previous position per query (feature 009)", () =>
     const none = google([row("crm", 5, 8)], []);
     const empty = await collectSearchConsole(account, site, { fetchImpl: none.impl, now: NOW });
     expect(empty.ok && empty.data.queries[0]!.previous).toBeNull();
+  });
+
+  it("fails the capture on a malformed answer or a timeout of the new query (AC-007)", async () => {
+    const malformed = google([row("crm", 5, 8)], Response.json({ rows: [{ keys: ["crm"], clicks: -1, impressions: 1, ctr: 0, position: 1 }] }));
+    expect(await collectSearchConsole(account, site, { fetchImpl: malformed.impl, now: NOW })).toMatchObject({ ok: false, kind: "error" });
+    const inner = google([], []).impl;
+    const slow = (async (input: string, init?: RequestInit) => {
+      if (String(init?.body ?? "").includes('"startDate":"2026-08-30","endDate":"2026-09-26","dimensions":["query"]')) {
+        return new Promise((_resolve, reject) => init?.signal?.addEventListener("abort", () => reject(init.signal!.reason)));
+      }
+      return inner(input, init);
+    }) as typeof fetch;
+    expect(await collectSearchConsole(account, site, { fetchImpl: slow, timeoutMs: 20, now: NOW })).toMatchObject({ ok: false, kind: "error", message: "Search Console no respondió a tiempo" });
   });
 
   it.each([

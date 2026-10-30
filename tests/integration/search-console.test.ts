@@ -329,10 +329,15 @@ describe("search console previous position per query (feature 009)", () => {
     for (const secret of [SECRET, new URLSearchParams(bodies[0]!).get("assertion")!, PRIVATE_PEM.split("\n")[1]!]) expect(stored).not.toContain(secret);
   });
 
-  it("keeps the last good capture after the new query fails (AC-007)", async () => {
+  it.each([
+    [403, { error: { details: [{ reason: "SERVICE_DISABLED" }] } }],
+    [403, { error: { message: "User does not have sufficient permission for site." } }],
+    [429, {}],
+    [500, {}],
+  ])("keeps the last good capture after the new query answers %i (AC-007)", async (status, body) => {
     const ws = await workspace();
     await refreshSearchConsole(db, ws.id, google(answer).deps);
-    await refreshSearchConsole(db, ws.id, google(() => Response.json({}, { status: 429 })).deps);
+    await refreshSearchConsole(db, ws.id, google(() => Response.json(body, { status })).deps);
     const { latest, latestCompleted } = await latestSearchConsole(db, ws.id);
     expect(latest?.status).toBe("failed");
     expect(latestCompleted?.queries[0]?.previous).toEqual(previous);

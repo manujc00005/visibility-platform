@@ -145,7 +145,8 @@ function queryPositionChange(q: QueryRow, t: Texts, f: Format): Change | null {
   if (q.previous === undefined) return null;
   if (q.previous === null) return { direction: "same", text: t.changes.queryNoPrevious };
   const delta = q.position - q.previous.position;
-  if (Math.abs(delta) < POSITION_SAME) return { direction: "same", text: t.changes.querySame };
+  // The tolerance keeps an exact 0.5 a change: 8.2 − 7.7 is 0.4999… in floating point.
+  if (Math.abs(delta) + 1e-9 < POSITION_SAME) return { direction: "same", text: t.changes.querySame };
   return delta < 0 ? { direction: "better", text: t.changes.queryUp(f.decimal(-delta)) } : { direction: "worse", text: t.changes.queryDown(f.decimal(delta)) };
 }
 

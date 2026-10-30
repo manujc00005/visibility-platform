@@ -5,6 +5,7 @@ import type { RefreshSearchConsoleState } from "@/app/workspaces/[id]/seo/action
 import { SearchConsoleSection } from "@/components/search-console/search-console-section";
 import type { Locale } from "@/i18n/locale";
 import { getMessages } from "@/i18n/messages";
+import { PREVIOUS_QUERIES } from "@/modules/search-console/collect";
 import type { SearchConsoleConfig } from "@/modules/search-console/deps";
 import type { SearchConsoleSnapshot } from "@/modules/search-console/schema";
 import { summarizeSearchConsole } from "@/modules/search-console/summary";
@@ -180,11 +181,45 @@ describe("SearchConsoleSection position change per query (feature 009)", () => {
     expect(brandedRow).toContain(t.changes.queryNoPrevious);
   });
 
-  it("paints no change in the pages table (AC-008)", () => {
-    const html = render(completed({ queries: [], pages: [{ page: "https://olessium.com/", clicks: 1, impressions: 2, ctr: 0.5, position: 3 }] }));
-    expect(html).toContain("https://olessium.com/");
-    expect(html).not.toContain(t.changes.querySame);
-    expect(html).not.toContain(t.changes.queryNoPrevious);
+  it("paints no change in the pages table, even next to queries that have one (AC-008)", () => {
+    const html = render(completed({ queries, pages: [{ page: "https://olessium.com/", clicks: 1, impressions: 2, ctr: 0.5, position: 3 }] }));
+    const pagesTable = html.slice(html.indexOf(t.tables.pages), html.indexOf("</table>", html.indexOf(t.tables.pages)));
+    expect(pagesTable).toContain("https://olessium.com/");
+    for (const text of ["Sube", "Baja", t.changes.querySame, t.changes.queryNoPrevious]) expect(pagesTable).not.toContain(text);
+    expect(pagesTable).not.toContain('class="sm:hidden"');
+  });
+
+  it("says on phones that the change is about the position (review DOM-01)", () => {
+    const html = render(completed({ queries: [row("sube", 8, before(12))] }));
+    expect(html).toContain(`<span class="sr-only">${t.tables.position}: </span>`);
+  });
+
+  it("paints no change line for rows without the comparison, keeping their figures and badge (AC-004, AC-006)", () => {
+    const old = [{ query: "olessium opiniones", clicks: 5, impressions: 50, ctr: 0.1, position: 4.2 }];
+    const html = render(completed({ queries: old }));
+    expect(html).not.toContain('class="sm:hidden"');
+    for (const text of ["Sube", "Baja", t.changes.querySame, t.changes.queryNoPrevious]) expect(html).not.toContain(text);
+    expect(html).toContain(">4,2<");
+    expect(html).toContain(BADGE);
+    expect(html.indexOf(t.positionChanges.missing(t.button.update))).toBeGreaterThan(html.indexOf("</table>"));
+  });
+
+  it("treats each row on its own in a mix, without the update phrase", () => {
+    const mixed = [row("sube", 8, before(12)), { query: "antigua", clicks: 1, impressions: 2, ctr: 0.5, position: 3 }];
+    const html = render(completed({ queries: mixed }));
+    expect(html).toContain("Sube 4,0");
+    expect(html).not.toContain(t.positionChanges.missing(t.button.update));
+    const oldRow = html.slice(html.indexOf(">antigua"), html.indexOf("</tr>", html.indexOf(">antigua")));
+    expect(oldRow).not.toContain('class="sm:hidden"');
+  });
+
+  it("keeps the rows and their changes of the last good capture after a failure (AC-007)", () => {
+    const good = completed({ queries });
+    const failed = completed({ id: "f1", status: "failed", property: null, totals: null, previousTotals: null, queries: [], segments: null, errorKind: "quota_exceeded", errorMessage: "x", createdAt: new Date("2026-10-28T10:00:00Z") });
+    const s = summarizeSearchConsole({ latest: failed, latestCompleted: good }, READY, "olessium.com", "es");
+    const html = renderToStaticMarkup(createElement(SearchConsoleSection, { s, config: READY, action: noop, locale: "es" }));
+    expect(html).toContain("Sube 4,0");
+    expect(html).toContain(t.failures.quota_exceeded);
   });
 
   it("asks to update a capture whose rows lack the comparison, or to set up without a button (AC-006)", () => {
@@ -213,12 +248,22 @@ describe("SearchConsoleSection position change per query (feature 009)", () => {
     expect(t.privacyNote).toContain("La posición es una media de todas las apariciones");
     expect(t.privacyNote).toContain("sin clasificar");
     expect(t.privacyNote).toContain("compara la media de dos periodos de 28 días");
+    expect(t.privacyNote).toContain("no es un histórico");
+    expect(t.privacyNote).toContain(`las ${PREVIOUS_QUERIES} primeras`);
+    expect(t.privacyNote).not.toContain("bajo cada posición");
+    const en = getMessages("en").searchConsole.privacyNote;
+    expect(en).toContain("so the table can add up to less than the total");
+    expect(en).toContain("two 28-day periods");
+    expect(en).toContain("first 1,000");
+    expect(en).not.toContain("under each position");
   });
 
   it("renders in English", () => {
     const en = getMessages("en").searchConsole;
     const html = render(completed({ queries }), READY, "en");
     expect(html).toContain("Up 4.0");
+    expect(html).toContain("Down 4.0");
+    expect(html).toContain(en.changes.querySame);
     expect(html).toContain(en.changes.queryNoPrevious);
   });
 });

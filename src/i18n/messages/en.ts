@@ -876,10 +876,10 @@ export const en = {
     },
     noQueries: "No searches in this period.",
     privacyNote:
-      "Searches made only a few times are not listed because Google hides them to protect privacy, so the table can add up to less than the total. The position is an average of every appearance, not a fixed place. When splitting searches with and without the brand, Google does not classify all of them either: the difference from the total appears as “unclassified”. The change under each position compares the average of two 28-day periods, and a search with no previous data may not be among the first 1,000 of that period.",
+      "Searches made only a few times are not listed because Google hides them to protect privacy, so the table can add up to less than the total. The position is an average of every appearance, not a fixed place. When splitting searches with and without the brand, Google does not classify all of them either: the difference from the total appears as “unclassified”. The position change shown with each search compares the average of two 28-day periods and is not a history, and a search with no previous data may not be among the first 1,000 of that period.",
     positionChanges: {
-      missing: (button: string) => `Press “${button}” to see whether each search goes up or down.`,
-      missingNotConfigured: "Set up Search Console to see whether each search goes up or down.",
+      missing: (button: string) => `Press “${button}” to see whether each search moves up or down in position.`,
+      missingNotConfigured: "Set up Search Console to see whether each search moves up or down in position.",
     },
     segments: {
       title: "With your brand and without it",

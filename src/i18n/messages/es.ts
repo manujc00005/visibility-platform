@@ -881,10 +881,10 @@ export const es = {
     },
     noQueries: "Sin búsquedas en este periodo.",
     privacyNote:
-      "Las búsquedas que se hacen pocas veces no aparecen en la lista porque Google las oculta para proteger la privacidad, así que la suma de la tabla puede ser menor que el total. La posición es una media de todas las apariciones, no un puesto fijo. Al separar las búsquedas con y sin marca, Google tampoco clasifica todas: la diferencia con el total aparece como «sin clasificar». El cambio bajo cada posición compara la media de dos periodos de 28 días, y una búsqueda sin dato anterior puede no estar entre las 1000 primeras de ese periodo.",
+      "Las búsquedas que se hacen pocas veces no aparecen en la lista porque Google las oculta para proteger la privacidad, así que la suma de la tabla puede ser menor que el total. La posición es una media de todas las apariciones, no un puesto fijo. Al separar las búsquedas con y sin marca, Google tampoco clasifica todas: la diferencia con el total aparece como «sin clasificar». El cambio de posición que acompaña a cada búsqueda compara la media de dos periodos de 28 días y no es un histórico, y una búsqueda sin dato anterior puede no estar entre las 1000 primeras de ese periodo.",
     positionChanges: {
-      missing: (button: string) => `Pulsa «${button}» para ver si cada búsqueda sube o baja.`,
-      missingNotConfigured: "Configura Search Console para ver si cada búsqueda sube o baja.",
+      missing: (button: string) => `Pulsa «${button}» para ver si cada búsqueda sube o baja de posición.`,
+      missingNotConfigured: "Configura Search Console para ver si cada búsqueda sube o baja de posición.",
     },
     segments: {
       title: "Con tu marca y sin ella",

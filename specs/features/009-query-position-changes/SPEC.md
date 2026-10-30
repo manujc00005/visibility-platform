@@ -10,7 +10,7 @@ La sección «Google Search Console» enseña las 25 búsquedas principales con 
 
 ## Goal
 
-Cada captura de Search Console guarda, para cada una de las 25 búsquedas principales del periodo actual, sus cifras del periodo anterior. La tabla de búsquedas muestra bajo cada posición si la búsqueda sube, baja o sigue igual, y lo dice cuando no hay dato anterior. Sin proveedor nuevo, sin coste y con la misma credencial.
+Cada captura de Search Console guarda, para cada una de las 25 búsquedas principales del periodo actual, sus cifras del periodo anterior. La tabla de búsquedas muestra junto a cada búsqueda si sube, baja o sigue igual de posición, y lo dice cuando no hay dato anterior. Sin proveedor nuevo, sin coste y con la misma credencial.
 
 ## Non-goals
 
@@ -39,7 +39,7 @@ Cada captura de Search Console guarda, para cada una de las 25 búsquedas princi
 
 1. Al capturar, la app pide también las búsquedas del periodo anterior y busca en ellas cada una de las 25 principales del periodo actual.
 2. Cada fila guardada lleva las cifras del periodo anterior, o indica que no se encontraron.
-3. En la tabla, bajo la posición de cada búsqueda, aparece «Sube 2,7», «Baja 1,3», «Igual» o «Sin dato anterior».
+3. En la tabla, bajo la posición de cada búsqueda (en móvil, bajo el texto de la búsqueda), aparece «Sube 2,7», «Baja 1,3», «Igual» o «Sin dato anterior».
 4. Una nota explica que se comparan medias de dos periodos de 28 días y que no es un puesto fijo ni un histórico.
 5. Una captura anterior a esta feature se muestra como hasta ahora, sin cambios por fila, y una frase pide actualizar los datos si tiene búsquedas.
 6. Si la consulta nueva falla, la captura entera falla con el motivo de siempre.
@@ -48,13 +48,13 @@ Cada captura de Search Console guarda, para cada una de las 25 búsquedas princi
 
 - FR-001 Consulta nueva: una llamada más a Search Analytics con el periodo anterior de la captura, `dimensions: ["query"]` y `rowLimit: 1000` (`PREVIOUS_QUERIES`), en el mismo `Promise.all` que las ocho actuales. Usa la misma propiedad, `type: "web"` y `dataState: "final"`. Las ocho consultas actuales mantienen su cuerpo exacto.
 - FR-002 Emparejado: cada una de las 25 búsquedas del periodo actual se busca por igualdad exacta del texto completo devuelto por Google, antes de recortarlo a 200 caracteres. No se normalizan mayúsculas, acentos ni espacios.
-- FR-003 Persistencia: `QueryRow` gana `previous: Totals | null`. Vale `Totals` con las cifras del periodo anterior si se encontró, y `null` si no. Se guarda solo para las 25 filas; las otras filas de la respuesta se descartan.
+- FR-003 Persistencia: `QueryRow` gana `previous?: Totals | null` (*enmienda, D006:* opcional, porque el tipo también describe las filas guardadas antes de esta feature; toda captura nueva escribe la clave). Vale `Totals` con las cifras del periodo anterior si se encontró, y `null` si no. Se guarda solo para las 25 filas; las otras filas de la respuesta se descartan.
 - FR-004 Tres casos distintos por fila: clave `previous` ausente (captura anterior a esta feature), `null` (no estaba entre las 1000 búsquedas devueltas) y `Totals` (hay comparación). Un `null` no significa que la búsqueda sea nueva: Google puede omitirla por el límite de filas o por ser poco frecuente.
-- FR-005 Cambio por fila: `delta = position − previous.position`, con las cifras crudas. Si `|delta| < 0,5` (`POSITION_SAME`, el mismo umbral que la posición global), el estado es `same`. Si `delta < 0`, `up` (`better`). Si `delta > 0`, `down` (`worse`). La magnitud se muestra con un decimal.
+- FR-005 Cambio por fila: `delta = position − previous.position`, con las cifras crudas. Si `|delta| < 0,5` (`POSITION_SAME`, el mismo umbral que la posición global, con una tolerancia de 1e-9 para que un ±0,5 exacto siga siendo cambio pese a la coma flotante, D006), el estado es `same`. Si `delta < 0`, `up` (`better`). Si `delta > 0`, `down` (`worse`). La magnitud se muestra con un decimal.
 - FR-006 Resumen: las filas proyectadas de `queries` ganan `positionChange: Change | null`. Vale `null` solo con la clave `previous` ausente. Con `previous: null`, la dirección es `same` y el texto es «Sin dato anterior». La proyección funciona con o sin `segments`: la etiqueta `branded` de la 007 no cambia.
 - FR-007 Tabla: el cambio se pinta bajo la posición, en la misma celda, con `ChangeLine` y un texto corto: «Sube 2,7», «Baja 1,3», «Igual» o «Sin dato anterior». No se añade ninguna columna. La tabla de páginas no cambia.
   - *Enmienda tras T006 (D004):* en móvil el cambio va bajo el texto de la búsqueda, porque bajo la posición escondía esa columna. El relleno lateral de las dos tablas baja en móvil.
-- FR-008 Nota: la nota de privacidad se amplía con una frase que dice que el cambio compara la posición media de dos periodos de 28 días, y que la búsqueda puede no estar entre las primeras 1000 del periodo anterior. Conserva sus frases actuales.
+- FR-008 Nota: la nota de privacidad se amplía con una frase que dice que el cambio de posición compara la media de dos periodos de 28 días, que no es un histórico, y que la búsqueda puede no estar entre las primeras 1000 del periodo anterior. Conserva sus frases actuales.
 - FR-009 Capturas antiguas: si la última captura tiene filas y ninguna lleva la clave `previous`, la sección muestra una frase bajo la tabla que pide «Actualizar datos» si hay botón, o explica que hay que configurar la credencial si no lo hay. Sin filas no se muestra la frase.
 - FR-010 Fallo: un `GscError` en la consulta nueva produce el motivo existente (`invalid_credentials`, `api_disabled`, `no_access`, `quota_exceeded` o `error`). Se guarda solo una fila `failed`, nunca una `completed` parcial. El último éxito sigue visible.
 - FR-011 Textos en `es` y `en` en el namespace `searchConsole`, con la salida española como referencia.
@@ -69,7 +69,7 @@ Cada captura de Search Console guarda, para cada una de las 25 búsquedas princi
 
 ## API / Interface changes
 
-- `QueryRow` gana `previous: Totals | null`.
+- `QueryRow` gana `previous?: Totals | null`.
 - `QueryView` gana `positionChange: Change | null`.
 - `SearchConsoleSection`: `Row` gana un cambio opcional, que solo pasan las filas de búsquedas. Sin acción ni ruta nueva.
 
@@ -131,7 +131,8 @@ Sin migración. `previous` vive dentro de cada elemento del array `queries` (`js
 
 ## Open questions
 
-- Ninguna bloqueante. A decidir en `/spec-plan`: el contenedor exacto del texto del cambio a 375 px, siempre que cumpla AC-011.
+- **Contenedor del texto del cambio a 375 px.** Resolved: bajo la búsqueda en móvil y bajo la posición desde `sm` (D004).
+- **Si el texto de una búsqueda coincide exactamente entre periodos.** Deferred: Olessium no tiene impresiones (D005, TASKS › Follow-ups).
 
 ## Decisions pre-registered for DECISIONS.md
 

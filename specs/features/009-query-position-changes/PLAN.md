@@ -2,7 +2,7 @@
 
 ## Summary
 
-La recogida añade una consulta del periodo anterior con la dimensión `query` y empareja las 25 búsquedas principales por texto exacto. Cada fila guarda sus cifras anteriores dentro de `queries`. El resumen calcula el cambio y la tabla lo pinta bajo la posición. Sin migración, sin proveedor nuevo y sin dependencias.
+La recogida añade una consulta del periodo anterior con la dimensión `query` y empareja las 25 búsquedas principales por texto exacto. Cada fila guarda sus cifras anteriores dentro de `queries`. El resumen calcula el cambio y la tabla lo pinta bajo la posición, o bajo la búsqueda en móvil (D004). Sin migración, sin proveedor nuevo y sin dependencias.
 
 ## Related spec
 
@@ -14,11 +14,11 @@ La recogida añade una consulta del periodo anterior con la dimensión `query` y
 |---|---|
 | `src/modules/search-console/collect.ts` | `QueryRow.previous`, `PREVIOUS_QUERIES`, consulta nueva en el `Promise.all` y emparejado con `Map` |
 | `src/modules/search-console/summary.ts` | `QueryView.positionChange`, `queryPositionChange` y proyección con o sin `segments` |
-| `src/components/search-console/search-console-section.tsx` | Cambio bajo la posición y frase de captura antigua |
+| `src/components/search-console/search-console-section.tsx` | Cambio bajo la posición o bajo la búsqueda en móvil, frase de captura antigua y menos relleno lateral en móvil en las dos tablas |
 | `src/i18n/messages/es.ts`, `en.ts`, `tests/unit/i18n/messages.test.ts` | Textos del cambio, frases y nota ampliada |
 | `tests/unit/search-console/{collect,summary,section-render}.test.ts`, `tests/integration/search-console.test.ts` | Pruebas |
 
-No cambian: `google.ts`, `schema.ts`, `service.ts`, migraciones, la tabla de páginas, la tarjeta del resumen, Bing, GA4 ni el informe PDF.
+No cambian: `google.ts`, `schema.ts`, `service.ts`, migraciones, el contenido de la tabla de páginas, la tarjeta del resumen, Bing, GA4 ni el informe PDF.
 
 ## Context budget
 
@@ -37,9 +37,9 @@ No cambian: `google.ts`, `schema.ts`, `service.ts`, migraciones, la tabla de pá
 
 ## Proposed approach
 
-1. **`collect.ts`.** `QueryRow` gana `previous: Totals | null`. Se añade una novena consulta al `Promise.all` con `{ ...range(previous), dimensions: ["query"], rowLimit: PREVIOUS_QUERIES }`. Un `Map` por `keys[0]` conserva la primera fila de cada texto. Cada fila actual busca su texto completo, antes de recortar a 200.
+1. **`collect.ts`.** `QueryRow` gana `previous?: Totals | null`. Se añade una novena consulta al `Promise.all` con `{ ...range(previous), dimensions: ["query"], rowLimit: PREVIOUS_QUERIES }`. Un `Map` por `keys[0]` conserva la primera fila de cada texto. Cada fila actual busca su texto completo, antes de recortar a 200.
 2. **`summary.ts`.** `queryPositionChange(row, t, f)` devuelve `null` si la clave `previous` falta, «Sin dato anterior» con `same` si es `null`, y si no aplica el umbral `POSITION_SAME` con el texto corto. `queries` se proyecta siempre con `positionChange`, y `branded` solo con `segments`.
-3. **Sección.** `Row` gana `change?: Change | null`. La celda de posición pinta `ChangeLine` si hay cambio. Bajo la tabla, la frase de captura antigua si hay filas y ninguna tiene `positionChange`.
+3. **Sección.** `Row` gana `change?: Change | null`. La celda de posición pinta `ChangeLine` desde `sm`, y la de la búsqueda en móvil. Bajo la tabla, la frase de captura antigua si hay filas y ninguna tiene `positionChange`.
 4. **Catálogos** `es`/`en`: `changes.queryUp`, `queryDown`, `querySame`, `queryNoPrevious`, las dos frases de captura antigua y la nota ampliada.
 
 ## Alternatives considered

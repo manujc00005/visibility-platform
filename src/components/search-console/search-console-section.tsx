@@ -51,7 +51,7 @@ function Table({ caption, head, rows, t, locale }: { caption: string; head: stri
   return (
     <div className="overflow-x-auto rounded-2xl border border-border/80 bg-card shadow-card">
       <table className="w-full text-sm">
-        <caption className="px-4 pt-4 pb-2 text-left text-base font-semibold">{caption}</caption>
+        <caption className="px-3 pt-4 pb-2 text-left text-base font-semibold sm:px-4">{caption}</caption>
         <thead>
           <tr className="border-b text-left text-xs text-muted-foreground">
             <th scope="col" className="px-3 py-2 font-medium sm:px-4">
@@ -88,6 +88,8 @@ function Table({ caption, head, rows, t, locale }: { caption: string; head: stri
                 {/* On phones the change goes here: under the position it pushed that column out of view (D004 of 009). */}
                 {r.change ? (
                   <div className="sm:hidden">
+                    {/* Under the search it needs to say it is about the position, not about the search. */}
+                    <span className="sr-only">{t.tables.position}: </span>
                     <ChangeLine change={r.change} className="text-xs font-normal" />
                   </div>
                 ) : null}

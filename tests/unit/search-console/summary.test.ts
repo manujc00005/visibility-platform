@@ -308,6 +308,8 @@ describe("summarizeSearchConsole position change per query (feature 009)", () =>
     expect(change(8.3, { position: 8 })).toEqual({ direction: "same", text: "Igual" });
     expect(change(8.5, { position: 8 })).toEqual({ direction: "worse", text: "Baja 0,5" });
     expect(change(7.5, { position: 8 })).toEqual({ direction: "better", text: "Sube 0,5" });
+    // 8.2 − 7.7 is 0.4999… in floating point and must still count as a change.
+    expect(change(8.2, { position: 7.7 })).toEqual({ direction: "worse", text: "Baja 0,5" });
   });
 
   it("tells apart no previous data from a capture without the key (AC-004)", () => {
