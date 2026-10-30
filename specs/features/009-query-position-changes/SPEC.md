@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Ready (2026-10-30). Plan, tareas y decisiones en esta carpeta.
 
 ## Problem
 
