@@ -263,3 +263,78 @@ describe("search console brand segments (feature 007)", () => {
     for (const secret of secretsIn(bodies)) expect(stored).not.toContain(secret);
   });
 });
+
+describe("search console previous position per query (feature 009)", () => {
+  const parsedAccount = parseServiceAccount(serviceAccountJson());
+  if (!parsedAccount?.ok) throw new Error("fixture");
+  const account = parsedAccount.value;
+  const SECRET = "ya29.integration-secret-009";
+  const previous = { clicks: 2, impressions: 40, ctr: 0.05, position: 12.1 };
+
+  /** Google double: `before` answers the query report of the previous period. */
+  function google(before: () => Response) {
+    const bodies: string[] = [];
+    const fetchImpl = (async (input: string, init?: RequestInit) => {
+      const url = String(input);
+      const body = String(init?.body ?? "");
+      bodies.push(body);
+      if (url.includes("oauth2")) return Response.json({ access_token: SECRET });
+      if (url.endsWith("/sites")) return Response.json({ siteEntry: [{ siteUrl: "sc-domain:olessium.com", permissionLevel: "siteOwner" }] });
+      const request = JSON.parse(body) as { dimensions: string[]; startDate: string };
+      if (request.dimensions[0] !== "query") return Response.json({});
+      if (request.startDate === "2026-09-27") {
+        return Response.json({
+          rows: [
+            { keys: ["crm agencias"], clicks: 5, impressions: 50, ctr: 0.1, position: 8 },
+            { keys: ["olessium"], clicks: 3, impressions: 9, ctr: 0.33, position: 1.2 },
+          ],
+        });
+      }
+      return before();
+    }) as typeof fetch;
+    return { bodies, deps: { collect: (site: CaptureSite) => collectSearchConsole(account, site, { fetchImpl, now: new Date("2026-10-27T10:00:00Z") }) } };
+  }
+  const answer = () => Response.json({ rows: [{ keys: ["crm agencias"], ...previous }] });
+
+  it("stores previous figures and null per query and reads them back (AC-001)", async () => {
+    const ws = await workspace();
+    await refreshSearchConsole(db, ws.id, google(answer).deps);
+    const { latestCompleted } = await latestSearchConsole(db, ws.id);
+    expect(latestCompleted?.queries.map((q) => [q.query, q.previous])).toEqual([
+      ["crm agencias", previous],
+      ["olessium", null],
+    ]);
+  });
+
+  it("reads a capture stored before the feature without the key", async () => {
+    const ws = await workspace();
+    await refreshSearchConsole(db, ws.id, deps(OK));
+    const { latestCompleted } = await latestSearchConsole(db, ws.id);
+    expect(latestCompleted?.queries[0]).not.toHaveProperty("previous");
+  });
+
+  it.each([
+    [403, { error: { details: [{ reason: "SERVICE_DISABLED" }] } }, "api_disabled"],
+    [403, { error: { message: "User does not have sufficient permission for site." } }, "no_access"],
+    [429, {}, "quota_exceeded"],
+    [500, {}, "error"],
+  ])("stores one failed row without secrets when the previous queries answer %i (AC-007)", async (status, body, kind) => {
+    const ws = await workspace();
+    const { bodies, deps: failing } = google(() => Response.json(body, { status }));
+    await refreshSearchConsole(db, ws.id, failing);
+    const rows = await db.select().from(searchConsoleSnapshots).where(eq(searchConsoleSnapshots.workspaceId, ws.id));
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ status: "failed", errorKind: kind, queries: [] });
+    const stored = JSON.stringify(rows[0]);
+    for (const secret of [SECRET, new URLSearchParams(bodies[0]!).get("assertion")!, PRIVATE_PEM.split("\n")[1]!]) expect(stored).not.toContain(secret);
+  });
+
+  it("keeps the last good capture after the new query fails (AC-007)", async () => {
+    const ws = await workspace();
+    await refreshSearchConsole(db, ws.id, google(answer).deps);
+    await refreshSearchConsole(db, ws.id, google(() => Response.json({}, { status: 429 })).deps);
+    const { latest, latestCompleted } = await latestSearchConsole(db, ws.id);
+    expect(latest?.status).toBe("failed");
+    expect(latestCompleted?.queries[0]?.previous).toEqual(previous);
+  });
+});

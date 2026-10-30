@@ -81,8 +81,8 @@ describe("collectSearchConsole", () => {
       pages: [{ page: "https://olessium.com/es", clicks: 10 }],
     });
     expect(outcome.data.queries[0]!.query).toHaveLength(200);
-    // token + sites + 4 queries + 4 brand-filtered totals (feature 007).
-    expect(calls).toHaveLength(10);
+    // token + sites + 4 queries + 4 brand-filtered totals (007) + previous queries (009).
+    expect(calls).toHaveLength(11);
   });
 
   it("returns zeros, not an error, for a property without data", async () => {
@@ -138,7 +138,7 @@ describe("collectSearchConsole brand segments (feature 007)", () => {
     const { calls, impl, analyticsBodies } = google(() => ({}));
     const outcome = await collectSearchConsole(account, site, { fetchImpl: impl, now: NOW });
     expect(outcome.ok).toBe(true);
-    expect(calls).toHaveLength(10);
+    expect(calls).toHaveLength(11);
     const bodies = analyticsBodies();
     const current = { startDate: "2026-09-27", endDate: "2026-10-24" };
     const previous = { startDate: "2026-08-30", endDate: "2026-09-26" };
@@ -149,6 +149,7 @@ describe("collectSearchConsole brand segments (feature 007)", () => {
       { ...previous, dimensions: [], rowLimit: 1, ...common },
       { ...current, dimensions: ["query"], rowLimit: 25, ...common },
       { ...current, dimensions: ["page"], rowLimit: 10, ...common },
+      { ...previous, dimensions: ["query"], rowLimit: 1000, ...common },
     ]);
     const filter = (operator: string) => [{ groupType: "and", filters: [{ dimension: "query", operator, expression: brandTerms(site).expression }] }];
     expect(bodies.filter(isFiltered)).toEqual([
@@ -162,7 +163,7 @@ describe("collectSearchConsole brand segments (feature 007)", () => {
     }
   });
 
-  it("starts all eight Search Analytics queries before any of them answers (AC-003)", async () => {
+  it("starts all nine Search Analytics queries before any of them answers (AC-003, AC-002 of 009)", async () => {
     let started = 0;
     let maxWaiting = 0;
     const waiting: (() => void)[] = [];
@@ -171,15 +172,15 @@ describe("collectSearchConsole brand segments (feature 007)", () => {
         started += 1;
         waiting.push(resolve);
         maxWaiting = Math.max(maxWaiting, waiting.length);
-        if (waiting.length === 8) waiting.splice(0).forEach((release) => release());
+        if (waiting.length === 9) waiting.splice(0).forEach((release) => release());
         // Safety net so a sequential implementation fails the assertion instead of hanging.
         else setTimeout(() => waiting.splice(0).forEach((release) => release()), 200);
       });
     const { impl } = google(() => ({}), hold);
     const outcome = await collectSearchConsole(account, site, { fetchImpl: impl, now: NOW });
     expect(outcome.ok).toBe(true);
-    expect(started).toBe(8);
-    expect(maxWaiting).toBe(8);
+    expect(started).toBe(9);
+    expect(maxWaiting).toBe(9);
   });
 
   it("stores the terms and each segment's own totals, zero when Google returns no row (AC-001, AC-004)", async () => {
@@ -234,5 +235,91 @@ describe("collectSearchConsole brand segments (feature 007)", () => {
     expect(outcome).toMatchObject({ ok: false, kind: "error", property: null, accessibleProperties: null });
     expect(calls).toHaveLength(0);
     expect(JSON.stringify(outcome)).not.toContain("dddd");
+  });
+});
+
+describe("collectSearchConsole previous position per query (feature 009)", () => {
+  const SECRET = "ya29.secret-access-token-009";
+  const owned = { siteEntry: [{ siteUrl: "sc-domain:olessium.com", permissionLevel: "siteOwner" }] };
+  const row = (query: string, clicks: number, position: number) => ({ keys: [query], clicks, impressions: clicks * 10, ctr: 0.1, position });
+  const isQueries = (b: Record<string, unknown>) => (b.dimensions as string[])[0] === "query";
+
+  function google(now: unknown[], before: unknown[] | Response) {
+    const calls: { url: string; body: string }[] = [];
+    const impl = (async (input: string, init?: RequestInit) => {
+      const url = String(input);
+      const body = String(init?.body ?? "");
+      calls.push({ url, body });
+      if (url.startsWith("https://oauth2.googleapis.com/token")) return Response.json({ access_token: SECRET });
+      if (url.endsWith("/sites")) return Response.json(owned);
+      const request = JSON.parse(body) as Record<string, unknown>;
+      if (!isQueries(request)) return Response.json({});
+      if (request.startDate === "2026-09-27") return Response.json({ rows: now });
+      return before instanceof Response ? before : Response.json({ rows: before });
+    }) as typeof fetch;
+    return { calls, impl };
+  }
+
+  it("stores the previous figures of each top query, or null, and no other row (AC-001)", async () => {
+    const { impl } = google([row("crm agencias", 5, 8), row("olessium", 3, 1.2)], [row("seo madrid", 9, 4), row("crm agencias", 2, 12)]);
+    const outcome = await collectSearchConsole(account, site, { fetchImpl: impl, now: NOW });
+    expect(outcome.ok && outcome.data.queries).toEqual([
+      { query: "crm agencias", clicks: 5, impressions: 50, ctr: 0.1, position: 8, previous: { clicks: 2, impressions: 20, ctr: 0.1, position: 12 } },
+      { query: "olessium", clicks: 3, impressions: 30, ctr: 0.1, position: 1.2, previous: null },
+    ]);
+  });
+
+  it("asks for the previous period and keeps the other eight bodies as exact strings (AC-002)", async () => {
+    const { calls, impl } = google([], []);
+    await collectSearchConsole(account, site, { fetchImpl: impl, now: NOW });
+    const raw = calls.filter((c) => c.url.includes("searchAnalytics")).map((c) => c.body);
+    expect(raw).toHaveLength(9);
+    const range = (a: string, b: string) => ({ startDate: a, endDate: b });
+    const body = (period: object, dimensions: string[], rowLimit: number) => JSON.stringify({ ...period, dimensions, rowLimit, type: "web", dataState: "final" });
+    const current = range("2026-09-27", "2026-10-24");
+    const previous = range("2026-08-30", "2026-09-26");
+    expect(raw.slice(0, 4)).toEqual([body(current, [], 1), body(previous, [], 1), body(current, ["query"], 25), body(current, ["page"], 10)]);
+    expect(raw[8]).toBe(body(previous, ["query"], 1000));
+  });
+
+  it("matches on the full text, before cutting it to 200 characters (AC-005)", async () => {
+    const long = "busqueda larga ".repeat(20);
+    const sameStart = `${long}distinta`;
+    const { impl } = google([row(long, 5, 3), row(sameStart, 4, 3)], [row(long, 2, 9)]);
+    const outcome = await collectSearchConsole(account, site, { fetchImpl: impl, now: NOW });
+    const queries = outcome.ok ? outcome.data.queries : [];
+    expect(queries[0]!.query).toHaveLength(200);
+    expect(queries[0]!.previous?.position).toBe(9);
+    expect(queries[1]!.previous).toBeNull();
+  });
+
+  it("does not match texts that differ only in case or spacing (AC-005)", async () => {
+    const { impl } = google([row("crm agencias", 5, 8)], [row("CRM Agencias", 2, 12), row("crm  agencias", 2, 11)]);
+    const outcome = await collectSearchConsole(account, site, { fetchImpl: impl, now: NOW });
+    expect(outcome.ok && outcome.data.queries[0]!.previous).toBeNull();
+  });
+
+  it("uses the first row when a text repeats, and null for all without previous rows", async () => {
+    const repeated = google([row("crm", 5, 8)], [row("crm", 3, 10), row("crm", 1, 40)]);
+    const first = await collectSearchConsole(account, site, { fetchImpl: repeated.impl, now: NOW });
+    expect(first.ok && first.data.queries[0]!.previous?.position).toBe(10);
+    const none = google([row("crm", 5, 8)], []);
+    const empty = await collectSearchConsole(account, site, { fetchImpl: none.impl, now: NOW });
+    expect(empty.ok && empty.data.queries[0]!.previous).toBeNull();
+  });
+
+  it.each([
+    [403, { error: { details: [{ reason: "SERVICE_DISABLED" }] } }, "api_disabled"],
+    [403, { error: { message: "User does not have sufficient permission for site." } }, "no_access"],
+    [429, {}, "quota_exceeded"],
+    [500, {}, "error"],
+  ])("fails the whole capture when the previous queries answer %i (AC-007)", async (status, body, kind) => {
+    const { calls, impl } = google([row("crm", 5, 8)], Response.json(body, { status }));
+    const outcome = await collectSearchConsole(account, site, { fetchImpl: impl, now: NOW });
+    expect(outcome).toMatchObject({ ok: false, kind, property: "sc-domain:olessium.com" });
+    expect(outcome).not.toHaveProperty("data");
+    const jwt = new URLSearchParams(calls[0]!.body).get("assertion")!;
+    const text = JSON.stringify(outcome);
+    for (const secret of [SECRET, jwt, PRIVATE_PEM.split("\n")[1]!]) expect(text).not.toContain(secret);
   });
 });

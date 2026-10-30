@@ -13,9 +13,10 @@ import {
 } from "@/modules/search-console/google";
 
 /**
- * One Search Console capture: token, property, then eight Search Analytics queries started
- * together: totals now and before, top queries, top pages, and totals with and without the
- * brand in both periods (feature 007). At most 10 requests.
+ * One Search Console capture: token, property, then nine Search Analytics queries started
+ * together: totals now and before, top queries, top pages, totals with and without the brand
+ * in both periods (feature 007) and the queries of the previous period (feature 009). At most
+ * 11 requests.
  */
 
 export interface Totals {
@@ -29,6 +30,11 @@ export interface Totals {
 
 export interface QueryRow extends Totals {
   query: string;
+  /**
+   * The same query in the previous period (feature 009). `null`: not among the rows Google
+   * returned, which does not make it new. Absent in captures taken before the feature.
+   */
+  previous?: Totals | null;
 }
 
 export interface PageRow extends Totals {
@@ -92,6 +98,8 @@ export const PERIOD_DAYS = 28;
 export const LAG_DAYS = 3;
 export const TOP_QUERIES = 25;
 export const TOP_PAGES = 10;
+/** Rows of the previous period to match the top queries against (D002 of 009). */
+export const PREVIOUS_QUERIES = 1000;
 const MAX_QUERY_LENGTH = 200;
 const MAX_PAGE_LENGTH = 500;
 
@@ -151,7 +159,7 @@ export async function collectSearchConsole(account: ServiceAccount, site: Captur
       rowLimit: 1,
       dimensionFilterGroups: [{ groupType: "and", filters: [{ dimension: "query", operator, expression: brand.expression }] }],
     });
-    const [totals, previousTotals, queries, pages, branded, nonBranded, previousBranded, previousNonBranded] = await Promise.all([
+    const [totals, previousTotals, queries, pages, branded, nonBranded, previousBranded, previousNonBranded, previousQueries] = await Promise.all([
       querySearchAnalytics(token, siteUrl, { ...range(current), dimensions: [], rowLimit: 1 }, options),
       querySearchAnalytics(token, siteUrl, { ...range(previous), dimensions: [], rowLimit: 1 }, options),
       querySearchAnalytics(token, siteUrl, { ...range(current), dimensions: ["query"], rowLimit: TOP_QUERIES }, options),
@@ -160,7 +168,14 @@ export async function collectSearchConsole(account: ServiceAccount, site: Captur
       querySearchAnalytics(token, siteUrl, filtered(current, "excludingRegex"), options),
       querySearchAnalytics(token, siteUrl, filtered(previous, "includingRegex"), options),
       querySearchAnalytics(token, siteUrl, filtered(previous, "excludingRegex"), options),
+      querySearchAnalytics(token, siteUrl, { ...range(previous), dimensions: ["query"], rowLimit: PREVIOUS_QUERIES }, options),
     ]);
+    // Exact text only, and the first row wins: Google lists the queries with most clicks first.
+    const before = new Map<string, Totals>();
+    for (const row of previousQueries) {
+      const text = row.keys[0] ?? "";
+      if (!before.has(text)) before.set(text, totalsOf(row));
+    }
     const first = (rows: AnalyticsRow[]) => (rows[0] ? totalsOf(rows[0]) : ZERO);
     return {
       ok: true,
@@ -170,7 +185,10 @@ export async function collectSearchConsole(account: ServiceAccount, site: Captur
         previous,
         totals: first(totals),
         previousTotals: first(previousTotals),
-        queries: queries.slice(0, TOP_QUERIES).map((r) => ({ query: (r.keys[0] ?? "").slice(0, MAX_QUERY_LENGTH), ...totalsOf(r) })),
+        queries: queries.slice(0, TOP_QUERIES).map((r) => {
+          const text = r.keys[0] ?? "";
+          return { query: text.slice(0, MAX_QUERY_LENGTH), ...totalsOf(r), previous: before.get(text) ?? null };
+        }),
         pages: pages.slice(0, TOP_PAGES).map((r) => ({ page: (r.keys[0] ?? "").slice(0, MAX_PAGE_LENGTH), ...totalsOf(r) })),
         segments: {
           version: 1,
