@@ -1,6 +1,6 @@
 # 16 — Roadmap de implementación (referencia operativa)
 
-**Última actualización:** 2026-10-29: conectores de Search Console, Bing y GA4 cerrados; búsquedas con marca y sin marca (spec 007) y conversiones desde buscadores en GA4 (spec 008) cerradas (§8); seguimientos y backlog (§6, §9).
+**Última actualización:** 2026-10-29: conectores de Search Console, Bing y GA4 cerrados; búsquedas con marca y sin marca (spec 007) y conversiones desde buscadores en GA4 (spec 008) cerradas (§8); 2026-10-30: cambios de posición por búsqueda (spec 009) cerrada (§8); seguimientos y backlog (§6, §9).
 **Estado del diseño:** `00`–`12` siguen siendo referencia arquitectónica (versión 1, PROPUESTA). `13-codex-review.md` (REQUEST CHANGES) sigue siendo el registro de riesgos. **Este documento manda sobre el orden de trabajo y sobre las decisiones técnicas de construcción.** Donde contradiga a `00`–`12`, prevalece este y la contradicción se lista en §7.
 
 Nota: `14-architecture-sync.md` no llegó a escribirse; el cambio de estrategia lo sustituyó por este documento antes de redactarlo. Los hallazgos de Codex se gestionan aquí de forma progresiva (§4).
@@ -284,6 +284,8 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 | D-31 | **Search Console a cero y sin estado vacío.** La propiedad es reciente y aún no tiene impresiones; la vista enseña «Conectado» con ceros sin explicar por qué, y le faltan el aviso de configuración y algunas pruebas que sí tienen Bing y GA4 (spec 003, D007) | Un propietario puede pensar que algo va mal | Iteración pequeña copiando el estado vacío y el aviso de GA4; comparar cifras cuando haya impresiones |
 | D-32 | **Expresión de marca sin comprobar con datos (spec 007, D007).** Sin impresiones, la API de Search Console responde 200 incluso a expresiones inválidas, así que no se sabe si interpreta `(?i)` y los literales escapados | Si la rechaza o la interpreta mal, el bloque «con tu marca» sale mal; si la rechaza, fallan todas las capturas de Search Console | Cuando olessium.com tenga impresiones: «Actualizar datos» y comparar «con tu marca» con la interfaz de Search Console filtrada por la misma expresión; si falla, la salida de D004 de la 007 |
 | D-33 | **Eventos clave de GA4 sin datos (spec 008, D009).** Olessium no tiene visitas, así que no se ha visto el canal `Organic Search` literal en una respuesta ni el formato real de un `keyEvents` distinto de cero | Si el canal llegara con otro nombre, la cifra orgánica saldría a cero (la sección lo advierte) | Cuando GA4 tenga visitas y eventos clave: «Actualizar datos» y comparar con los informes de GA4 del mismo periodo |
+| D-34 | **Cambios de posición sin comparar con datos (spec 009, D005).** Olessium no tiene impresiones, así que no se ha visto si el texto de una búsqueda coincide entre periodos | Si no coincidiera, las filas dirían «Sin dato anterior», sin inventar nada | Cuando olessium.com tenga impresiones: «Actualizar datos» y comparar varias posiciones con la interfaz de Search Console en los dos periodos |
+| D-35 | **Recorte de texto inseguro en los conectores (anterior a la 007, visto en la revisión de la 009).** Búsquedas y páginas de Search Console, y rutas, canales y nombre de propiedad de GA4, se recortan por unidades UTF-16 sin quitar NUL. Un carácter partido o un NUL haría que Postgres rechazara el `jsonb`. `clipName` de GA4 cubre el corte y el NUL, pero no un sustituto suelto que ya venga en la entrada | La captura se perdería sin dejar fila `failed`, y se repetiría mientras ese texto siga entre los principales. No se ha visto en real | Utilidad compartida de recorte con `toWellFormed`, usada en los dos conectores, y decidir qué hace el servicio con un fallo de base que no sea FK |
 | D-07 | `neon init -y` instaló el plugin de Neon (skills y MCP) a nivel de usuario en Claude Code, Codex y VS Code | Configuración global del equipo, no del repo | Ninguno; el servidor MCP de Neon en Claude Code necesita autorizar OAuth con `/mcp` |
 | R-01 | Las fases 2–6 dependen de cuentas externas (PSI, DataForSEO, Stripe) aún no abiertas; la Fase 4 se cerró sin la de DataForSEO | Retraso de fases | Abrir PSI antes de Fase 2; DataForSEO antes de Fase 4; Stripe test antes de Fase 5 |
 | R-02 | El NORTE del workspace `lead-platform` sigue en mantenimiento | Conflicto de foco del único desarrollador | Decisión del owner; este repo no depende de ello técnicamente |
@@ -446,6 +448,16 @@ Los tres conectores siguen el mismo patrón: credencial del operador en el entor
 **Revisiones:** tres revisiones independientes. Los metadatos de la propiedad confirmaron que `keyEvents` es `TYPE_FLOAT`; se aceptan decimales solo ahí (D009).
 
 **Seguimiento:** D-33.
+
+### Cambios de posición por búsqueda (spec `specs/features/009-query-position-changes`) — 2026-10-30, hecha
+
+**Alcance:** cada captura de Search Console pide también las búsquedas del periodo anterior, hasta 1000 filas, y guarda las cifras de entonces en cada una de las 25 búsquedas principales. La tabla muestra si cada búsqueda sube, baja o sigue igual, o que no hay dato anterior. Compara dos periodos de 28 días: no es un histórico ni un seguimiento de keywords elegidas, que siguen en la Fase 6 y en BL-01. Sin proveedor nuevo ni coste.
+
+**Commits:** `bee2a5d`…`e8eaae2`. **Migraciones:** ninguna: el dato vive dentro de la columna `queries`.
+
+**Verificación:** 982 pruebas, lint, typecheck y build sobre `e8eaae2`. Dos pasadas anteriores fallaron por cortes de red contra Neon y Google Fonts, sin relación con el código. Captura real de olessium.com `completed` a cero, con 11 llamadas. Maquetación a 375 px en `es` y `en` con una fila sintética que se borró después; la primera prueba encontró que la tabla escondía la columna Posición y se corrigió. Tres revisiones independientes, con las correcciones en su D006.
+
+**Seguimiento:** D-34 y D-35.
 
 ### Categorías de Lighthouse (spec `specs/features/004-lighthouse-categories`) — 2026-10-28, en progreso
 

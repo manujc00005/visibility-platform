@@ -16,7 +16,10 @@
 
 ## Phase 3: Verificación
 
-- [ ] T005 - Lint, typecheck, unitarias, integración y build sobre el árbol commiteado. Covers: AC-010. Verify: en un worktree desechable del último commit, `npm run lint`, `npm run typecheck`, `npm test` y `npm run build` sin errores, con los totales apuntados aquí; las pruebas previas solo cambian para añadir campos y el recuento de peticiones.
+- [x] T005 - Lint, typecheck, unitarias, integración y build sobre el árbol commiteado. Covers: AC-010. Verify: en un worktree desechable del último commit, `npm run lint`, `npm run typecheck`, `npm test` y `npm run build` sin errores, con los totales apuntados aquí; las pruebas previas solo cambian para añadir campos y el recuento de peticiones.
+  - Hecho 2026-10-30 sobre `e8eaae2`, en worktrees desechables: lint sin errores (el aviso previo de `_formatted`), typecheck limpio, build correcto y `npm test` con 982 pruebas en 78 archivos.
+  - Hizo falta repetir: dos pasadas anteriores fallaron por la red. En la primera, una consulta se colgó 427 s y el build no pudo descargar la fuente. En la segunda, 4 pruebas de `competitor-suggestions.test.ts`, un archivo que esta feature no toca, fallaron con `read ECONNRESET` contra la base de pruebas. Ese archivo pasó solo (24 pruebas) y después la suite completa, sin cambios de código.
+  - El diff de `collect.test.ts` confirma que las pruebas previas solo cambian el recuento de peticiones y consultas paralelas.
 - [x] T006 - Captura real y maquetación. Covers: AC-011. Verify: «Actualizar datos» de Search Console en Olessium deja una fila `completed` en `dev` o un motivo accionable, apuntado en DECISIONS; con una fila sintética borrada después por su id, a 375 px en `es` y `en`, `scrollWidth` igual a `clientWidth` en la página y en el contenedor de la tabla, con los cuatro textos visibles; sin errores nuevos en el registro del servidor.
   - Hecho 2026-10-30 (D005): captura real `completed`, con 11 llamadas sin error y todo a cero. Con la fila sintética, el primer intento falló AC-011: bajo la posición, la tabla medía 386 px en 341 y escondía esa columna. Se corrigió con el cambio bajo la búsqueda en móvil y menos relleno lateral (D004). Quedó 341 de 341 px en `es` y `en`, con «Sube», «Baja», «Igual» y «Sin dato anterior» visibles; a 1024 px el cambio va bajo la posición. La fila sintética se borró por su id; Olessium vuelve a sus capturas reales.
 - [x] T007 - Revisiones independientes y `/spec-review`. Covers: AC-007, AC-008, AC-010. Verify: informes de seguridad, dominio y conformidad sin hallazgos críticos o altos sin resolver; los aceptados en DECISIONS con su motivo; `/spec-review` Pass sobre el árbol final.
@@ -24,11 +27,13 @@
     - **Seguridad:** sin críticos, altos ni medios; dos bajos anteriores a esta feature.
     - **Dominio:** sin críticos ni altos; un medio, la nota que en móvil ya no era exacta.
     - **Conformidad:** sin defectos de comportamiento; pidió evidencia más fuerte en AC-002, AC-004, AC-006, AC-007 y AC-011, y alinear documentos.
+  - AC-011 repetido sobre `e8eaae2` con una fila sintética borrada después: en `es` y en `en`, página 375 de 375 y contenedor de la tabla 341 de 341, con «Sube», «Baja», «Igual» y «Sin dato anterior» (o su versión en inglés) visibles, y sin errores nuevos en el registro del servidor (último error en la línea 127, anterior a esta feature).
   - Resultado de las correcciones: 224 pruebas en `tests/unit/search-console` y `tests/unit/i18n`, y 44 de integración de Search Console, en verde, con lint limpio.
 
 ## Phase 4: Cierre
 
-- [ ] T008 - Roadmap con la entrada de la 009 y sus seguimientos. Covers: AC-010. Verify: `docs/visibility-mvp/16-implementation-roadmap.md` tiene el apartado de la spec, D-34 y D-35, y `git diff` no toca nada más.
+- [x] T008 - Roadmap con la entrada de la 009 y sus seguimientos. Covers: AC-010. Verify: `docs/visibility-mvp/16-implementation-roadmap.md` tiene el apartado de la spec, D-34 y D-35, y `git diff` no toca nada más.
+  - Hecho 2026-10-30: apartado de la 009 en §8, D-34 (comparar con datos) y D-35 (recorte de texto anterior a esta feature) en §6.
 
 ## Follow-ups
 

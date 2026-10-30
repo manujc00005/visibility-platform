@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress (2026-10-30). T001–T004 hechas. Plan, tareas y decisiones en esta carpeta.
+Done (2026-10-30). T001–T008 hechas; `/spec-review` Pass y revisiones de seguridad, dominio y conformidad aplicadas (D006). Seguimiento abierto: con impresiones, comparar posiciones con Search Console y confirmar que el texto de una búsqueda coincide entre periodos (TASKS › Follow-ups).
 
 ## Problem
 
@@ -133,6 +133,16 @@ Sin migración. `previous` vive dentro de cada elemento del array `queries` (`js
 
 - **Contenedor del texto del cambio a 375 px.** Resolved: bajo la búsqueda en móvil y bajo la posición desde `sm` (D004).
 - **Si el texto de una búsqueda coincide exactamente entre periodos.** Deferred: Olessium no tiene impresiones (D005, TASKS › Follow-ups).
+
+## Implementation summary
+
+Cada captura de Search Console pide también las búsquedas del periodo anterior, hasta 1000 filas, y guarda las cifras de entonces en cada una de las 25 búsquedas principales, emparejadas por texto exacto. La tabla muestra «Sube», «Baja», «Igual» o «Sin dato anterior»: bajo la posición en escritorio y bajo la búsqueda en móvil. Las capturas antiguas se ven como antes, con una frase que pide actualizar. Sin migración, sin dependencias y sin proveedor nuevo.
+
+Comportamiento añadido sobre el texto original, recogido en las enmiendas y en D004 y D006:
+- `previous` es opcional en el tipo, para describir también las filas antiguas.
+- En móvil, el cambio va bajo la búsqueda con un prefijo oculto para lectores de pantalla.
+- Baja el relleno lateral de las dos tablas en móvil.
+- El umbral de 0,5 lleva una tolerancia de coma flotante solo en la comparación por búsqueda.
 
 ## Decisions pre-registered for DECISIONS.md
 
