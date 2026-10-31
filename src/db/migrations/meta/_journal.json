@@ -99,6 +99,13 @@
       "when": 1793464326144,
       "tag": "0013_tracked_keywords_hardening",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793475120224,
+      "tag": "0014_competitor_comparisons",
+      "breakpoints": true
     }
   ]
 }
