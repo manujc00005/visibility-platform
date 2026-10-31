@@ -478,7 +478,7 @@ Los tres conectores siguen el mismo patrón: credencial del operador en el entor
 
 **Migraciones:** `0014`, en `test` y `dev`; `production` sin tocar.
 
-**Verificación:** 1092 unitarias, 238 de integración, lint, typecheck y build sobre `8df0345`. Navegador a 375 y 1280 px en `es` y `en`. Captura real con PageSpeed, CrUX y Open PageRank: 42 campos comparados con sus respuestas, sin diferencias, con `found: true` y `found: false` reales.
+**Verificación:** 1103 unitarias, 238 de integración, lint, typecheck y build sobre `3178295`. Navegador a 375 y 1280 px en `es` y `en`, y botón real. Captura real con olessium.com y 4 competidores: 71 campos comparados con sus respuestas, sin diferencias, con `found: true` y `found: false` reales.
 
 **Seguimiento:** D-37 y D-38.
 
