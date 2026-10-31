@@ -472,7 +472,7 @@ Los tres conectores siguen el mismo patrón: credencial del operador en el entor
 
 **Seguimiento:** D-36. No se cierra hasta tener esa evidencia (D011 de la 010).
 
-### Comparativa con competidores (spec `specs/features/011-competitor-seo-comparison`) — 2026-10-31, en progreso
+### Comparativa con competidores (spec `specs/features/011-competitor-seo-comparison`) — 2026-10-31, hecha
 
 **Alcance:** en la página SEO, una comparativa manual mide la web propia y hasta 5 competidores en la misma ejecución: Lighthouse, Core Web Vitals reales, problemas de la auditoría y autoridad de Open PageRank. Guarda solo métricas. No cubre keywords ni tráfico de competidores, que no tienen vía gratuita estable. Open PageRank es un destinatario nuevo de dominios.
 

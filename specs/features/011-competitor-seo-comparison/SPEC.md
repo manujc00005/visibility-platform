@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress (2026-10-31). T000–T009 hechas, con evidencia real de autoridad (D012). Pendiente de `/spec-review` y `/spec-close`.
+Done (2026-10-31). T000–T009 hechas; `/spec-review` Pass y revisiones de seguridad, dominio y conformidad aplicadas (D013). Evidencia real de PageSpeed, CrUX y Open PageRank registrada en TASKS.
 
 ## Problem
 
@@ -166,7 +166,7 @@ En «Visibilidad en Google» aparece la sección «Comparativa con competidores�
 - Evolución de la comparativa en el tiempo: posible con las filas guardadas, pendiente de saber si Nastya la necesita (Deferred).
 - Antes de desplegar, la captura larga debería pasar a trabajo en segundo plano, junto a D-12 (Deferred).
 
-Ninguna bloquea implementar el plan. Crear la cuenta gratuita de Open PageRank y disponer de datos reales son dependencias del responsable para AC-016. Sin ellas se puede desarrollar con fixtures y mostrar `not_configured`, pero T009 permanece sin completar y no se ejecuta spec-close ni se declara cerrada la feature.
+Las tres quedan aplazadas y registradas: D-37, D-12 y D-38 en el roadmap. Ninguna bloquea el uso del operador.
 
 ## Contracted services
 
