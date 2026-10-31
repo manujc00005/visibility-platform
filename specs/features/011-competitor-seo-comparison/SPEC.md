@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress (2026-10-31). T000–T008 hechas; T009 abierta solo por la evidencia real de autoridad de AC-016 (D012), que necesita la cuenta de Open PageRank. No se puede cerrar sin ella.
+In Progress (2026-10-31). T000–T009 hechas, con evidencia real de autoridad (D012). Pendiente de `/spec-review` y `/spec-close`.
 
 ## Problem
 
