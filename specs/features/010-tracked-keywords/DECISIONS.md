@@ -1,6 +1,6 @@
 # Decisions: Búsquedas que sigues
 
-Las decisiones D001–D006 concretan las propuestas que figuraban en el borrador; D007–D012 incorporan la auditoría aceptada. Todas se registran el 2026-10-30. No certifican implementación ni acceso real al proveedor.
+Las decisiones D001–D006 concretan las propuestas que figuraban en el borrador; D007–D012 incorporan la auditoría aceptada, y se registran el 2026-10-30; D013 y D014, el 2026-10-31. No certifican implementación ni acceso real al proveedor.
 
 ### D001 - Serie de Google en cada captura
 
@@ -93,3 +93,21 @@ Las decisiones D001–D006 concretan las propuestas que figuraban en el borrador
 También se aplica la `0012` en `dev`: el código ya lee `keyword_series`, y sin ella la página SEO fallaría (D-22).
 
 **Consequences:** T009 prohibía commits; se hacen commits locales incrementales por la instrucción expresa del responsable, sin subir nada a origin.
+
+### D014 - Correcciones de las revisiones de T009
+
+**Date:** 2026-10-31 · **Status:** Accepted
+
+**Context:** las revisiones de seguridad, dominio y conformidad encontraron huecos reales. Corrigen o precisan D005, D009, D010 y FR-010, FR-012 y FR-014.
+
+**Decision:**
+- **Clics por encima de impresiones (cambia D005 y AC-016):** una fila así ya no se rechaza, y `ctr` deja de exigir `<= 1` en las diez consultas. Con `dataState: final` la fila sería estable, y un rechazo haría fallar todas las capturas hasta 26 semanas, por un dato que aquí no se muestra. No está comprobado que Google la emita; si no lo hace, la regla no hacía nada. Con cero impresiones la fila se ignora aunque traiga clics.
+- **`keyword_limit` (precisa D010):** nuevo tipo de error para la expresión demasiado grande y para las 25000 filas, con texto propio. Con el genérico, «vuelve a intentarlo» no servía de nada.
+- **Migración 0013:** admite `keyword_limit`, quita `EXCEPTION WHEN OTHERS` y fija `search_path`. El bloque no aportaba nada, porque jsonpath con `silent` ya es total, y convertía errores de infraestructura en un falso 23514. El orden de despliegue pasa a 0012, 0013 y código.
+- **Función de validación:** se mantiene pese a no ser imprescindible; sustituirla por un CHECK sería otra migración sin mejora funcional. `schema.ts` indica dónde vive.
+- **Caracteres:** se rechazan controles, sustitutos sueltos y controles bidi, que Postgres o la página no mostrarían como se escribieron. Se conservan ZWJ y ZWNJ.
+- **`canRun` (corrige D009):** el botón solo aparece con credencial lista, como pide AC-012 y como ya hacen Bing y Analytics. Con credencial inválida y datos guardados, la sección dice por qué no se pueden actualizar. La interfaz deja de crear filas `failed` con esa credencial.
+- **Ubicación (corrige FR-012):** el bloque queda tras todas las tablas de Search Console y no justo debajo de la de búsquedas. Moverlo exigiría un hueco dentro de `SearchConsoleSection` sin beneficio claro.
+- **Accesibilidad:** roles explícitos en la tabla, huecos agrupados en el texto de la gráfica y foco de vuelta al campo.
+
+**Consequences:** quedan aceptados, sin cambio: tras quitar una búsqueda el foco vuelve al documento; el estado sigue diciendo «Conectado» con credencial inválida y datos guardados (viene de D007 de la 003); y `keywordExpression` no repite la comprobación `SAFE_VARIANT` de marca, porque solo une literales escapados. Sigue sin medirse la duración de la consulta con datos reales (timeout de 15 s), y hay que medirla junto a AC-017.

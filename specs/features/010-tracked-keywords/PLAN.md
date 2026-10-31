@@ -82,7 +82,7 @@ Un solo agente con el modelo actual, sin delegación ni cambio de modelo. Concur
 
 ## Deployment coupling
 
-- Nuevo código requiere migración antes: SELECT/INSERT de tabla y columna nuevas fallarían sin 0012. Aplicar primero en base de pruebas; `dev` se migró después porque el código ya lee esas columnas (D013); ningún despliegue productivo está autorizado por este plan.
+- Nuevo código requiere migraciones antes, en orden 0012 y 0013: SELECT/INSERT de tabla y columna nuevas fallarían sin 0012, y guardar `keyword_limit` sin 0013. Aplicar primero en base de pruebas; `dev` se migró después porque el código ya lee esas columnas (D013); ningún despliegue productivo está autorizado por este plan.
 - Sin backfill; capturas antiguas quedan null y muestran pending para keywords activas.
 - Migración sin código: el código anterior ignora tabla/columna; código sin migración: no compatible, no desplegar en ese orden.
 - Para un futuro despliegue autorizado, revisar orden migración → código y preparar la observación de los errores antes. No hay nuevos secretos ni pasos de proveedor.
