@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress (2026-10-28).
+Done (2026-10-31). T001–T008 hechas; `/spec-review` Pass sobre `05c4f70` y revisiones de seguridad y dominio aplicadas (D006). Comprobado con una respuesta real de PageSpeed.
 
 ## Problem
 
