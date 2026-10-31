@@ -57,6 +57,11 @@ const envSchema = z.object({
    * the Bing section is "not configured". Its format is checked when used (feature 005, FR-001).
    */
   BING_WEBMASTER_API_KEY: z.string().optional().transform((v) => v?.trim() || undefined),
+  /**
+   * Open PageRank (feature 011). Optional: without it the comparison runs and its authority
+   * columns say so. A free key answers from one IPv4 address, set on the provider's account page.
+   */
+  OPEN_PAGERANK_API_KEY: z.string().optional().transform((v) => v?.trim() || undefined),
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
     .default("info"),
