@@ -15,6 +15,7 @@ import {
   usdFloatToMicros,
 } from "@/modules/geo/budget";
 import { DATAFORSEO_PRICE, type DataForSeoClient } from "@/modules/geo/dataforseo";
+import type { CompetitorKind } from "@/modules/geo/competitors/profile-options";
 import { classifySources, detectMentions, nameKey, type BrandPanel } from "@/modules/geo/detection";
 import { computeGeoMetrics, type GeoMetrics } from "@/modules/geo/metrics";
 import type { PromptIntent } from "@/modules/geo/prompt-suggestions";
@@ -133,6 +134,7 @@ export interface CompetitorInsert {
   /** Hostname without "www." as produced by normalizeWebsite, or null. */
   domain: string | null;
   aliases: string[];
+  kind?: CompetitorKind | null;
 }
 
 /**
@@ -154,7 +156,7 @@ export async function insertCompetitorLocked(
   const duplicate = pool.some((c) => (input.domain !== null && c.domain === input.domain) || (key.length > 0 && nameKey(c.name) === key));
   if (duplicate) return { ok: false, error: "already_exists" };
   if (active.length >= MAX_ACTIVE_COMPETITORS) return { ok: false, error: "limit" };
-  const [row] = await tx.insert(geoCompetitors).values({ workspaceId, name: input.name, aliases: input.aliases, domain: input.domain }).returning();
+  const [row] = await tx.insert(geoCompetitors).values({ workspaceId, name: input.name, aliases: input.aliases, domain: input.domain, kind: input.kind ?? null }).returning();
   return { ok: true, value: row! };
 }
 

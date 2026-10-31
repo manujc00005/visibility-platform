@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { bigint, boolean, check, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { COMPETITOR_KINDS } from "@/modules/geo/competitors/profile-options";
 import type { ClassifiedSource, Mentions, BrandPanel } from "@/modules/geo/detection";
 import type { PromptIntent } from "@/modules/geo/prompt-suggestions";
 import { workspaces } from "@/modules/workspaces/schema";
@@ -15,10 +16,13 @@ export const geoCompetitors = pgTable(
     /** ASCII domain without "www.", normalized like workspace domains. */
     domain: text("domain"),
     status: text("status", { enum: ["active", "archived"] }).notNull().default("active"),
+    /** Declared by the assistant and confirmed by the operator; null on manual entries. */
+    kind: text("kind", { enum: COMPETITOR_KINDS }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     check("geo_competitors_status_valid", sql`${t.status} in ('active', 'archived')`),
+    check("geo_competitors_kind_valid", sql`${t.kind} is null or ${t.kind} in ('direct', 'indirect', 'substitute')`),
     check("geo_competitors_name_not_blank", sql`length(btrim(${t.name})) between 1 and 120`),
     index("geo_competitors_workspace_idx").on(t.workspaceId),
   ],

@@ -6,6 +6,8 @@ import { getDb } from "@/db/client";
 import type { Locale } from "@/i18n/locale";
 import { getMessages, type Messages } from "@/i18n/messages";
 import { getLocale } from "@/i18n/server";
+import type { ProposalNote } from "@/modules/geo/competitors/profile";
+import { proposeBusinessProfile, saveBusinessProfile } from "@/modules/geo/competitors/profile-service";
 import { acceptSuggestion, dismissSuggestion, extractCompetitors } from "@/modules/geo/competitors/service";
 import { createCompetitorDeps, createGeoDeps } from "@/modules/geo/deps";
 import {
@@ -27,6 +29,8 @@ export interface GeoFormState {
   errors: string[];
   values: Record<string, string>;
   attempt: number;
+  /** Why each proposed value was chosen; only the profile proposal sets them. */
+  notes?: string[];
 }
 
 type GeoTexts = Messages["geo"];
@@ -138,6 +142,45 @@ export async function refreshRunAction(workspaceId: string, runId: string, previ
   revalidateGeo(workspaceId);
   const { collected, reconciled } = result.value;
   return success(previous, t.success.refreshed(collected, reconciled));
+}
+
+// --- Business profile -------------------------------------------------------------------
+
+const noteText = (t: GeoTexts["profile"]["notes"], note: ProposalNote): string => {
+  switch (note.code) {
+    case "customer_terms":
+      return t.customerTerms(note.terms.join(", "));
+    case "zone_local_type":
+      return t.zoneLocalType(note.type);
+    case "zone_languages":
+      return t.zoneLanguages(note.languages.join(", "));
+    default:
+      return t[note.code];
+  }
+};
+
+/** Checkboxes repeat their name: `values` would keep only the last one. */
+const kindsOf = (formData: FormData) => formData.getAll("competitorKinds").filter((v) => typeof v === "string");
+
+export async function proposeBusinessProfileAction(workspaceId: string, previous: GeoFormState, formData: FormData): Promise<GeoFormState> {
+  const { t } = await texts();
+  const result = await proposeBusinessProfile(getDb(), workspaceId, createCompetitorDeps());
+  if (!result.ok) return { ...failure(t, previous, formData, result.error), values: { ...values(formData), competitorKinds: kindsOf(formData).join(",") } };
+  const { draft, notes } = result.value;
+  return {
+    ...success(previous, t.profile.proposed),
+    values: { ...draft, offerings: draft.offerings.join("\n"), competitorKinds: draft.competitorKinds.join(",") },
+    notes: notes.map((note) => noteText(t.profile.notes, note)),
+  };
+}
+
+export async function saveBusinessProfileAction(workspaceId: string, previous: GeoFormState, formData: FormData): Promise<GeoFormState> {
+  const { locale, t } = await texts();
+  const kinds = kindsOf(formData);
+  const result = await saveBusinessProfile(getDb(), workspaceId, { ...values(formData), competitorKinds: kinds }, locale);
+  if (!result.ok) return { ...failure(t, previous, formData, result.error, result.fieldErrors), values: { ...values(formData), competitorKinds: kinds.join(",") } };
+  revalidateGeo(workspaceId);
+  return success(previous, t.profile.saved);
 }
 
 // --- Competitor discovery (assisted capture) --------------------------------------------

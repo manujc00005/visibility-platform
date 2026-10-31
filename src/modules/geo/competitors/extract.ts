@@ -1,3 +1,4 @@
+import type { CompetitorKind } from "@/modules/geo/competitors/profile-options";
 import { nameKey, normalizeText } from "@/modules/geo/detection";
 import { normalizeWebsite } from "@/modules/workspaces/domain";
 
@@ -7,7 +8,7 @@ import { normalizeWebsite } from "@/modules/workspaces/domain";
  * the link is unambiguous. A cited URL is a reference, never a confirmed business.
  */
 
-export const EXTRACTION_RULES_VERSION = "extract-2026-10-26.1";
+export const EXTRACTION_RULES_VERSION = "extract-2026-10-31.1";
 export const MAX_NAMES = 20;
 export const MAX_HOSTS = 20;
 export const MAX_SNIPPET = 200;
@@ -37,6 +38,8 @@ export interface ExtractedName {
   snippet: string;
   /** URL explicitly linked to this name in the same list item, if exactly one. */
   explicitUrl: string | null;
+  /** Declared in a structured line; a claim, never evidence. */
+  kind: CompetitorKind | null;
 }
 
 export interface ExtractedReference {
@@ -80,8 +83,44 @@ function cutExplanation(text: string): string {
     .trim();
 }
 
+/** "COMPETIDOR | Nombre | web | tipo | zona | motivo", also as a table row or a list item. */
+const STRUCTURED_LINE = /^(?:[-*•]\s+|\|\s*)?\**competidor\**\s*\|(.*)$/i;
+const TEMPLATE_WEB = "https://web";
+const KINDS: Record<string, CompetitorKind> = { directo: "direct", direct: "direct", indirecto: "indirect", indirect: "indirect", sustituto: "substitute", substitute: "substitute" };
+
+interface StructuredLine {
+  name: string;
+  url: string | null;
+  kind: CompetitorKind | null;
+  snippet: string;
+}
+
+function webColumn(value: string): string | null {
+  const link = /\((https?:\/\/[^\s)]+)\)/.exec(value)?.[1] ?? /https?:\/\/[^\s<>()"'\]]+/.exec(value)?.[0];
+  if (link) return link;
+  return /^[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\/?$/i.test(value) ? `https://${value}` : null;
+}
+
+/** Null when the line is not structured, so it follows the free-text path. */
+function structuredLine(line: string): StructuredLine | "template" | null {
+  const body = STRUCTURED_LINE.exec(line)?.[1];
+  if (body === undefined) return null;
+  const columns = body.replace(/\|\s*$/, "").split("|").map((c) => c.trim());
+  if (columns.length < 2) return null;
+  const [rawName = "", web = "", kind = "", zone = "", ...reason] = columns;
+  const name = stripMarkdown(rawName);
+  if (nameKey(name) === nameKey("Nombre") || web === TEMPLATE_WEB) return "template";
+  const parts = [reason.join(" ").trim(), zone ? `Atiende: ${zone}` : ""].filter(Boolean);
+  return { name, url: webColumn(web), kind: KINDS[kind.toLowerCase()] ?? null, snippet: snippetOf(parts.join(" · ")) };
+}
+
 export function isGenericName(key: string): boolean {
   return key.length === 0 || GENERIC_LABELS.has(key) || GENERIC_WORDS.has(key);
+}
+
+function acceptableName(name: string, key: string): boolean {
+  const looksLikeUrl = /^https?:\/\//i.test(name) || (/\.[a-z]{2,}$/i.test(name) && !name.includes(" "));
+  return name.length > 0 && name.length <= MAX_NAME && !looksLikeUrl && !isGenericName(key);
 }
 
 function hostOf(url: string): string | null {
@@ -117,6 +156,22 @@ export const assistedCaptureSource = {
     for (const rawLine of input.answerText.split(/\r?\n/)) {
       const line = rawLine.trim();
       if (!line || line.startsWith("#")) continue;
+      const structured = structuredLine(line);
+      if (structured === "template") continue;
+      if (structured) {
+        const key = nameKey(structured.name);
+        if (acceptableName(structured.name, key) && !seenNames.has(key)) {
+          if (names.length >= MAX_NAMES) {
+            extraNames += 1;
+          } else {
+            seenNames.add(key);
+            names.push({ name: structured.name, key, snippet: structured.snippet, explicitUrl: structured.url, kind: structured.kind });
+          }
+        }
+        // Only the web column makes a reference: a URL inside the reason cites something else.
+        if (structured.url) addReference(structured.url, structured.snippet, true);
+        continue;
+      }
       const item = LIST_ITEM.exec(line)?.[1] ?? null;
       const bold = BOLD.exec(line);
       const boldText = bold ? (bold[1] ?? bold[2] ?? "") : null;
@@ -129,15 +184,14 @@ export const assistedCaptureSource = {
       if (candidateText !== null) {
         const name = cutExplanation(stripMarkdown(candidateText)).slice(0, MAX_NAME + 1);
         const key = nameKey(name);
-        const looksLikeUrl = /^https?:\/\//i.test(name) || (/\.[a-z]{2,}$/i.test(name) && !name.includes(" "));
-        if (name.length > 0 && name.length <= MAX_NAME && !looksLikeUrl && !isGenericName(key) && !seenNames.has(key)) {
+        if (acceptableName(name, key) && !seenNames.has(key)) {
           if (names.length >= MAX_NAMES) {
             extraNames += 1;
           } else {
             seenNames.add(key);
             const own = links.filter((l) => l.text !== null && nameKey(l.text) === key);
             const explicit = own.length === 1 ? own[0]! : links.length === 1 ? links[0]! : null;
-            names.push({ name, key, snippet: snippetOf(item ?? line), explicitUrl: explicit?.url ?? null });
+            names.push({ name, key, snippet: snippetOf(item ?? line), explicitUrl: explicit?.url ?? null, kind: null });
           }
         }
       }
@@ -177,6 +231,7 @@ export interface Candidate {
   nameKey: string;
   /** True when the name was derived from a page title and needs review. */
   nameProvisional: boolean;
+  kind: CompetitorKind | null;
   host: string | null;
   sourceUrls: string[];
   snippet: string;
@@ -288,6 +343,7 @@ export function associateCandidates(extraction: ExtractionResult, heads: Map<str
       name: title,
       nameKey: key,
       nameProvisional: true,
+      kind: null,
       host,
       sourceUrls: urlsByHost.get(host) ?? [],
       snippet: extraction.references.find((r) => r.host === host)?.snippet ?? "",
@@ -306,6 +362,7 @@ function candidate(name: ExtractedName, host: string | null, association: Associ
     name: name.name,
     nameKey: name.key,
     nameProvisional: false,
+    kind: name.kind,
     host,
     sourceUrls,
     snippet: name.snippet,

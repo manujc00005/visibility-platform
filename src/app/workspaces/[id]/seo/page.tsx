@@ -162,7 +162,7 @@ export default async function SeoPage({ params }: PageProps<"/workspaces/[id]/se
       </Section>
 
       <Section id="competitors-title" title={m.competitorComparison.section.title} description={m.competitorComparison.section.description}>
-        <ComparisonSection s={comparison} action={runCompetitorComparisonAction.bind(null, workspace.id)} manageHref={`/workspaces/${workspace.id}/geo/setup`} locale={locale} />
+        <ComparisonSection s={comparison} action={runCompetitorComparisonAction.bind(null, workspace.id)} manageHref={`/workspaces/${workspace.id}/geo/setup#competitors`} locale={locale} />
       </Section>
 
       <Section id="health-title" title={t.health.title} description={t.health.description}>

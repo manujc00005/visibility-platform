@@ -32,8 +32,9 @@ const site = (over: Partial<SiteResult> = {}): SiteResult => ({
   authority,
   ...over,
 });
-const measured = (s: SiteResult, over: Partial<ComparisonRow> = {}): ComparisonRow => ({ key: s.domain, role: s.role, name: s.name, domain: s.domain, state: "measured", site: s, measuredAs: null, ...over }) as ComparisonRow;
+const measured = (s: SiteResult, over: Partial<ComparisonRow> = {}): ComparisonRow => ({ key: s.domain, role: s.role, name: s.name, domain: s.domain, kind: null, state: "measured", site: s, measuredAs: null, ...over }) as ComparisonRow;
 const summary = (rows: ComparisonRow[], over: Partial<ComparisonSummary> = {}): ComparisonSummary => ({
+  unreachable: [],
   blocker: null,
   running: false,
   failure: null,
@@ -216,9 +217,28 @@ describe("comparison section", () => {
     expect(render(summary([measured(site(), { name: "Nuevo", measuredAs: "Rival" } as Partial<ComparisonRow>)]))).toContain(t.measuredAs("Rival"));
   });
 
+  it("shows the type of a competitor and always links to finding competitors, in both languages (AC-010, AC-011)", () => {
+    for (const locale of ["es", "en"] as const) {
+      const t = getMessages(locale).competitorComparison;
+      const typed = renderToStaticMarkup(createElement(ComparisonSection, { s: summary([measured(site(), { kind: "direct" } as Partial<ComparisonRow>)]), action: noop, manageHref: "/manage", locale }));
+      expect(typed).toContain(t.kinds.direct);
+      expect(typed).toContain(t.needs.manage);
+      const blocked = renderToStaticMarkup(createElement(ComparisonSection, { s: summary([], { blocker: "no_competitors" }), action: noop, manageHref: "/manage", locale }));
+      expect(blocked).toContain(t.needs.no_competitors);
+      expect(blocked).toContain(t.needs.manage);
+      const none = renderToStaticMarkup(createElement(ComparisonSection, { s: summary([measured(site())]), action: noop, manageHref: "/manage", locale }));
+      expect(none).not.toContain(t.kinds.direct);
+    }
+  });
+
+  it("warns about a competitor whose website did not respond (FR-013)", () => {
+    const t = getMessages("es").competitorComparison;
+    expect(render(summary([measured(site())], { unreachable: ["Rival"] }))).toContain(t.unreachable("Rival"));
+  });
+
   it("marks a pending row across all the columns", () => {
     const t = getMessages("es").competitorComparison;
-    const html = render(summary([{ key: "x", role: "competitor", name: "Nuevo", domain: "nuevo.es", state: "pending" }]));
+    const html = render(summary([{ key: "x", role: "competitor", name: "Nuevo", domain: "nuevo.es", kind: null, state: "pending" }]));
     expect(html).toContain(t.pending);
     expect(html).toContain('colSpan="11"');
   });

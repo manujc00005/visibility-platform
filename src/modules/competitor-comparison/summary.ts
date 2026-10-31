@@ -1,5 +1,6 @@
 import { STALE_RUNNING_AFTER_MS, type LatestComparison } from "@/modules/competitor-comparison/service";
 import { parseComparison, selectSites, type SiteResult } from "@/modules/competitor-comparison/sites";
+import type { CompetitorKind } from "@/modules/geo/competitors/profile-options";
 
 export type ComparisonBlocker = "not_configured" | "no_competitors" | null;
 
@@ -9,6 +10,8 @@ export type ComparisonRow = {
   /** Current name; the figures may belong to a site then called otherwise. */
   name: string;
   domain: string;
+  /** Today's type of the competitor; it is not part of what a capture freezes. */
+  kind: CompetitorKind | null;
 } & ({ state: "measured"; site: SiteResult; measuredAs: string | null } | { state: "pending" });
 
 export interface ComparisonSummary {
@@ -25,6 +28,8 @@ export interface ComparisonSummary {
   withoutWebsite: string[];
   /** Competitors sharing the domain of another site, which is what got measured. */
   duplicates: string[];
+  /** Competitors whose website did not answer in the figures shown: probably worth reviewing. */
+  unreachable: string[];
 }
 
 interface CompanyInput {
@@ -38,6 +43,7 @@ interface CompetitorInput {
   name: string;
   domain: string | null;
   createdAt: Date;
+  kind?: CompetitorKind | null;
 }
 
 interface Input {
@@ -59,7 +65,8 @@ export function summarizeComparison({ stored, company, competitors, config, now 
   const captured = comparison?.sites ?? [];
 
   const rows = selection.sites.map((current): ComparisonRow => {
-    const base = { key: current.competitorId ?? "company", role: current.role, name: current.name, domain: current.domain };
+    const kind = competitors.find((c) => c.id === current.competitorId)?.kind ?? null;
+    const base = { key: current.competitorId ?? "company", role: current.role, name: current.name, domain: current.domain, kind };
     const site = captured.find((s) => s.role === current.role && s.competitorId === current.competitorId && s.domain === current.domain && s.hostname === current.hostname);
     if (!site) return { ...base, state: "pending" };
     return { ...base, state: "measured", site, measuredAs: site.name === current.name ? null : site.name };
@@ -82,5 +89,6 @@ export function summarizeComparison({ stored, company, competitors, config, now 
     mixedFieldScope: scopes.size > 1,
     withoutWebsite: selection.withoutWebsite.map((c) => c.name),
     duplicates: selection.duplicates.map((c) => c.name),
+    unreachable: rows.flatMap((row) => (row.role === "competitor" && row.state === "measured" && row.site.access === "unreachable" ? [row.name] : [])),
   };
 }

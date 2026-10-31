@@ -117,6 +117,7 @@ function Row({ row, t, locale }: { row: ComparisonRow; t: Texts; locale: Locale 
           <span className="block font-medium [overflow-wrap:anywhere]">{row.name}</span>
           <span className="block text-xs text-muted-foreground [overflow-wrap:anywhere]">{row.domain}</span>
           {row.role === "company" ? <span className="mt-0.5 block text-xs font-medium">{t.you}</span> : null}
+          {row.kind ? <span className="mt-0.5 block text-xs">{t.kinds[row.kind]}</span> : null}
           {row.state === "measured" && row.measuredAs ? <span className="block text-xs text-muted-foreground [overflow-wrap:anywhere]">{t.measuredAs(row.measuredAs)}</span> : null}
         </th>
         {row.state === "measured" ? (
@@ -154,18 +155,16 @@ export function ComparisonSection({ s, action, manageHref, locale }: Props) {
   const measured = s.capture !== null;
   return (
     <div className="flex min-w-0 flex-col gap-4 rounded-2xl border border-border/80 bg-card p-4 shadow-card sm:p-5">
-      {s.blocker ? (
-        <p className="max-w-3xl text-sm text-muted-foreground">
-          {t.needs[s.blocker]}{" "}
-          {s.blocker === "no_competitors" ? (
-            <Link href={manageHref} className="font-medium underline underline-offset-2">
-              {t.needs.manage}
-            </Link>
-          ) : null}
-        </p>
-      ) : (
-        <ComparisonButton labels={{ idle: measured ? t.button.rerun : t.button.run, pending: t.button.pending, failed: t.actionErrors.failed }} action={action} />
-      )}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        {s.blocker ? (
+          <p className="max-w-3xl text-sm text-muted-foreground">{t.needs[s.blocker]}</p>
+        ) : (
+          <ComparisonButton labels={{ idle: measured ? t.button.rerun : t.button.run, pending: t.button.pending, failed: t.actionErrors.failed }} action={action} />
+        )}
+        <Link href={manageHref} className="text-sm font-medium underline underline-offset-2">
+          {t.needs.manage}
+        </Link>
+      </div>
       {s.running ? <p className="text-sm">{t.running}</p> : null}
       {s.failure ? <p className="text-sm">{t.lastAttempt(formatDateTime(s.failure.at, locale), t.failure[s.failure.error])}</p> : null}
       {s.unreadable ? (
@@ -198,6 +197,7 @@ export function ComparisonSection({ s, action, manageHref, locale }: Props) {
       ) : s.running || s.failure ? null : (
         <p className="text-sm text-muted-foreground">{t.empty}</p>
       )}
+      {s.unreachable.length > 0 ? <p className="text-sm [overflow-wrap:anywhere]">{t.unreachable(s.unreachable.join(", "))}</p> : null}
       {s.mixedFieldScope ? <p className="text-sm">{t.mixedScope}</p> : null}
       {s.withoutWebsite.length > 0 ? <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">{t.withoutWebsite(s.withoutWebsite.join(", "))}</p> : null}
       {s.duplicates.length > 0 ? <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">{t.duplicates(s.duplicates.join(", "))}</p> : null}

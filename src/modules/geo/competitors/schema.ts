@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { check, foreignKey, index, integer, jsonb, pgTable, primaryKey, text, timestamp, unique, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { COMPETITOR_KINDS, CUSTOMER_TYPES, ZONE_RELEVANCES, type CompetitorKind, type CustomerType, type ZoneRelevance } from "@/modules/geo/competitors/profile-options";
 import { geoCompetitors } from "@/modules/geo/schema";
 import { workspaces } from "@/modules/workspaces/schema";
 
@@ -20,9 +21,22 @@ export interface ExtractionContext {
   countryCode: string;
   countryName: string;
   services: string[];
+  /** Absent in extractions older than feature 012, and null when no profile was confirmed. */
+  profile?: ExtractionProfile | null;
 }
 
-export type FactorState = "matched" | "unknown" | "conflicting";
+/** The confirmed business profile as used by one extraction, without timestamps. */
+export interface ExtractionProfile {
+  summary: string;
+  offerings: string[];
+  customerType: CustomerType;
+  targetCustomer: string;
+  zoneRelevance: ZoneRelevance;
+  servedArea: string | null;
+  competitorKinds: CompetitorKind[];
+}
+
+export type FactorState = "matched" | "unknown" | "conflicting" | "not_applicable";
 
 export interface FactorEvidence {
   state: FactorState;
@@ -56,6 +70,33 @@ export interface AcceptedInput {
   reviewConfirmed: true;
 }
 
+/** What the operator confirmed about the business. Drafted from the home page, never saved unreviewed. */
+export const geoBusinessProfiles = pgTable(
+  "geo_business_profiles",
+  {
+    workspaceId: uuid("workspace_id").primaryKey().references(() => workspaces.id, { onDelete: "cascade" }),
+    summary: text("summary").notNull(),
+    offerings: text("offerings").array().notNull().default(sql`'{}'::text[]`),
+    customerType: text("customer_type", { enum: CUSTOMER_TYPES }).notNull(),
+    targetCustomer: text("target_customer").notNull(),
+    zoneRelevance: text("zone_relevance", { enum: ZONE_RELEVANCES }).notNull(),
+    servedArea: text("served_area"),
+    competitorKinds: text("competitor_kinds", { enum: COMPETITOR_KINDS }).array().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    check("geo_business_profiles_summary_length", sql`length(btrim(${t.summary})) between 1 and 400`),
+    check("geo_business_profiles_offerings_count", sql`cardinality(${t.offerings}) <= 10`),
+    check("geo_business_profiles_customer_type_valid", sql`${t.customerType} in ('b2b', 'b2c', 'both')`),
+    check("geo_business_profiles_target_length", sql`length(btrim(${t.targetCustomer})) between 1 and 200`),
+    check("geo_business_profiles_zone_valid", sql`${t.zoneRelevance} in ('local', 'regional', 'national', 'international')`),
+    check("geo_business_profiles_area_length", sql`${t.servedArea} is null or length(btrim(${t.servedArea})) between 1 and 120`),
+    check("geo_business_profiles_area_required", sql`${t.zoneRelevance} not in ('local', 'regional') or ${t.servedArea} is not null`),
+    check("geo_business_profiles_kinds_valid", sql`cardinality(${t.competitorKinds}) between 1 and 3 and ${t.competitorKinds} <@ array['direct', 'indirect', 'substitute']::text[]`),
+  ],
+);
+
 export const geoCompetitorExtractions = pgTable(
   "geo_competitor_extractions",
   {
@@ -76,7 +117,7 @@ export const geoCompetitorExtractions = pgTable(
   },
   (t) => [
     check("geo_competitor_extractions_source_valid", sql`${t.source} in ('assisted')`),
-    check("geo_competitor_extractions_question_length", sql`length(${t.question}) between 1 and 500`),
+    check("geo_competitor_extractions_question_length", sql`length(${t.question}) between 1 and 2000`),
     check("geo_competitor_extractions_answer_sha256_hex", sql`${t.answerSha256} ~ '^[0-9a-f]{64}$'`),
     check("geo_competitor_extractions_fingerprint_hex", sql`${t.inputFingerprint} ~ '^[0-9a-f]{64}$'`),
     check("geo_competitor_extractions_counts_non_negative", sql`${t.candidatesTotal} >= 0 and ${t.candidatesShown} >= 0`),
@@ -100,6 +141,8 @@ export const geoCompetitorSuggestions = pgTable(
     domain: text("domain"),
     sourceUrls: jsonb("source_urls").$type<string[]>().notNull().default(sql`'[]'::jsonb`),
     snippet: text("snippet").notNull().default(""),
+    /** Declared in the answer; a claim to review, never evidence. */
+    competitorKind: text("competitor_kind", { enum: COMPETITOR_KINDS }),
     pageTitle: text("page_title"),
     pageDescription: text("page_description"),
     factors: jsonb("factors").$type<SuggestionFactors>().notNull(),
@@ -121,6 +164,7 @@ export const geoCompetitorSuggestions = pgTable(
       foreignColumns: [geoCompetitorExtractions.workspaceId, geoCompetitorExtractions.id],
     }).onDelete("cascade"),
     check("geo_competitor_suggestions_status_valid", sql`${t.status} in ('suggested', 'accepted', 'dismissed', 'superseded')`),
+    check("geo_competitor_suggestions_kind_valid", sql`${t.competitorKind} is null or ${t.competitorKind} in ('direct', 'indirect', 'substitute')`),
     check("geo_competitor_suggestions_web_status_valid", sql`${t.webStatus} is null or ${t.webStatus} in ('reachable', 'unreachable', 'unverified', 'blocked')`),
     check("geo_competitor_suggestions_key_prefixed", sql`${t.candidateKey} ~ '^(host|name):.'`),
     check("geo_competitor_suggestions_name_length", sql`length(btrim(${t.name})) between 1 and 120`),
@@ -151,5 +195,6 @@ export const geoCompetitorDismissals = pgTable(
   ],
 );
 
+export type GeoBusinessProfile = typeof geoBusinessProfiles.$inferSelect;
 export type GeoCompetitorExtraction = typeof geoCompetitorExtractions.$inferSelect;
 export type GeoCompetitorSuggestion = typeof geoCompetitorSuggestions.$inferSelect;

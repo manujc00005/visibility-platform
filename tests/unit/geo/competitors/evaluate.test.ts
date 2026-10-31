@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { compareEvaluated, evaluateCandidate, evaluateCandidates, MAX_SHOWN } from "@/modules/geo/competitors/evaluate";
+import type { ExtractionProfile } from "@/modules/geo/competitors/schema";
 import type { Candidate, PageHead } from "@/modules/geo/competitors/extract";
 import type { ExtractionContext } from "@/modules/geo/competitors/schema";
 
@@ -20,7 +21,7 @@ function head(host: string, title: string | null, description: string | null = n
 
 function candidate(name: string, host: string | null, page: PageHead | null = null, extra: Partial<Candidate> = {}): Candidate {
   const key = name.toLowerCase();
-  return { key: host ? `host:${host}` : `name:${key}`, name, nameKey: key, nameProvisional: false, host, sourceUrls: [], snippet: "", association: host ? "title" : "none", head: page, notes: [], ...extra };
+  return { key: host ? `host:${host}` : `name:${key}`, name, nameKey: key, nameProvisional: false, kind: null, host, sourceUrls: [], snippet: "", association: host ? "title" : "none", head: page, notes: [], ...extra };
 }
 
 describe("evaluateCandidate", () => {
@@ -131,5 +132,46 @@ describe("inputFingerprint", () => {
     expect(inputFingerprint({ ...base, rulesVersion: "v2" })).not.toBe(same);
     expect(inputFingerprint({ ...base, sources: ["https://a.es/"] })).not.toBe(same);
     expect(inputFingerprint({ ...base, context: { ...context, city: "Getafe" } })).not.toBe(same);
+  });
+});
+
+describe("with a business profile (012)", () => {
+  const profile: ExtractionProfile = { summary: "s", offerings: ["Automatización de CRM"], customerType: "b2b", targetCustomer: "t", zoneRelevance: "local", servedArea: "Madrid y Toledo", competitorKinds: ["direct", "indirect"] };
+  const withProfile = (over: Partial<ExtractionProfile>) => ({ ...context, profile: { ...profile, ...over } });
+  const onlyBarcelona = () => candidate("otra", "otra.es", head("otra.es", "Otra", "Solo atendemos en Barcelona"));
+  const known = { registeredKeys: new Set<string>(), dismissedKeys: new Set<string>() };
+
+  it("does not judge the zone in an international market (AC-007)", () => {
+    const f = evaluateCandidate(onlyBarcelona(), withProfile({ zoneRelevance: "international", servedArea: null }));
+    expect(f.zone.state).toBe("not_applicable");
+    expect(f.review.some((r) => r.includes("zona"))).toBe(false);
+    expect(evaluateCandidates([onlyBarcelona()], withProfile({ zoneRelevance: "international", servedArea: null }), known).shown).toHaveLength(1);
+  });
+
+  it("excludes on exclusivity only outside every served place", () => {
+    expect(evaluateCandidates([onlyBarcelona()], withProfile({}), known).excluded[0]?.reason).toBe("conflicting_zone");
+    const toledo = candidate("t", "t.es", head("t.es", "T", "Solo atendemos en Toledo"));
+    expect(evaluateCandidate(toledo, withProfile({})).zone.state).toBe("matched");
+  });
+
+  it("does not exclude on exclusivity in a national market", () => {
+    expect(evaluateCandidate(onlyBarcelona(), withProfile({ zoneRelevance: "national", servedArea: null })).zone.state).toBe("unknown");
+  });
+
+  it("matches the offer of the profile as services", () => {
+    const c = candidate("a", "a.es", head("a.es", "Automatización de CRM", null));
+    expect(evaluateCandidate(c, withProfile({})).services.state).toBe("matched");
+  });
+
+  it("leaves out kinds the operator does not want and orders the rest (AC-008)", () => {
+    const of = (name: string, kind: Candidate["kind"]) => candidate(name, `${name}.es`, head(`${name}.es`, name), { kind });
+    const result = evaluateCandidates([of("z", null), of("y", "indirect"), of("x", "direct"), of("w", "substitute")], withProfile({}), known);
+    expect(result.shown.map((c) => c.name)).toEqual(["x", "y", "z"]);
+    expect(result.excluded.map((e) => e.reason)).toEqual(["unwanted_kind"]);
+  });
+
+  it("keeps a declared kind out when no profile exists only as an order", () => {
+    const c = candidate("a", "a.es", head("a.es", "a"), { kind: "substitute" });
+    expect(evaluateCandidates([c], context, known).shown).toHaveLength(1);
   });
 });

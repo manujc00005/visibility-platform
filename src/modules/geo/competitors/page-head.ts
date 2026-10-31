@@ -40,9 +40,11 @@ function collectLocalities(value: unknown, into: Set<string>, depth = 0): void {
   const record = value as Record<string, unknown>;
   for (const key of ["addressLocality", "addressRegion", "areaServed"]) {
     const v = record[key];
-    if (typeof v === "string" && v.trim()) into.add(v.trim().slice(0, 80));
-    else if (Array.isArray(v)) for (const x of v) if (typeof x === "string" && x.trim()) into.add(x.trim().slice(0, 80));
-    else if (v && typeof v === "object" && !Array.isArray(v)) {
+    if (typeof v === "string" && v.trim()) {
+      into.add(v.trim().slice(0, 80));
+    } else if (Array.isArray(v)) {
+      for (const x of v) if (typeof x === "string" && x.trim()) into.add(x.trim().slice(0, 80));
+    } else if (v && typeof v === "object") {
       const name = (v as Record<string, unknown>).name;
       if (typeof name === "string" && name.trim()) into.add(name.trim().slice(0, 80));
     }

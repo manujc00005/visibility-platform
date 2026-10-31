@@ -128,3 +128,43 @@ describe("associateCandidates", () => {
     expect(isGenericName("k2")).toBe(false);
   });
 });
+
+describe("structured lines (012)", () => {
+  const extract = (answerText: string, sources: string[] = []) => assistedCaptureSource.extract({ answerText, sources });
+
+  it("reads name, web, kind, zone and reason, inside a code block too (AC-006)", () => {
+    const { names, references } = extract(["```", "COMPETIDOR | Acme Growth | https://acme.es | directo | España | Automatiza CRM para pymes", "COMPETIDOR | Beta | https://beta.es/ | Indirect | Madrid | Agencia", "```"].join("\n"));
+    expect(names[0]).toEqual({ name: "Acme Growth", key: "acme growth", explicitUrl: "https://acme.es", kind: "direct", snippet: "Automatiza CRM para pymes · Atiende: España" });
+    expect(names[1]).toMatchObject({ name: "Beta", kind: "indirect" });
+    expect(references.map((r) => r.host)).toEqual(["acme.es", "beta.es"]);
+  });
+
+  it("accepts a markdown link, a bare domain, a table row and a list item", () => {
+    expect(extract("COMPETIDOR | Acme | [acme.es](https://acme.es/?utm_source=chatgpt.com) | sustituto | - | x").names[0]).toMatchObject({ kind: "substitute", explicitUrl: "https://acme.es/?utm_source=chatgpt.com" });
+    expect(extract("COMPETIDOR | Acme | acme.es").names[0]).toMatchObject({ explicitUrl: "https://acme.es", kind: null });
+    expect(extract("| COMPETIDOR | Acme | https://acme.es | directo | España | x |").names[0]).toMatchObject({ name: "Acme", kind: "direct", snippet: "x · Atiende: España" });
+    expect(extract("- competidor | Acme | https://acme.es | directo").names[0]).toMatchObject({ name: "Acme" });
+  });
+
+  it("marks a missing web and an unknown kind as absent", () => {
+    expect(extract("COMPETIDOR | Acme | sin web | quizá | España | x").names[0]).toMatchObject({ explicitUrl: null, kind: null });
+    expect(extract("COMPETIDOR | Acme |  | directo").names[0]).toMatchObject({ explicitUrl: null, kind: "direct" });
+  });
+
+  it("only the web column makes a reference", () => {
+    const { references } = extract("COMPETIDOR | Acme | https://acme.es | directo | España | citado en https://blog.es/ranking");
+    expect(references.map((r) => r.host)).toEqual(["acme.es"]);
+  });
+
+  it("ignores the template line, and applies the same name guards as free text", () => {
+    expect(extract("COMPETIDOR | Nombre | https://web | tipo | zona donde atiende | motivo breve").names).toEqual([]);
+    expect(extract("COMPETIDOR | Otro | https://web | directo").names).toEqual([]);
+    expect(extract(`COMPETIDOR | ${"n".repeat(121)} | https://acme.es`).names).toEqual([]);
+    expect(extract("COMPETIDOR | Servicios | https://acme.es").names).toEqual([]);
+  });
+
+  it("a line with too few columns follows the free-text path", () => {
+    expect(extract("COMPETIDOR | ").names).toEqual([]);
+    expect(extract("Competidor directo de la zona").names).toEqual([]);
+  });
+});

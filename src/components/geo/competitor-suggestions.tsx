@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { fillTemplate, plural } from "@/i18n/client-format";
 import type { Locale } from "@/i18n/locale";
 import type { Messages } from "@/i18n/messages";
+import { COMPETITOR_KINDS, type CompetitorKind } from "@/modules/geo/competitors/profile-options";
 import type { FactorEvidence, SuggestionFactors, WebStatus } from "@/modules/geo/competitors/schema";
 import type { Tone } from "@/modules/audits/status";
 
@@ -29,6 +30,7 @@ export interface SuggestionCard {
   id: string;
   status: "suggested" | "accepted" | "dismissed" | "superseded";
   name: string;
+  kind: CompetitorKind | null;
   domain: string | null;
   sourceUrls: string[];
   snippet: string;
@@ -93,7 +95,9 @@ function CopyButton({ text, labels }: { text: string; labels: SuggestionLabels }
   );
 }
 
-const FACTOR_TONE: Record<FactorEvidence["state"], Tone> = { matched: "good", unknown: "neutral", conflicting: "bad" };
+export const SELECT_CLASS = "h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm";
+
+const FACTOR_TONE: Record<FactorEvidence["state"], Tone> = { matched: "good", unknown: "neutral", conflicting: "bad", not_applicable: "neutral" };
 const WEB_TONE: Record<WebStatus, Tone> = { reachable: "good", unreachable: "fair", unverified: "neutral", blocked: "bad" };
 
 function Factor({ label, factor, states, pill }: { label: string; factor: FactorEvidence; states: SuggestionLabels["card"]["factor"]; pill: string }) {
@@ -147,6 +151,9 @@ function Card({
       </div>
 
       <ul className="flex flex-col gap-1">
+        <li>
+          <StatusPill tone="neutral">{card.kind ? t.kinds[card.kind] : t.noKind}</StatusPill>
+        </li>
         <Factor label={t.sector} factor={card.factors.sector} states={t.factor} pill={t.factorPill} />
         <Factor label={t.zone} factor={card.factors.zone} states={t.factor} pill={t.factorPill} />
         <Factor label={t.services} factor={card.factors.services} states={t.factor} pill={t.factorPill} />
@@ -195,6 +202,17 @@ function Card({
               <Input id={`s-web-${card.id}`} name="website" defaultValue={v.website ?? card.domain ?? ""} inputMode="url" />
               <span className="text-xs text-muted-foreground">{t.websiteHint}</span>
             </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor={`s-kind-${card.id}`}>{t.kind}</Label>
+              <select id={`s-kind-${card.id}`} name="kind" defaultValue={v.kind ?? card.kind ?? ""} className={SELECT_CLASS}>
+                <option value="">{t.noKind}</option>
+                {COMPETITOR_KINDS.map((kind) => (
+                  <option key={kind} value={kind}>
+                    {t.kinds[kind]}
+                  </option>
+                ))}
+              </select>
+            </div>
             <label className="flex items-start gap-2 sm:col-span-2">
               <input type="checkbox" name="reviewConfirmed" value="true" defaultChecked={v.reviewConfirmed === "true"} required className="mt-1" />
               <span>{t.confirm}</span>
@@ -222,6 +240,7 @@ function Card({
 export function CompetitorSuggestions({
   workspaceId,
   questions,
+  questionsNote,
   extraction,
   cards,
   activeCount,
@@ -234,6 +253,8 @@ export function CompetitorSuggestions({
 }: {
   workspaceId: string;
   questions: string[];
+  /** Shown over the questions while no business profile is confirmed. */
+  questionsNote: string | null;
   extraction: ExtractionSummary | null;
   cards: SuggestionCard[];
   activeCount: number;
@@ -262,20 +283,23 @@ export function CompetitorSuggestions({
         <p className="text-xs text-muted-foreground">{t.description}</p>
       </div>
 
+      {questionsNote ? <p className="text-xs text-muted-foreground">{questionsNote}</p> : null}
       <ol className="flex flex-col gap-2 text-sm">
         {questions.map((q) => (
           <li key={q} className="flex flex-wrap items-center gap-2">
             <CopyButton text={q} labels={t} />
             {/* Market question: stays in the business's language. */}
-            <span lang="es">{q}</span>
+            <span lang="es" className="min-w-0 whitespace-pre-wrap [overflow-wrap:anywhere]">
+              {q}
+            </span>
           </li>
         ))}
       </ol>
 
-      <form key={state.attempt} action={formAction} className="flex flex-col gap-3">
+      <form key={`${state.attempt}:${questions[0] ?? ""}`} action={formAction} className="flex flex-col gap-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="d-question">{t.question}</Label>
-          <Input id="d-question" name="question" defaultValue={v.question ?? questions[0] ?? ""} required maxLength={500} />
+          <Textarea id="d-question" name="question" rows={3} defaultValue={v.question ?? questions[0] ?? ""} required maxLength={2000} />
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="d-answer">{t.answer}</Label>

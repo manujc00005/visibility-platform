@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { BusinessProfileForm } from "@/components/geo/business-profile-form";
 import { CompetitorSuggestions, type SuggestionCard } from "@/components/geo/competitor-suggestions";
 import { PageHeader } from "@/components/overview/page-header";
 import { WorkspaceNav } from "@/components/overview/workspace-nav";
@@ -15,9 +16,11 @@ import { getLocale } from "@/i18n/server";
 import { geoProviderStatus } from "@/modules/geo/deps";
 import { formatMicros } from "@/modules/geo/budget";
 import { geoLabels } from "@/modules/geo/presentation";
+import { profileContext } from "@/modules/geo/competitors/profile";
+import { getBusinessProfile } from "@/modules/geo/competitors/profile-service";
 import type { ExtractionContext } from "@/modules/geo/competitors/schema";
 import { listSuggestions } from "@/modules/geo/competitors/service";
-import { discoveryQuestions, suggestPrompts } from "@/modules/geo/prompt-suggestions";
+import { discoveryPrompt, discoveryQuestions, suggestPrompts } from "@/modules/geo/prompt-suggestions";
 import { listCompetitors, listPrompts, MAX_ACTIVE_COMPETITORS, MAX_ACTIVE_PROMPTS } from "@/modules/geo/service";
 import { displayCountry, displayDate, displayDomain } from "@/modules/workspaces/presentation";
 import { getWorkspace } from "@/modules/workspaces/service";
@@ -31,6 +34,8 @@ import {
   createRunAction,
   dismissSuggestionAction,
   extractCompetitorsAction,
+  proposeBusinessProfileAction,
+  saveBusinessProfileAction,
   updateAliasesAction,
 } from "../actions";
 
@@ -40,10 +45,11 @@ export async function generateMetadata(): Promise<Metadata> {
 export const instant = false;
 
 /** Company record frozen at extraction time. Its values (sector, place, services) are the user's own data. */
-function contextLine(c: ExtractionContext, t: Messages["geo"]["setup"]["context"]): string {
+function contextLine(c: ExtractionContext, t: Messages["geo"]["setup"]["context"], profile: Messages["geo"]["profile"]["form"]): string {
   const parts = [c.brandName, c.sector, c.city ? `${c.city} (${c.countryName})` : c.countryName];
   if (c.aliases.length) parts.push(t.aliases(c.aliases.join(", ")));
   if (c.services.length) parts.push(t.services(c.services.join(", ")));
+  if (c.profile) parts.push(profile.customerTypes[c.profile.customerType], profile.zones[c.profile.zoneRelevance]);
   return parts.join(" · ");
 }
 
@@ -57,20 +63,24 @@ export default async function GeoSetupPage({ params }: PageProps<"/workspaces/[i
   const m = getMessages(locale);
   const t = m.geo.setup;
   const L = geoLabels(locale);
-  const [competitors, prompts, discovery] = await Promise.all([
+  const [competitors, prompts, discovery, profile] = await Promise.all([
     listCompetitors(db, workspace.id),
     listPrompts(db, workspace.id),
     listSuggestions(db, workspace.id),
+    getBusinessProfile(db, workspace.id),
   ]);
   // Market questions are built in the business's language: the country name stays Spanish (SPEC «Límites»).
   const countryName = displayCountry(workspace.country);
-  const questions = discoveryQuestions({ brandName: workspace.name, sector: workspace.sector, city: workspace.city, countryName });
+  const questions = profile
+    ? [discoveryPrompt({ brandName: workspace.name, hostname: workspace.domain, sector: workspace.sector, countryName, services: workspace.services, profile: profileContext(profile) })]
+    : discoveryQuestions({ brandName: workspace.name, sector: workspace.sector, city: workspace.city, countryName });
   const cards: SuggestionCard[] = (discovery?.suggestions ?? [])
     .filter((s) => s.status !== "superseded")
     .map((s) => ({
       id: s.id,
       status: s.status,
       name: s.name,
+      kind: s.competitorKind,
       domain: s.domain,
       sourceUrls: s.sourceUrls,
       snippet: s.snippet,
@@ -119,7 +129,7 @@ export default async function GeoSetupPage({ params }: PageProps<"/workspaces/[i
         </CardContent>
       </Card>
 
-      <Card>
+      <Card id="competitors">
         <CardHeader>
           <CardTitle>{t.competitors.title}</CardTitle>
           <CardDescription>{t.competitors.description(MAX_ACTIVE_COMPETITORS)}</CardDescription>
@@ -146,9 +156,16 @@ export default async function GeoSetupPage({ params }: PageProps<"/workspaces/[i
             <p className="text-sm text-muted-foreground">{t.competitors.none}</p>
           )}
           {competitors.length < MAX_ACTIVE_COMPETITORS ? <CompetitorForm action={addCompetitorAction.bind(null, workspace.id)} labels={m.geo.forms} /> : null}
+          <BusinessProfileForm
+            profile={profile}
+            propose={proposeBusinessProfileAction.bind(null, workspace.id)}
+            save={saveBusinessProfileAction.bind(null, workspace.id)}
+            labels={m.geo.profile.form}
+          />
           <CompetitorSuggestions
             workspaceId={workspace.id}
             questions={questions}
+            questionsNote={profile ? null : m.geo.profile.form.needsProfile}
             extraction={
               discovery
                 ? {
@@ -157,7 +174,7 @@ export default async function GeoSetupPage({ params }: PageProps<"/workspaces/[i
                     sourcesCount: discovery.extraction.sources.length,
                     candidatesTotal: discovery.extraction.candidatesTotal,
                     warnings: discovery.extraction.warnings,
-                    context: contextLine(discovery.extraction.contextSnapshot, t.context),
+                    context: contextLine(discovery.extraction.contextSnapshot, t.context, m.geo.profile.form),
                     rulesVersion: discovery.extraction.rulesVersion,
                     notice: locale !== DEFAULT_LOCALE ? m.geo.suggestions.originalNotice : null,
                   }

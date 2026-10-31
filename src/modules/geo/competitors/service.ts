@@ -11,12 +11,16 @@ import { compareEvaluated, evaluateCandidates, EVALUATION_RULES_VERSION, EXCLUSI
 import { EXCLUSIONS_VERSION, isKnownNonBusinessHost, isOwnBusiness, registeredKeys } from "@/modules/geo/competitors/exclusions";
 import { assistedCaptureSource, associateCandidates, EXTRACTION_RULES_VERSION, type PageHead } from "@/modules/geo/competitors/extract";
 import { fetchPageHead, PAGE_HEAD_LIMITS } from "@/modules/geo/competitors/page-head";
+import { COMPETITOR_KINDS } from "@/modules/geo/competitors/profile-options";
+import { profileContext } from "@/modules/geo/competitors/profile";
+import { getBusinessProfile } from "@/modules/geo/competitors/profile-service";
 import {
   geoCompetitorDismissals,
   geoCompetitorExtractions,
   geoCompetitorSuggestions,
   type AcceptedInput,
   type ExtractionContext,
+  type GeoBusinessProfile,
   type GeoCompetitorExtraction,
   type GeoCompetitorSuggestion,
 } from "@/modules/geo/competitors/schema";
@@ -33,11 +37,11 @@ import { getWorkspace } from "@/modules/workspaces/service";
  * `extractCompetitors`, outside any transaction; accepting and dismissing are short
  * transactions that take the workspace lock first and then the suggestion row.
  */
-export const SUGGESTION_RULES_VERSION = `competitors-2026-10-26.1|${EXTRACTION_RULES_VERSION}|${EVALUATION_RULES_VERSION}|${EXCLUSIONS_VERSION}`;
+export const SUGGESTION_RULES_VERSION = `competitors-2026-10-31.1|${EXTRACTION_RULES_VERSION}|${EVALUATION_RULES_VERSION}|${EXCLUSIONS_VERSION}`;
 export const EXTERNAL_DEADLINE_MS = 15_000;
 export const MAX_CONCURRENCY = 5;
 export const MAX_ATTEMPTS = 25;
-export const MAX_QUESTION = 500;
+export const MAX_QUESTION = 2_000;
 export const MAX_ANSWER = 30_000;
 export const MAX_SOURCES = 20;
 export const MAX_SOURCE_LENGTH = 2_048;
@@ -104,7 +108,7 @@ function canonicalSource(raw: string, locale: Locale): { ok: true; url: string }
   return { ok: true, url: url.href };
 }
 
-export function contextOf(workspace: Workspace): ExtractionContext {
+export function contextOf(workspace: Workspace, profile: GeoBusinessProfile | null = null): ExtractionContext {
   return {
     brandName: workspace.name,
     aliases: [...workspace.brandAliases].sort(),
@@ -114,6 +118,7 @@ export function contextOf(workspace: Workspace): ExtractionContext {
     countryCode: workspace.country,
     countryName: displayCountry(workspace.country),
     services: [...workspace.services].sort(),
+    profile: profile ? profileContext(profile) : null,
   };
 }
 
@@ -241,7 +246,7 @@ export async function extractCompetitors(
 
   const workspace = await getWorkspace(db, workspaceId);
   if (!workspace) return { ok: false, error: "not_found" };
-  const context = contextOf(workspace);
+  const context = contextOf(workspace, await getBusinessProfile(db, workspace.id));
   const answerSha256 = sha256(parsed.data.answer);
   const fingerprint = inputFingerprint({ workspaceId: workspace.id, question: parsed.data.question, answerSha256, sources: uniqueSources, context, rulesVersion: SUGGESTION_RULES_VERSION });
 
@@ -285,7 +290,7 @@ export async function extractCompetitors(
     const again = await findByFingerprint(tx, workspace.id, fingerprint);
     if (again) return { ok: true, value: { ...again, repeated: true } };
     const [current] = await tx.select().from(workspaces).where(eq(workspaces.id, workspace.id));
-    if (!current || canonical(contextOf(current)) !== canonical(context)) return { ok: false, error: "conflict" };
+    if (!current || canonical(contextOf(current, await getBusinessProfile(tx, workspace.id))) !== canonical(context)) return { ok: false, error: "conflict" };
     if ((await latestExtractionId(tx, workspace.id)) !== baseId) return { ok: false, error: "conflict" };
 
     // Decisions taken while we were reading the web still win.
@@ -344,6 +349,7 @@ function suggestionRow(workspaceId: string, extractionId: string, c: EvaluatedCa
     candidateKey: c.key,
     name: c.name,
     domain: c.host,
+    competitorKind: c.kind,
     sourceUrls: c.sourceUrls.slice(0, 10),
     snippet: c.snippet.slice(0, 200),
     pageTitle: c.head?.title ?? null,
@@ -364,6 +370,7 @@ export function compareStored(a: GeoCompetitorSuggestion, b: GeoCompetitorSugges
     name: s.name,
     nameKey: s.candidateKey.startsWith("name:") ? s.candidateKey.slice(5) : nameKey(s.name),
     nameProvisional: false,
+    kind: s.competitorKind,
     host: s.domain,
     sourceUrls: [],
     snippet: "",
@@ -413,6 +420,7 @@ function buildAcceptSchema(locale: Locale) {
     name: z.string({ error: t.nameRequired }).trim().min(1, t.nameRequired).max(120, t.maxChars(120)),
     website: z.string().default(""),
     reviewConfirmed: z.string().default("").transform((v) => v === "true" || v === "on"),
+    kind: z.enum([...COMPETITOR_KINDS, ""], { error: t.kindInvalid }).optional(),
   });
 }
 
@@ -479,7 +487,8 @@ export async function acceptSuggestion(
     if (domain && isKnownNonBusinessHost(domain)) fieldErrors.website = [t.nonBusinessHost];
     if (Object.keys(fieldErrors).length > 0) return { ok: false, error: "validation", fieldErrors };
 
-    const inserted = await insertCompetitorLocked(tx, workspaceId, { name: parsed.data.name, domain, aliases: [] }, "all");
+    const kind = parsed.data.kind === undefined ? suggestion.competitorKind : parsed.data.kind || null;
+    const inserted = await insertCompetitorLocked(tx, workspaceId, { name: parsed.data.name, domain, aliases: [], kind }, "all");
     if (!inserted.ok) return inserted;
     const corrected = parsed.data.name !== suggestion.name || domain !== suggestion.domain;
     const acceptedInput: AcceptedInput = {

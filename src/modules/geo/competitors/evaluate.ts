@@ -10,7 +10,7 @@ import type { ExtractionContext, FactorEvidence, SuggestionFactors } from "@/mod
  * The question the operator asked is context and never evidence about a candidate.
  * No score, no weights: a fixed order the operator can understand.
  */
-export const EVALUATION_RULES_VERSION = "evaluate-2026-10-26.1";
+export const EVALUATION_RULES_VERSION = "evaluate-2026-10-31.1";
 export const MAX_SHOWN = 5;
 
 export interface EvaluatedCandidate extends Candidate {
@@ -19,7 +19,7 @@ export interface EvaluatedCandidate extends Candidate {
 
 export interface Exclusion {
   candidate: Candidate;
-  reason: "own_business" | "known_non_business" | "registered" | "dismissed" | "conflicting_zone";
+  reason: "own_business" | "known_non_business" | "registered" | "dismissed" | "conflicting_zone" | "unwanted_kind";
 }
 
 export interface EvaluationResult {
@@ -52,34 +52,42 @@ function matchedTerms(terms: string[], texts: (string | null)[]): { terms: strin
   return { terms: matched, origin };
 }
 
-function placeOf(context: ExtractionContext): { place: string; label: string } {
+/** Where the zone is judged, per the confirmed profile. Null when it does not limit the market. */
+function zoneRule(context: ExtractionContext): { places: string[]; label: string; exclusive: boolean } | null {
+  const profile = context.profile;
+  if (profile?.zoneRelevance === "international") return null;
+  if (profile?.zoneRelevance === "national") return { places: [context.countryName], label: "el país", exclusive: false };
+  const area = profile?.servedArea?.split(/,|\/|\s+y\s+|\s+e\s+/).map((p) => p.trim()).filter(Boolean) ?? [];
+  if (area.length > 0) return { places: area, label: "la zona", exclusive: true };
   const city = context.city?.trim();
-  return city ? { place: city, label: "la ciudad" } : { place: context.countryName, label: "el país" };
+  return city ? { places: [city], label: "la ciudad", exclusive: true } : { places: [context.countryName], label: "el país", exclusive: true };
 }
 
 /** Only these two forms count as an explicit exclusivity statement (SPEC FR-002). */
 const EXCLUSIVITY = /\b(?:solo atendemos en|exclusivamente en)\s+([^.,;:!?\n]+)/giu;
 
 function zoneFactor(candidate: Candidate, context: ExtractionContext): FactorEvidence {
+  const rule = zoneRule(context);
+  if (!rule) return { state: "not_applicable", reason: "La zona no limita este mercado.", origin: "none" };
   const head = candidate.head;
-  const { place, label } = placeOf(context);
-  const placeKey = nameKey(place);
+  const { places, label, exclusive } = rule;
+  const placeKeys = places.map(nameKey);
   if (!head || head.webStatus !== "reachable") return { state: "unknown", reason: `No se pudo leer la portada para comprobar ${label}.`, origin: "none" };
 
-  for (const text of [head.title, head.description]) {
+  for (const text of exclusive ? [head.title, head.description] : []) {
     if (!text) continue;
     for (const m of text.matchAll(EXCLUSIVITY)) {
       const locality = nameKey(m[1] ?? "");
-      if (locality && locality !== placeKey && !locality.includes(placeKey)) {
-        return { state: "conflicting", reason: `La web declara atender solo en «${(m[1] ?? "").trim().slice(0, 60)}».`, terms: [place], origin: "description" };
+      if (locality && !placeKeys.some((key) => locality === key || locality.includes(key))) {
+        return { state: "conflicting", reason: `La web declara atender solo en «${(m[1] ?? "").trim().slice(0, 60)}».`, terms: places, origin: "description" };
       }
     }
   }
-  const inText = matchedTerms([place], [head.title, head.description]);
-  if (inText.terms.length > 0) return { state: "matched", reason: `Menciona ${place} en su ${inText.origin === "title" ? "título" : "descripción"}.`, terms: [place], origin: inText.origin };
-  const inJsonLd = head.localities.some((l) => normalizeText(l).includes(` ${placeKey} `));
-  if (inJsonLd) return { state: "matched", reason: `Declara ${place} en sus datos estructurados.`, terms: [place], origin: "jsonld" };
-  return { state: "unknown", reason: `No encontramos ${place} en su portada; eso no significa que no atienda allí.`, origin: "none" };
+  const inText = matchedTerms(places, [head.title, head.description]);
+  if (inText.terms.length > 0) return { state: "matched", reason: `Menciona ${inText.terms.join(", ")} en su ${inText.origin === "title" ? "título" : "descripción"}.`, terms: inText.terms, origin: inText.origin };
+  const declared = places.filter((_, i) => head.localities.some((l) => normalizeText(l).includes(` ${placeKeys[i]} `)));
+  if (declared.length > 0) return { state: "matched", reason: `Declara ${declared.join(", ")} en sus datos estructurados.`, terms: declared, origin: "jsonld" };
+  return { state: "unknown", reason: `No encontramos ${places.join(", ")} en su portada; eso no significa que no atienda allí.`, origin: "none" };
 }
 
 function termFactor(label: "sector" | "services", terms: string[], candidate: Candidate): FactorEvidence {
@@ -97,7 +105,7 @@ function termFactor(label: "sector" | "services", terms: string[], candidate: Ca
 export function evaluateCandidate(candidate: Candidate, context: ExtractionContext): SuggestionFactors {
   const review: string[] = [...candidate.notes];
   const sector = termFactor("sector", [context.sector], candidate);
-  const services = termFactor("services", context.services, candidate);
+  const services = termFactor("services", [...new Set([...context.services, ...(context.profile?.offerings ?? [])])], candidate);
   const zone = zoneFactor(candidate, context);
   if (candidate.head?.webStatus === "reachable") review.push("La web responde, pero eso no confirma que sea la de esta empresa: revísalo.");
   for (const [factor, name] of [
@@ -114,8 +122,13 @@ function matchedCount(f: SuggestionFactors): number {
   return [f.sector, f.zone, f.services].filter((x) => x.state === "matched").length;
 }
 
-/** FR-003b: matched count desc, reachable first, then name key and hostname ascending. */
+const KIND_RANK = { direct: 0, indirect: 1, substitute: 2 } as const;
+const kindRank = (c: EvaluatedCandidate) => (c.kind ? KIND_RANK[c.kind] : 3);
+
+/** Declared kind first (012), then FR-003b: matched count desc, reachable first, name key and hostname ascending. */
 export function compareEvaluated(a: EvaluatedCandidate, b: EvaluatedCandidate): number {
+  const byKind = kindRank(a) - kindRank(b);
+  if (byKind !== 0) return byKind;
   const byMatches = matchedCount(b.factors) - matchedCount(a.factors);
   if (byMatches !== 0) return byMatches;
   const reach = (c: EvaluatedCandidate) => (c.head?.webStatus === "reachable" ? 0 : 1);
@@ -154,6 +167,10 @@ export function evaluateCandidates(
       excluded.push({ candidate, reason: "dismissed" });
       continue;
     }
+    if (candidate.kind && context.profile && !context.profile.competitorKinds.includes(candidate.kind)) {
+      excluded.push({ candidate, reason: "unwanted_kind" });
+      continue;
+    }
     const factors = evaluateCandidate(candidate, context);
     if (factors.zone.state === "conflicting") {
       excluded.push({ candidate, reason: "conflicting_zone" });
@@ -171,4 +188,5 @@ export const EXCLUSION_LABELS: Record<Exclusion["reason"], string> = {
   registered: "competidores ya registrados",
   dismissed: "descartados anteriormente",
   conflicting_zone: "webs que declaran atender solo en otra zona",
+  unwanted_kind: "tipos de competidor que no buscas",
 };

@@ -48,3 +48,9 @@ describe("fetchPageHead", () => {
     expect(await fetchPageHead("redir.es", fetcher, b, o)).toMatchObject({ webStatus: "reachable", finalHost: "doctoralia.es" });
   });
 });
+
+describe("jsonLdLocalities areaServed", () => {
+  it("reads an area declared as an object", () => {
+    expect(jsonLdLocalities('<script type="application/ld+json">{"areaServed":{"@type":"City","name":"Toledo"}}</script>')).toContain("Toledo");
+  });
+});

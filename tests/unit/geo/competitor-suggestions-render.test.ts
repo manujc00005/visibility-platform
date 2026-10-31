@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { GeoFormState } from "@/app/workspaces/[id]/geo/actions";
+import { BusinessProfileForm } from "@/components/geo/business-profile-form";
 import { CompetitorSuggestions, type SuggestionCard } from "@/components/geo/competitor-suggestions";
 import type { Locale } from "@/i18n/locale";
 import { getMessages } from "@/i18n/messages";
@@ -26,6 +27,7 @@ function card(partial: Partial<SuggestionCard>): SuggestionCard {
     id: "00000000-0000-4000-8000-000000000001",
     status: "suggested",
     name: "Clínica Sonrisa",
+    kind: null,
     domain: "sonrisa.es",
     sourceUrls: ["https://sonrisa.es/"],
     snippet: "Clínica Sonrisa es conocida por…",
@@ -45,6 +47,7 @@ function render(locale: Locale, sourcesCount: number, activeCount: number): stri
     createElement(CompetitorSuggestions, {
       workspaceId: "00000000-0000-4000-8000-0000000000aa",
       questions: ["¿Qué clínica dental me recomiendas en Madrid?"],
+      questionsNote: null,
       extraction: {
         question: "¿Qué clínica dental me recomiendas en Madrid?",
         capturedAt: locale === "en" ? "26 Oct 2026, 21:10" : "26 oct 2026, 21:10",
@@ -103,5 +106,68 @@ describe("CompetitorSuggestions in Spanish", () => {
     expect(one).toContain("Sector: Indicio");
     expect(one).not.toContain('role="note"');
     expect(render("es", 3, 1)).toContain("3 webs citadas · 4 candidatos analizados");
+  });
+});
+
+describe("competitor types and the profile form (012)", () => {
+  const form = (locale: Locale, profile: Parameters<typeof BusinessProfileForm>[0]["profile"] = null) =>
+    renderToStaticMarkup(createElement(BusinessProfileForm, { profile, propose: noop, save: noop, labels: getMessages(locale).geo.profile.form }));
+
+  it("shows the declared type, or says it is missing, in both languages", () => {
+    for (const locale of ["es", "en"] as const) {
+      const t = getMessages(locale).geo.suggestions.card;
+      const m = getMessages(locale);
+      const html = renderToStaticMarkup(
+        createElement(CompetitorSuggestions, {
+          workspaceId: "00000000-0000-4000-8000-0000000000aa",
+          questions: ["Línea uno\nLínea dos"],
+          questionsNote: m.geo.profile.form.needsProfile,
+          extraction: { question: "q", capturedAt: "x", sourcesCount: 0, candidatesTotal: 2, warnings: [], context: "c", rulesVersion: "r", notice: null },
+          cards: [card({ kind: "direct", factors: { ...factors, zone: { state: "not_applicable", reason: "La zona no limita este mercado.", origin: "none" } } }), card({ id: "00000000-0000-4000-8000-000000000002", kind: null })],
+          activeCount: 0,
+          maxActive: 5,
+          extract: noop,
+          accept: noop as never,
+          dismiss: noop as never,
+          labels: m.geo.suggestions,
+          locale,
+        }),
+      );
+      expect(html).toContain(t.kinds.direct);
+      expect(html).toContain(t.noKind);
+      expect(html).toContain(t.factor.not_applicable);
+      expect(html).toContain(m.geo.profile.form.needsProfile);
+      expect(html).toContain('name="kind"');
+      expect(html).toMatch(/<textarea[^>]*name="question"[^>]*maxLength="2000"/);
+    }
+  });
+
+  it("the form offers both actions and defaults to the two main kinds", () => {
+    for (const locale of ["es", "en"] as const) {
+      const t = getMessages(locale).geo.profile.form;
+      const html = form(locale);
+      expect(html).toContain(t.propose);
+      expect(html).toContain(t.save);
+      expect(html.match(/name="competitorKinds"[^>]*checked=""/g)).toHaveLength(2);
+    }
+  });
+
+  it("shows the stored profile as text", () => {
+    const html = form("es", {
+      workspaceId: "w",
+      summary: "<script>alert(1)</script>",
+      offerings: ["Uno", "Dos"],
+      customerType: "b2b",
+      targetCustomer: "Pymes",
+      zoneRelevance: "local",
+      servedArea: "Madrid",
+      competitorKinds: ["substitute"],
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+    });
+    expect(html).not.toContain("<script>alert");
+    expect(html).toContain("&lt;script&gt;");
+    expect(html).toContain('value="Madrid"');
+    expect(html.match(/name="competitorKinds"[^>]*checked=""/g)).toHaveLength(1);
   });
 });

@@ -1,3 +1,6 @@
+import type { CompetitorKind } from "@/modules/geo/competitors/profile-options";
+import type { ExtractionProfile } from "@/modules/geo/competitors/schema";
+
 /**
  * Deterministic question templates built from the company record. They are suggestions:
  * the operator reviews, edits and approves them before any measurement. Non-branded
@@ -31,6 +34,72 @@ function sectorQuestion(sector: string, place: string): string {
 export function discoveryQuestions(input: { brandName: string; sector: string; city: string | null; countryName: string }): string[] {
   const place = input.city?.trim() || input.countryName;
   return [sectorQuestion(input.sector, place), `¿Qué alternativas hay a ${input.brandName.trim()} en ${place}?`];
+}
+
+export const MAX_DISCOVERY_PROMPT = 2_000;
+
+const KIND_RULES: Record<CompetitorKind, string> = {
+  direct: "directo: vende lo mismo al mismo tipo de cliente",
+  indirect: "indirecto: resuelve la misma necesidad con otra oferta",
+  substitute: "sustituto: lo que el cliente usa en lugar de contratar este servicio",
+};
+
+/** Profile text goes inside a fixed format: nothing in it may break a line or the code block. */
+const flat = (value: string) => value.replace(/[\r\n|`]+/g, " ").replace(/\s+/g, " ").trim();
+
+function zoneRule(profile: ExtractionProfile, countryName: string): string {
+  const area = flat(profile.servedArea ?? "") || countryName;
+  switch (profile.zoneRelevance) {
+    case "local":
+      return `importa. Solo empresas que atiendan a clientes en ${area}.`;
+    case "regional":
+      return `importa. Solo empresas que trabajen en la región: ${area}.`;
+    case "national":
+      return `cuenta el país, no la ciudad. Empresas que trabajen en ${countryName}.`;
+    case "international":
+      return "no importa dónde estén. Cuenta que vendan al mismo mercado.";
+  }
+}
+
+const CUSTOMER_LABEL: Record<ExtractionProfile["customerType"], string> = { b2b: "empresas", b2c: "particulares", both: "empresas y particulares" };
+
+/**
+ * The full question for the assistant, built only from what the operator confirmed. It fits the
+ * question field: when it would not, the offer shrinks first and then the summary.
+ */
+export function discoveryPrompt(input: { brandName: string; hostname: string; sector: string; countryName: string; services: string[]; profile: ExtractionProfile }): string {
+  const { profile } = input;
+  const brand = flat(input.brandName);
+  const build = (offerings: string[], summary: string) =>
+    [
+      `Usa la búsqueda web. Necesito los competidores reales de ${brand} (${input.hostname}).`,
+      "",
+      `Negocio: ${summary}`,
+      `Sector: ${flat(input.sector)}`,
+      ...(offerings.length > 0 ? [`Oferta: ${offerings.join("; ")}`] : []),
+      `Cliente: ${CUSTOMER_LABEL[profile.customerType]}. ${flat(profile.targetCustomer)}`,
+      `Zona: ${zoneRule(profile, input.countryName)}`,
+      "",
+      "Busca hasta 5 empresas reales con web propia. Tipos que me interesan:",
+      ...profile.competitorKinds.map((kind) => `- ${KIND_RULES[kind]}`),
+      "",
+      `No incluyas a ${brand}, directorios, marketplaces, artículos ni comparadores. Comprueba que cada web existe y no inventes empresas.`,
+      "",
+      "Responde solo con un bloque de código, una línea por empresa, con este formato:",
+      "COMPETIDOR | Nombre | https://web | tipo | zona donde atiende | motivo breve",
+    ].join("\n");
+  const offerings = [...new Set([...profile.offerings, ...input.services].map(flat).filter(Boolean))].slice(0, 10);
+  let summary = flat(profile.summary);
+  let prompt = build(offerings, summary);
+  while (prompt.length > MAX_DISCOVERY_PROMPT && offerings.length > 0) {
+    offerings.pop();
+    prompt = build(offerings, summary);
+  }
+  if (prompt.length > MAX_DISCOVERY_PROMPT) {
+    summary = summary.slice(0, Math.max(0, summary.length - (prompt.length - MAX_DISCOVERY_PROMPT)));
+    prompt = build(offerings, summary);
+  }
+  return prompt;
 }
 
 export function suggestPrompts(input: {
