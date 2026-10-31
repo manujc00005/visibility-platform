@@ -160,14 +160,14 @@ export function ComparisonSection({ s, action, manageHref, locale }: Props) {
         </p>
       ) : null}
       {measured ? (
-        <table role="table" aria-label={t.tableLabel} className="block w-full min-w-0 lg:table lg:table-fixed">
+        <table role="table" aria-label={t.tableLabel} className="block w-full min-w-0 lg:table">
           <thead role="rowgroup" className="sr-only lg:not-sr-only lg:table-header-group">
             <tr role="row" className="text-xs text-muted-foreground">
-              <th role="columnheader" scope="col" className="w-[23%] pb-2 pr-3 text-left font-medium">
+              <th role="columnheader" scope="col" className="pb-2 pr-3 text-left font-medium">
                 {t.columns.site}
               </th>
               {COLUMNS.map((column) => (
-                <th key={column} role="columnheader" scope="col" className="px-1.5 pb-2 text-center align-bottom font-medium [overflow-wrap:anywhere]">
+                <th key={column} role="columnheader" scope="col" className="px-1.5 pb-2 text-center align-bottom font-medium">
                   {t.columns[column]}
                 </th>
               ))}

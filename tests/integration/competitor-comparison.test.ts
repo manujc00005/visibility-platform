@@ -252,6 +252,37 @@ describe("capture", () => {
     expect(authorityCalls).toEqual([["olessium.com", "prohibido.es"]]);
   });
 
+  it("turns the robots guard on: a redirect to a forbidden path is never read nor sent to Google (AC-018)", async () => {
+    const ws = await company();
+    await rival(ws.id, "redirige.es");
+    const routes = {
+      ...open("olessium.com"),
+      "https://redirige.es/robots.txt": { status: 200, body: "User-agent: *\nDisallow: /privado", contentType: "text/plain" },
+      "https://redirige.es/": { status: 200, body: HTML_OK, contentType: "text/html" },
+    };
+    const psi: string[] = [];
+    const { built, fetcher } = deps(routes, {
+      pageSpeed: async (url) => {
+        psi.push(url);
+        return performance(50);
+      },
+    });
+    // The fetcher double follows the redirect the way the real one does: asking first.
+    const fetchPlain = fetcher.fetch;
+    built.audit.fetcher = {
+      fetch: async (url, limits, budget) => {
+        if (url === "https://redirige.es/" && limits.allowRequest) {
+          const target = new URL("https://redirige.es/privado");
+          if (!(await limits.allowRequest(target))) return { ok: false, failure: { kind: "refused_by_policy", message: "x", url: target.href } };
+        }
+        return fetchPlain(url, limits, budget);
+      },
+    };
+    await runComparison(db, ws.id, built);
+    expect(byDomain(sitesOf((await rows(ws.id))[0]!.sites), "redirige.es")).toMatchObject({ access: "robots_disallowed", lighthouse: { status: "skipped" } });
+    expect(psi).toEqual(["https://olessium.com/"]);
+  });
+
   it.each<[string, () => Response, string]>([
     ["a rejected key", () => Response.json({}, { status: 401 }), "invalid_key"],
     ["another address", () => Response.json({ error: { type: "address_error" } }, { status: 403 }), "ip_not_allowed"],
@@ -423,6 +454,16 @@ describe("capture", () => {
     expect(stored).not.toContain(secret);
     expect(stored).not.toContain("https://");
     expect(stored).not.toContain("<html");
+  });
+
+  it("breaks a tie on the start time by id", async () => {
+    const ws = await company();
+    const data = (name: string) => ({ version: 1, sites: [{ name }] });
+    const at = new Date("2026-10-31T10:00:00Z");
+    const end = new Date("2026-10-31T10:05:00Z");
+    const ids = ["00000000-0000-4000-8000-000000000001", "00000000-0000-4000-8000-000000000002"];
+    for (const id of [ids[1]!, ids[0]!]) await db.insert(competitorComparisons).values({ id, workspaceId: ws.id, status: "completed", sites: data(id), rulesVersion: "r", startedAt: at, finishedAt: end });
+    expect((await latestComparison(db, ws.id)).latestCompleted?.id).toBe(ids[1]);
   });
 
   it("reads the newest attempt and the newest completed one", async () => {
