@@ -1,12 +1,12 @@
 import { formatDate, formatDateTime } from "@/i18n/format";
 import type { Locale } from "@/i18n/locale";
 import { getMessages } from "@/i18n/messages";
-import { speedSegments, type EvolutionPoint } from "@/modules/audits/evolution";
-import { METRIC_THRESHOLDS } from "@/modules/audits/thresholds";
+import { SCORE_NOISE, speedAxis, speedSegments, type EvolutionPoint } from "@/modules/audits/evolution";
+import { METRIC_THRESHOLDS, rateMetric } from "@/modules/audits/thresholds";
 
 /**
- * Evolution across audits as inline SVG (no chart library, no client JavaScript):
- * stacked bars of problems by severity and a line with Google's mobile speed score.
+ * Evolution across audits (no chart library, no client JavaScript): stacked bars of
+ * problems by severity and a line with Google's mobile speed score.
  * Values are labelled directly, bars carry distinct patterns besides colour, and the
  * same data is available as a visually hidden table for screen readers. Server component:
  * labels and date formats follow the interface language.
@@ -168,128 +168,155 @@ export function ProblemsChart({ points, locale }: { points: EvolutionPoint[]; lo
   );
 }
 
+const TIME: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Madrid" };
+
+/** Points that share a day sit under one date, each with its time; a lone audit needs only the date. */
+function dayGroups(points: EvolutionPoint[], locale: Locale): { label: string; start: number; count: number }[] {
+  const groups: { label: string; start: number; count: number }[] = [];
+  points.forEach((p, i) => {
+    const label = formatDate(p.date, locale, SHORT_DATE);
+    const last = groups.at(-1);
+    if (last?.label === label) last.count += 1;
+    else groups.push({ label, start: i, count: 1 });
+  });
+  return groups;
+}
+
+/** Above this many audits a phone cannot fit every date and time. */
+const PHONE_MAX_LABELS = 6;
+
+const DOT = { good: "bg-good-line", needs_improvement: "bg-fair-line", poor: "bg-bad-line" };
+
+/**
+ * Speed score per audit. Unlike the bars above, this is HTML over a stretched SVG line, so
+ * text keeps its size at any width. Every audit is a hover and focus target with its detail;
+ * still no client JavaScript.
+ */
 export function SpeedChart({ points, locale }: { points: EvolutionPoint[]; locale: Locale }) {
   const t = getMessages(locale).chart;
-  const labels = axisLabels(points, locale);
-  const innerH = H - PAD.top - PAD.bottom;
-  const yOf = (score: number) => PAD.top + innerH - (score / 100) * innerH;
+  const count = points.length;
   const [good, poor] = METRIC_THRESHOLDS.score;
+  const { min, ticks } = speedAxis(points.flatMap((p) => (p.score === null ? [] : [p.score])));
+  const yOf = (score: number) => ((100 - score) / (100 - min)) * 100;
+  const xOf = (index: number) => ((index + 0.5) / count) * 100;
+  const dense = count > PHONE_MAX_LABELS;
+  const onlyWide = dense ? "hidden sm:block" : "";
+  const groups = dayGroups(points, locale);
+  const latest = points.findLastIndex((p) => p.score !== null);
+  const bands = [
+    { key: "good", from: good, to: 100, fill: "bg-good-soft", swatch: "bg-good-soft ring-1 ring-good-line", label: t.legend.good },
+    { key: "fair", from: Math.max(poor, min), to: good, fill: "bg-fair-soft", swatch: "bg-fair-soft ring-1 ring-fair-line", label: t.legend.fair },
+    { key: "poor", from: min, to: poor, fill: "bg-bad-soft", swatch: "bg-bad-soft ring-1 ring-bad-line", label: t.legend.poor },
+  ].filter((band) => band.to > band.from);
   // One stroke per run of comparable measurements (D019): no line where continuity cannot be claimed.
   const paths = speedSegments(points)
     .filter((segment) => segment.length > 1)
-    .map((segment) =>
-      segment
-        .map(
-          (i, k) =>
-            `${k === 0 ? "M" : "L"}${xOf(i, points.length)},${yOf(points[i]!.score!)}`,
-        )
-        .join(" "),
-    );
+    .map((segment) => segment.map((i, k) => `${k === 0 ? "M" : "L"}${xOf(i)},${yOf(points[i]!.score!)}`).join(" "));
 
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      role="img"
-      aria-labelledby="speed-chart-title"
-      className="h-auto w-full text-xs"
-    >
-      <title id="speed-chart-title">{t.speedTitle}</title>
-      <rect
-        x={PAD.left}
-        y={yOf(100)}
-        width={W - PAD.left - PAD.right}
-        height={yOf(good) - yOf(100)}
-        className="fill-good-soft"
-      />
-      <rect
-        x={PAD.left}
-        y={yOf(good)}
-        width={W - PAD.left - PAD.right}
-        height={yOf(poor) - yOf(good)}
-        className="fill-fair-soft"
-      />
-      <rect
-        x={PAD.left}
-        y={yOf(poor)}
-        width={W - PAD.left - PAD.right}
-        height={yOf(0) - yOf(poor)}
-        className="fill-bad-soft"
-      />
-      {[0, poor, good, 100].map((t) => (
-        <g key={t}>
-          <line
-            x1={PAD.left}
-            x2={W - PAD.right}
-            y1={yOf(t)}
-            y2={yOf(t)}
-            className="stroke-border"
-          />
-          {t < 100 ? (
-            <text
-              x={PAD.left - 6}
-              y={yOf(t) + 3}
-              textAnchor="end"
-              className="fill-muted-foreground"
-            >
-              {t}
-            </text>
-          ) : null}
-        </g>
-      ))}
-      {paths.map((d) => (
-        <path
-          key={d}
-          d={d}
-          fill="none"
-          className="stroke-foreground"
-          strokeWidth="2"
-          strokeLinejoin="round"
-        />
-      ))}
-      {points.map((p, i) => {
-        const x = xOf(i, points.length);
-        return (
-          <g key={p.id}>
-            {p.score === null ? (
-              <text
-                x={x}
-                y={yOf(50) + 3}
-                textAnchor="middle"
-                className="fill-muted-foreground"
+    <div className="flex flex-col gap-3">
+      <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+        {bands.map((band) => (
+          <Swatch key={band.key} className={band.swatch} label={band.label} />
+        ))}
+        {points.some((p) => p.score === null) ? <Swatch className="border-l border-dashed border-muted-foreground bg-transparent !w-0 !rounded-none" label={t.legend.unmeasured} /> : null}
+      </p>
+      <div className="mt-5 grid grid-cols-[1.75rem_minmax(0,1fr)] gap-x-2">
+        <div aria-hidden="true" className="relative">
+          {ticks.map((tick) => (
+            <span key={tick} className="absolute right-0 -translate-y-1/2 text-xs text-muted-foreground tabular-nums" style={{ top: `${yOf(tick)}%` }}>
+              {tick}
+            </span>
+          ))}
+        </div>
+        <div role="group" aria-label={t.speedTitle} className="relative h-56 sm:h-64">
+          <div aria-hidden="true" className="absolute inset-0 overflow-hidden rounded-lg">
+            {bands.map((band) => (
+              <div key={band.key} className={`absolute inset-x-0 ${band.fill}`} style={{ top: `${yOf(band.to)}%`, height: `${yOf(band.from) - yOf(band.to)}%` }} />
+            ))}
+            {ticks
+              .filter((tick) => tick > min && tick < 100)
+              .map((tick) => (
+                <div key={tick} className={`absolute inset-x-0 border-t ${tick === good || tick === poor ? "border-foreground/20" : "border-foreground/5"}`} style={{ top: `${yOf(tick)}%` }} />
+              ))}
+          </div>
+          <svg aria-hidden="true" viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 size-full overflow-visible">
+            {paths.map((d) => (
+              <path key={d} d={d} fill="none" vectorEffect="non-scaling-stroke" className="stroke-foreground/70" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+            ))}
+          </svg>
+          {points.map((p, i) => {
+            const x = xOf(i);
+            const y = p.score === null ? 50 : yOf(p.score);
+            const when = formatDateTime(p.date, locale);
+            const rating = p.score === null ? null : t.rating[rateMetric("score", p.score)];
+            const isLatest = i === latest;
+            // Near the edges the detail grows inwards, so it never widens the page.
+            const align = x < 30 ? "left-0" : x > 70 ? "right-0" : "left-1/2 -translate-x-1/2";
+            return (
+              <div
+                key={p.id}
+                role="img"
+                tabIndex={0}
+                aria-label={p.score === null ? t.unmeasured(when) : t.point(when, p.score, rating!)}
+                className="group absolute inset-y-0 rounded-sm transition-colors outline-none hover:bg-foreground/5 focus-visible:bg-foreground/5 focus-visible:ring-2 focus-visible:ring-foreground motion-reduce:transition-none"
+                style={{ left: `${(i / count) * 100}%`, width: `${100 / count}%` }}
               >
-                —
-              </text>
-            ) : (
-              <>
-                <circle
-                  cx={x}
-                  cy={yOf(p.score)}
-                  r="4"
-                  className="fill-background stroke-foreground"
-                  strokeWidth="2"
-                />
-                <text
-                  x={x}
-                  y={yOf(p.score) - 9}
-                  textAnchor="middle"
-                  className="fill-foreground font-medium"
+                {p.score === null ? (
+                  <span aria-hidden="true" className="absolute inset-y-3 left-1/2 border-l border-dashed border-muted-foreground/60" />
+                ) : (
+                  <>
+                    <span aria-hidden="true" className={`absolute left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-background ${DOT[rateMetric("score", p.score)]} ${isLatest ? "size-3.5" : "size-2.5"}`} style={{ top: `${y}%` }} />
+                    <span aria-hidden="true" className={`absolute left-1/2 -translate-x-1/2 -translate-y-full tabular-nums ${isLatest ? "text-sm font-semibold sm:text-base" : "text-xs font-medium sm:text-sm"}`} style={{ top: `calc(${y}% - 0.625rem)` }}>
+                      {p.score}
+                    </span>
+                  </>
+                )}
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none absolute z-10 w-max max-w-44 rounded-md bg-popover px-2.5 py-1.5 text-xs text-popover-foreground opacity-0 shadow-md ring-1 ring-border transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none ${align}`}
+                  style={{ bottom: `calc(${100 - y}% + 2.25rem)` }}
                 >
-                  {p.score}
-                </text>
-              </>
-            )}
-            <text
-              x={x}
-              y={H - 8}
-              textAnchor="middle"
-              className="fill-muted-foreground"
+                  {p.score === null ? (
+                    <span className="block font-medium">{t.table.notMeasured}</span>
+                  ) : (
+                    <span className="block font-medium">
+                      {p.score} · {rating}
+                    </span>
+                  )}
+                  <span className="block text-muted-foreground">{when}</span>
+                  {p.methodology ? <span className="block text-muted-foreground">Lighthouse {p.methodology.major}</span> : null}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        <div aria-hidden="true" className="col-start-2 mt-2 grid text-xs text-muted-foreground" style={{ gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))` }}>
+          {groups.flatMap((group) =>
+            group.count > 1
+              ? points.slice(group.start, group.start + group.count).map((p, k) => (
+                  <span key={p.id} className={`whitespace-nowrap text-center tabular-nums ${onlyWide}`} style={{ gridColumn: group.start + k + 1, gridRow: 1 }}>
+                    {formatDate(p.date, locale, TIME)}
+                  </span>
+                ))
+              : [],
+          )}
+          {groups.map((group, k) => (
+            <span
+              key={group.start}
+              className={`mt-1 whitespace-nowrap border-t pt-1 text-center font-medium text-foreground/80 ${group.count > 1 ? "border-foreground/20" : "border-transparent"} ${dense && k > 0 && k < groups.length - 1 ? "hidden sm:block" : ""}`}
+              style={{ gridColumn: `${group.start + 1} / span ${group.count}`, gridRow: 2 }}
             >
-              {labels[i]}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
+              {group.label}
+            </span>
+          ))}
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        {min > 0 ? `${t.zoomed(min)} ` : ""}
+        {t.noise(SCORE_NOISE)}
+      </p>
+    </div>
   );
 }
 
@@ -312,17 +339,6 @@ export function ProblemsLegend({ locale }: { locale: Locale }) {
       <Swatch className="bg-bad-line" label={t.critical} />
       <Swatch className="bg-[repeating-linear-gradient(45deg,var(--fair-line)_0_2px,var(--background)_2px_3px)]" label={t.warning} />
       <Swatch className="bg-info-line" label={t.info} />
-    </p>
-  );
-}
-
-export function SpeedLegend({ locale }: { locale: Locale }) {
-  const t = getMessages(locale).chart.legend;
-  return (
-    <p className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-      <Swatch className="bg-good-soft ring-1 ring-good-line" label={t.good} />
-      <Swatch className="bg-fair-soft ring-1 ring-fair-line" label={t.fair} />
-      <Swatch className="bg-bad-soft ring-1 ring-bad-line" label={t.poor} />
     </p>
   );
 }

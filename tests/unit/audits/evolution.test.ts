@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptyResult, type PerformanceResult } from "@/modules/audits/pagespeed";
-import { speedBreaks, speedSegments, toPoint, type AuditLike } from "@/modules/audits/evolution";
+import { speedAxis, speedBreaks, speedSegments, toPoint, type AuditLike } from "@/modules/audits/evolution";
 import type { AuditFacts } from "@/modules/audits/rules";
 
 const perf = (score: number, lcpMs = 2000): PerformanceResult => ({
@@ -60,6 +60,17 @@ describe("speed methodology and segments (D019)", () => {
     expect(speedSegments([point("a", 60, "12"), point("b", 70, "13"), point("c", 65, "13")])).toEqual([[0], [1, 2]]);
     expect(speedSegments([point("a", 60, "13"), point("b", 70, null), point("c", 65, "13")])).toEqual([[0], [1], [2]]);
     expect(speedSegments([point("a", 60, "13"), point("b", null, null), point("c", 65, "13")])).toEqual([[0], [2]]);
+  });
+
+  it("starts the speed axis a noise margin below the lowest score, in tens", () => {
+    expect(speedAxis([95, 86, 96])).toEqual({ min: 70, ticks: [70, 80, 90, 100] });
+    expect(speedAxis([60, 72])).toEqual({ min: 50, ticks: [50, 60, 70, 80, 90, 100] });
+  });
+
+  it("keeps the good threshold in view and falls back towards 0 with low scores", () => {
+    expect(speedAxis([100, 100]).min).toBe(80);
+    expect(speedAxis([45])).toEqual({ min: 30, ticks: [30, 50, 90, 100] });
+    expect(speedAxis([5])).toEqual({ min: 0, ticks: [0, 50, 90, 100] });
   });
 
   it("explains the breaks found among the points shown", () => {

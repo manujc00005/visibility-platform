@@ -1076,7 +1076,12 @@ export const es = {
     problemsTitle: "Problemas por auditoría, de la más antigua a la más reciente",
     speedTitle: "Puntuación de velocidad en móvil por auditoría, de 0 a 100",
     bar: (date: string, critical: number, warning: number, info: number) => `${date}: ${critical} críticos, ${warning} importantes, ${info} mejoras`,
-    legend: { critical: "Críticos", warning: "Importantes", info: "Mejoras", good: "Bueno ≥ 90", fair: "Mejorable", poor: "Malo < 50" },
+    legend: { critical: "Críticos", warning: "Importantes", info: "Mejoras", good: "Bueno: 90–100", fair: "Mejorable: 50–89", poor: "Malo: 0–49", unmeasured: "Auditoría sin medir" },
+    point: (date: string, score: number, rating: string) => `${date}: ${score} de 100, ${rating}`,
+    unmeasured: (date: string) => `${date}: no se midió la velocidad`,
+    rating: { good: "Bueno", needs_improvement: "Mejorable", poor: "Malo" },
+    zoomed: (min: number) => `La escala empieza en ${min} para ver mejor los cambios.`,
+    noise: (points: number) => `Entre dos pruebas es normal una diferencia de hasta ${points} puntos.`,
     table: {
       problems: "Problemas por auditoría",
       speed: "Puntuación de velocidad en móvil por auditoría",

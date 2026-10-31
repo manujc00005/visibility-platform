@@ -1069,7 +1069,12 @@ export const en = {
     problemsTitle: "Problems per audit, from oldest to most recent",
     speedTitle: "Mobile speed score per audit, from 0 to 100",
     bar: (date: string, critical: number, warning: number, info: number) => `${date}: ${critical} critical, ${warning} important, ${info} improvements`,
-    legend: { critical: "Critical", warning: "Important", info: "Improvements", good: "Good ≥ 90", fair: "Needs improvement", poor: "Poor < 50" },
+    legend: { critical: "Critical", warning: "Important", info: "Improvements", good: "Good: 90–100", fair: "Needs improvement: 50–89", poor: "Poor: 0–49", unmeasured: "Audit without measurement" },
+    point: (date: string, score: number, rating: string) => `${date}: ${score} out of 100, ${rating}`,
+    unmeasured: (date: string) => `${date}: speed was not measured`,
+    rating: { good: "Good", needs_improvement: "Needs improvement", poor: "Poor" },
+    zoomed: (min: number) => `The scale starts at ${min} so changes are easier to see.`,
+    noise: (points: number) => `A difference of up to ${points} points between two tests is normal.`,
     table: {
       problems: "Problems per audit",
       speed: "Mobile speed score per audit",

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
-import { ChartDataTable, SpeedChart, SpeedLegend } from "@/components/audits/evolution-chart";
+import { ChartDataTable, SpeedChart } from "@/components/audits/evolution-chart";
 import { LighthouseCategoryCard } from "@/components/audits/lighthouse-category";
 import { RunAuditButton } from "@/components/audits/run-audit-button";
 import { StatusPill } from "@/components/audits/status-ui";
@@ -279,7 +279,6 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
             {measuredPoints > 0 ? (
               <Panel>
                 <div className="flex flex-col gap-3">
-                  <SpeedLegend locale={locale} />
                   <SpeedChart points={shown} locale={locale} />
                   <ChartDataTable points={shown} kind="speed" locale={locale} />
                   {points.length > 12 ? <p className="text-xs text-muted-foreground">{t.history.showing(12, points.length)}</p> : null}
