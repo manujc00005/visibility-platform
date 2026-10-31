@@ -942,6 +942,51 @@ export const es = {
       noImpressions: "En Google: sin impresiones en los últimos 28 días (Search Console).",
     },
   },
+  lighthouse: {
+    categories: {
+      seo: {
+        title: "SEO",
+        description:
+          "Comprobaciones básicas de Google para que tu página se pueda rastrear y mostrar bien en los resultados. Las calcula Google Lighthouse por su cuenta y no cambian los problemas de arriba.",
+      },
+      accessibility: {
+        title: "Accesibilidad",
+        description: "Si las personas con discapacidad o que usan lectores de pantalla pueden usar tu página: contraste, textos alternativos, etiquetas de formularios.",
+      },
+      "best-practices": {
+        title: "Buenas prácticas",
+        description: "Seguridad y calidad técnica de la página: HTTPS, errores en la consola del navegador, imágenes con proporciones correctas.",
+      },
+    },
+    section: {
+      seoTitle: "Revisión SEO de Google Lighthouse",
+      qualityTitle: "Accesibilidad y buenas prácticas",
+      qualityDescription: "Dos puntuaciones más de Google Lighthouse, calculadas en la misma prueba que la velocidad.",
+    },
+    states: { no_audit: "Sin auditoría", not_measured: "No medido", unavailable: "Sin resultado" },
+    reasons: {
+      noAudit: "Todavía no hay auditorías.",
+      notMeasured: "La última auditoría es anterior a esta comprobación. Ejecuta una auditoría nueva para medirla.",
+      unscored: "Google Lighthouse no pudo puntuar esta categoría en la última auditoría.",
+      unavailable: {
+        not_configured: "PageSpeed Insights no está configurado, así que no se midió.",
+        quota_exceeded: "La cuota de PageSpeed Insights estaba agotada en la última auditoría.",
+        error: "PageSpeed Insights no dio resultado en la última auditoría.",
+        skipped: "La portada no se pudo leer, así que no se midió.",
+      },
+    },
+    failingTitle: (total: number) => `${total} ${total === 1 ? "comprobación no superada" : "comprobaciones no superadas"}`,
+    allPassed: (scored: number) => (scored === 1 ? "Supera la única comprobación puntuada." : `Supera las ${scored} comprobaciones puntuadas.`),
+    more: (count: number) => `Y ${count} más.`,
+    /** Our own name and meaning for the commonest checks, by Lighthouse id. */
+    checks: {
+      "color-contrast": { title: "Contraste", meaning: "El color del texto y el del fondo no contrastan lo suficiente." },
+      "heading-order": { title: "Encabezados", meaning: "Los títulos no siguen un orden descendente." },
+    },
+    originalNotice: "Los nombres de las comprobaciones vienen de Google Lighthouse y se muestran en su español original.",
+    source: (version: string, when: string) => `Google Lighthouse ${version} en un móvil simulado · ${when}`,
+    sourceNoVersion: (when: string) => `Google Lighthouse en un móvil simulado · ${when}`,
+  },
   chart: {
     problemsTitle: "Problemas por auditoría, de la más antigua a la más reciente",
     speedTitle: "Puntuación de velocidad en móvil por auditoría, de 0 a 100",

@@ -8,6 +8,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
 import { ChartDataTable, ProblemsChart, ProblemsLegend } from "@/components/audits/evolution-chart";
+import { LighthouseCategoryCard } from "@/components/audits/lighthouse-category";
 import { RunAuditButton } from "@/components/audits/run-audit-button";
 import { StatusPill, ToneIcon } from "@/components/audits/status-ui";
 import { AnalyticsSection } from "@/components/analytics/analytics-section";
@@ -24,6 +25,7 @@ import { getLocale } from "@/i18n/server";
 import { auditLabels } from "@/modules/audits/presentation";
 import type { Category } from "@/modules/audits/rules";
 import { getAudit, listAudits } from "@/modules/audits/service";
+import { lighthouseView } from "@/modules/audits/lighthouse";
 import { SEVERITY_TONE } from "@/modules/audits/status";
 import { analyticsConfig } from "@/modules/analytics/deps";
 import { latestAnalytics } from "@/modules/analytics/service";
@@ -250,6 +252,15 @@ export default async function SeoPage({ params }: PageProps<"/workspaces/[id]/se
           </Section>
         </>
       ) : null}
+
+      <Section id="lighthouse-seo-title" title={m.lighthouse.section.seoTitle}>
+        <LighthouseCategoryCard
+          view={lighthouseView(result?.facts?.performance, "seo", locale)}
+          locale={locale}
+          auditedAt={result?.startedAt ?? null}
+          version={result?.facts?.performance?.lighthouseVersion ?? null}
+        />
+      </Section>
 
       <Section id="history-title" title={t.history.title} description={t.history.description}>
         {points.length > 0 ? (

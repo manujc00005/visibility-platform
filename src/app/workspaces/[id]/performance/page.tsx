@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
 import { ChartDataTable, SpeedChart, SpeedLegend } from "@/components/audits/evolution-chart";
+import { LighthouseCategoryCard } from "@/components/audits/lighthouse-category";
 import { RunAuditButton } from "@/components/audits/run-audit-button";
 import { StatusPill } from "@/components/audits/status-ui";
 import { ChangeLine, NoticeList, type Notice } from "@/components/overview/overview-card";
@@ -17,6 +18,7 @@ import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
 import { getMessages, type Messages } from "@/i18n/messages";
 import { getLocale } from "@/i18n/server";
 import { speedBreaks, toPoint } from "@/modules/audits/evolution";
+import { lighthouseView } from "@/modules/audits/lighthouse";
 import { auditLabels } from "@/modules/audits/presentation";
 import { getAudit, listAudits } from "@/modules/audits/service";
 import { rateMetric, RATING_TONE, SEVERITY_TONE, type MetricName } from "@/modules/audits/status";
@@ -221,6 +223,20 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
                 </p>
               </Panel>
             )}
+          </Section>
+
+          <Section id="lighthouse-quality-title" title={m.lighthouse.section.qualityTitle} description={m.lighthouse.section.qualityDescription}>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              {(["accessibility", "best-practices"] as const).map((category) => (
+                <LighthouseCategoryCard
+                  key={category}
+                  view={lighthouseView(perf, category, locale)}
+                  locale={locale}
+                  auditedAt={result?.startedAt ?? null}
+                  version={perf?.lighthouseVersion ?? null}
+                />
+              ))}
+            </div>
           </Section>
 
           <Section id="problems-title" title={t.problems.title} description={t.problems.description}>

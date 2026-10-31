@@ -936,6 +936,50 @@ export const en = {
       noImpressions: "On Google: no impressions in the last 28 days (Search Console).",
     },
   },
+  lighthouse: {
+    categories: {
+      seo: {
+        title: "SEO",
+        description:
+          "Google's basic checks so your page can be crawled and shown properly in the results. Google Lighthouse calculates them on its own and they do not change the problems above.",
+      },
+      accessibility: {
+        title: "Accessibility",
+        description: "Whether people with disabilities or who use screen readers can use your page: contrast, alternative texts, form labels.",
+      },
+      "best-practices": {
+        title: "Best practices",
+        description: "Security and technical quality of the page: HTTPS, errors in the browser console, images with the right proportions.",
+      },
+    },
+    section: {
+      seoTitle: "Google Lighthouse SEO review",
+      qualityTitle: "Accessibility and best practices",
+      qualityDescription: "Two more Google Lighthouse scores, calculated in the same test as speed.",
+    },
+    states: { no_audit: "No audit", not_measured: "Not measured", unavailable: "No result" },
+    reasons: {
+      noAudit: "There are no audits yet.",
+      notMeasured: "The latest audit predates this check. Run a new audit to measure it.",
+      unscored: "Google Lighthouse could not score this category in the latest audit.",
+      unavailable: {
+        not_configured: "PageSpeed Insights is not set up, so it was not measured.",
+        quota_exceeded: "The PageSpeed Insights quota was used up in the latest audit.",
+        error: "PageSpeed Insights gave no result in the latest audit.",
+        skipped: "The home page could not be read, so it was not measured.",
+      },
+    },
+    failingTitle: (total: number) => `${total} ${total === 1 ? "check not passed" : "checks not passed"}`,
+    allPassed: (scored: number) => (scored === 1 ? "Passes the only scored check." : `Passes all ${scored} scored checks.`),
+    more: (count: number) => `And ${count} more.`,
+    checks: {
+      "color-contrast": { title: "Contrast", meaning: "The text and background colors do not contrast enough." },
+      "heading-order": { title: "Headings", meaning: "The headings are not in descending order." },
+    },
+    originalNotice: "Some check names come from Google Lighthouse and are shown in their original Spanish.",
+    source: (version: string, when: string) => `Google Lighthouse ${version} on a simulated phone · ${when}`,
+    sourceNoVersion: (when: string) => `Google Lighthouse on a simulated phone · ${when}`,
+  },
   chart: {
     problemsTitle: "Problems per audit, from oldest to most recent",
     speedTitle: "Mobile speed score per audit, from 0 to 100",
