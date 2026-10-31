@@ -135,7 +135,7 @@ describe("competitor types and the profile form (012)", () => {
       );
       expect(html).toContain(t.kinds.direct);
       expect(html).toContain(t.noKind);
-      expect(html).toContain(t.factor.not_applicable);
+      expect(html).not.toContain("La zona no limita este mercado.");
       expect(html).toContain(m.geo.profile.form.needsProfile);
       expect(html).toContain('name="kind"');
       expect(html).toMatch(/<textarea[^>]*name="question"[^>]*maxLength="2000"/);

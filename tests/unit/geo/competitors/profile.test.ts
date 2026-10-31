@@ -38,6 +38,12 @@ describe("profile validation (AC-001)", () => {
   });
 });
 
+describe("profile text", () => {
+  it("drops NUL characters", () => {
+    expect(profileSchemaFor("es").parse({ ...valid, summary: "CRM\0" }).summary).toBe("CRM");
+  });
+});
+
 describe("proposeProfile (AC-003)", () => {
   it("takes the summary from the description, else the H1, else nothing", () => {
     expect(propose(html('<meta name="description" content="Hacemos CRM">', "<h1>Título</h1>")).draft.summary).toBe("Hacemos CRM");
@@ -47,6 +53,10 @@ describe("proposeProfile (AC-003)", () => {
     const none = propose(html(""));
     expect(none.draft.summary).toBe("");
     expect(codes(none)).toContain("summary_missing");
+  });
+
+  it("falls back to the H1 on an empty description", () => {
+    expect(propose(html('<meta name="description" content="">', "<h1>Título</h1>")).draft.summary).toBe("Título");
   });
 
   it("proposes offers from H2/H3 that are not sentences, else the record", () => {
@@ -59,7 +69,7 @@ describe("proposeProfile (AC-003)", () => {
 
   it.each([
     ["CRM para pymes y empresas", "b2b", "pymes, empresas"],
-    ["Tu negocio crece", "b2b", "tu negocio"],
+    ["Tu negocio crece", "b2b", ""],
     ["Atención a pacientes y familias", "b2c", "familias, pacientes"],
     ["Para empresas y particulares", "both", "empresas, particulares"],
   ])("detects the customer in «%s»", (text, customerType, target) => {
@@ -86,6 +96,11 @@ describe("proposeProfile (AC-003)", () => {
     expect(multi.draft).toMatchObject({ zoneRelevance: "international", servedArea: "" });
     expect(multi.notes).toContainEqual({ code: "zone_languages", languages: ["es", "en"] });
     expect(propose(html('<link rel="alternate" hreflang="es" href="https://e.es/es">')).draft.zoneRelevance).toBe("national");
+  });
+
+  it("ignores invalid language codes", () => {
+    const page = html('<link rel="alternate" hreflang="es" href="/"><link rel="alternate" hreflang="<b>" href="/">');
+    expect(propose(page).draft.zoneRelevance).toBe("national");
   });
 
   it("is bounded and proposes the two main kinds", () => {

@@ -63,7 +63,10 @@ const normalizeAnswer = (value: string) => value.replace(/\r\n?/g, "\n").trim();
 function buildInputSchema(locale: Locale) {
   const t = getMessages(locale).geo.validation;
   return z.object({
-    question: z.string({ error: t.questionRequired }).trim().min(1, t.questionRequired).max(MAX_QUESTION, t.questionMax(MAX_QUESTION)),
+    question: z
+      .string({ error: t.questionRequired })
+      .transform(normalizeAnswer)
+      .pipe(z.string().min(1, t.questionRequired).max(MAX_QUESTION, t.questionMax(MAX_QUESTION))),
     answer: z
       .string({ error: t.pasteAnswer })
       .transform(normalizeAnswer)

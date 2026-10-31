@@ -49,7 +49,7 @@ export async function proposeBusinessProfile(db: Database, workspaceId: string, 
   const started = Date.now();
   const own = (url: URL) => {
     const host = url.hostname.toLowerCase();
-    return host === workspace.domain || host.endsWith(`.${workspace.domain}`);
+    return url.protocol === "https:" && (host === workspace.domain || host.endsWith(`.${workspace.domain}`));
   };
   const result = await deps.fetcher.fetch(
     `https://${workspace.hostname}/`,
@@ -57,10 +57,13 @@ export async function proposeBusinessProfile(db: Database, workspaceId: string, 
     createBudget({ maxRequests: 6, maxTotalBytes: PAGE.maxBytes, timeLimitMs: PAGE.timeoutMs }),
   );
   const html = result.ok && result.response.status >= 200 && result.response.status < 300 && /html|xml/i.test(result.response.contentType ?? "html");
-  logger.info({ workspaceId, ok: Boolean(html), ms: Date.now() - started }, "business profile proposal");
-  if (!result.ok || !html) return { ok: false, error: "unreadable" };
-  return {
-    ok: true,
-    value: proposeProfile({ html: decodeHtml(result.response.body, result.response.contentType), url: result.response.url, city: workspace.city, services: workspace.services }),
-  };
+  let proposal: { draft: ProfileDraft; notes: ProposalNote[] } | null = null;
+  try {
+    if (result.ok && html) proposal = proposeProfile({ html: decodeHtml(result.response.body, result.response.contentType), url: result.response.url, city: workspace.city, services: workspace.services });
+  } catch (error) {
+    // A page too deep or malformed to parse must not lose what the operator already typed.
+    logger.warn({ workspaceId, error: error instanceof Error ? error.name : "unknown" }, "business profile page could not be parsed");
+  }
+  logger.info({ workspaceId, ok: proposal !== null, ms: Date.now() - started }, "business profile proposal");
+  return proposal ? { ok: true, value: proposal } : { ok: false, error: "unreadable" };
 }

@@ -1281,7 +1281,7 @@ export const en = {
         zone: "Area",
         services: "Services",
         factorPill: "{label}: {state}",
-        factor: { matched: "Signal", unknown: "No signals", conflicting: "Contradicts, not_applicable: ", not_applicable: "Not applicable" },
+        factor: { matched: "Signal", unknown: "No signals", conflicting: "Contradicts", not_applicable: "Not applicable" },
         kind: "Competitor type",
         kinds: { direct: "Direct", indirect: "Indirect", substitute: "Substitute" },
         noKind: "Type not stated",

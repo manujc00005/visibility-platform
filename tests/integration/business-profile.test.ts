@@ -64,6 +64,7 @@ describe("saving the profile (AC-001, AC-012)", () => {
   it.each([
     ["geo_business_profiles_summary_length", { summary: " " }],
     ["geo_business_profiles_offerings_count", { offerings: Array.from({ length: 11 }, (_, i) => `${i}`) }],
+    ["geo_business_profiles_offering_length", { offerings: ["o".repeat(81)] }],
     ["geo_business_profiles_target_length", { targetCustomer: "" }],
     ["geo_business_profiles_area_required", { zoneRelevance: "local", servedArea: null }],
     ["geo_business_profiles_kinds_valid", { competitorKinds: [] }],
@@ -115,6 +116,7 @@ describe("the proposal (AC-002, AC-004)", () => {
     expect(await allow!(new URL("https://www.empresa.es/es"))).toBe(true);
     expect(await allow!(new URL("https://empresa.es/"))).toBe(true);
     expect(await allow!(new URL("https://empresa.es.mal.com/"))).toBe(false);
+    expect(await allow!(new URL("http://empresa.es/"))).toBe(false);
   });
 });
 
@@ -130,6 +132,13 @@ describe("extraction with a profile (AC-009, AC-010)", () => {
     expect(result.value.suggestions.map((s) => [s.name, s.competitorKind])).toEqual([["Rival", "direct"]]);
     expect(result.value.suggestions[0]!.factors.zone.state).toBe("not_applicable");
     expect(result.value.extraction.warnings.join(" ")).toContain("tipos de competidor que no buscas");
+  });
+
+  it("counts a question with CRLF line ends as the operator wrote it", async () => {
+    const id = await workspace();
+    const question = "x\r\n".repeat(660) + "y".repeat(600);
+    expect(question.length).toBeGreaterThan(2_000);
+    expect(await extractCompetitors(db, id, { ...raw, question }, { fetcher: fakeFetcher(routes) })).toMatchObject({ ok: true });
   });
 
   it("changing the profile changes the fingerprint", async () => {

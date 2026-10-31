@@ -151,6 +151,11 @@ describe("structured lines (012)", () => {
     expect(extract("COMPETIDOR | Acme |  | directo").names[0]).toMatchObject({ explicitUrl: null, kind: "direct" });
   });
 
+  it("an inherited property is not a kind, and a trailing empty web stays a structured line", () => {
+    expect(extract("COMPETIDOR | Acme | https://acme.es | constructor").names[0]).toMatchObject({ kind: null });
+    expect(extract("COMPETIDOR | Acme |").names[0]).toMatchObject({ name: "Acme", explicitUrl: null });
+  });
+
   it("only the web column makes a reference", () => {
     const { references } = extract("COMPETIDOR | Acme | https://acme.es | directo | España | citado en https://blog.es/ranking");
     expect(references.map((r) => r.host)).toEqual(["acme.es"]);

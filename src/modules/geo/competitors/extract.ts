@@ -13,6 +13,8 @@ export const MAX_NAMES = 20;
 export const MAX_HOSTS = 20;
 export const MAX_SNIPPET = 200;
 export const MAX_NAME = 120;
+/** Longer lines are cut: no list item or structured line needs more, and the patterns stay cheap. */
+const MAX_LINE = 4_096;
 
 /** Headings and section labels that ChatGPT bolds or lists but that are not businesses. */
 const GENERIC_LABELS = new Set(
@@ -105,13 +107,14 @@ function webColumn(value: string): string | null {
 function structuredLine(line: string): StructuredLine | "template" | null {
   const body = STRUCTURED_LINE.exec(line)?.[1];
   if (body === undefined) return null;
-  const columns = body.replace(/\|\s*$/, "").split("|").map((c) => c.trim());
+  // A table row closes with a pipe of its own; elsewhere a last empty column is the missing web.
+  const columns = (line.startsWith("|") ? body.replace(/\|\s*$/, "") : body).split("|").map((c) => c.trim());
   if (columns.length < 2) return null;
   const [rawName = "", web = "", kind = "", zone = "", ...reason] = columns;
   const name = stripMarkdown(rawName);
   if (nameKey(name) === nameKey("Nombre") || web === TEMPLATE_WEB) return "template";
   const parts = [reason.join(" ").trim(), zone ? `Atiende: ${zone}` : ""].filter(Boolean);
-  return { name, url: webColumn(web), kind: KINDS[kind.toLowerCase()] ?? null, snippet: snippetOf(parts.join(" · ")) };
+  return { name, url: webColumn(web), kind: Object.hasOwn(KINDS, kind.toLowerCase()) ? KINDS[kind.toLowerCase()]! : null, snippet: snippetOf(parts.join(" · ")) };
 }
 
 export function isGenericName(key: string): boolean {
@@ -154,7 +157,7 @@ export const assistedCaptureSource = {
     };
 
     for (const rawLine of input.answerText.split(/\r?\n/)) {
-      const line = rawLine.trim();
+      const line = rawLine.slice(0, MAX_LINE).trim();
       if (!line || line.startsWith("#")) continue;
       const structured = structuredLine(line);
       if (structured === "template") continue;

@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready
+In Review (2026-10-31). Implementación, pruebas y revisiones hechas. Falta AC-018: una respuesta real de ChatGPT para Olessium pegada por el operador. Sin ella no se ejecuta `/spec-close`.
 
 ## Problem
 
@@ -149,7 +149,7 @@ El operador confirma un perfil de negocio propuesto desde la portada de su web. 
 
 ## Open questions
 
-Ninguna bloquea el plan. AC-018 depende de una acción del operador.
+Ninguna bloquea la implementación. AC-018 depende de una acción del operador (Deferred).
 
 ## Contracted services
 

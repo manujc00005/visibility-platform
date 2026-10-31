@@ -24,20 +24,23 @@ const LOCAL_TYPES = new Set([
 const B2B_TERMS = ["pymes", "empresas", "negocios", "tu negocio", "tu empresa", "startups", "equipos", "profesionales", "b2b"];
 const B2C_TERMS = ["particulares", "familias", "pacientes", "consumidores", "tienda online"];
 
+/** Postgres refuses NUL in text, and its error would carry the values. */
+const withoutNul = (value: unknown) => (typeof value === "string" ? value.replaceAll("\0", "") : value);
+
 function buildSchema(locale: Locale) {
   const t = getMessages(locale).geo.profile.validation;
   return z
     .object({
-      summary: z.string({ error: t.summaryRequired }).trim().min(1, t.summaryRequired).max(PROFILE_LIMITS.summary, t.summaryMax(PROFILE_LIMITS.summary)),
-      offerings: z
+      summary: z.preprocess(withoutNul, z.string({ error: t.summaryRequired }).trim().min(1, t.summaryRequired).max(PROFILE_LIMITS.summary, t.summaryMax(PROFILE_LIMITS.summary))),
+      offerings: z.preprocess(withoutNul, z
         .string()
         .default("")
         .transform((value) => [...new Set(value.split(/\r?\n/).map((v) => v.trim()).filter(Boolean))])
-        .pipe(z.array(z.string().max(PROFILE_LIMITS.offering, t.offeringMax(PROFILE_LIMITS.offering))).max(PROFILE_LIMITS.offerings, t.offeringsMax(PROFILE_LIMITS.offerings))),
+        .pipe(z.array(z.string().max(PROFILE_LIMITS.offering, t.offeringMax(PROFILE_LIMITS.offering))).max(PROFILE_LIMITS.offerings, t.offeringsMax(PROFILE_LIMITS.offerings)))),
       customerType: z.enum(CUSTOMER_TYPES, { error: t.customerType }),
-      targetCustomer: z.string({ error: t.targetRequired }).trim().min(1, t.targetRequired).max(PROFILE_LIMITS.targetCustomer, t.targetMax(PROFILE_LIMITS.targetCustomer)),
+      targetCustomer: z.preprocess(withoutNul, z.string({ error: t.targetRequired }).trim().min(1, t.targetRequired).max(PROFILE_LIMITS.targetCustomer, t.targetMax(PROFILE_LIMITS.targetCustomer))),
       zoneRelevance: z.enum(ZONE_RELEVANCES, { error: t.zoneRelevance }),
-      servedArea: z.string().trim().max(PROFILE_LIMITS.servedArea, t.areaMax(PROFILE_LIMITS.servedArea)).default(""),
+      servedArea: z.preprocess(withoutNul, z.string().trim().max(PROFILE_LIMITS.servedArea, t.areaMax(PROFILE_LIMITS.servedArea)).default("")),
       competitorKinds: z.array(z.enum(COMPETITOR_KINDS, { error: t.kindsRequired }), { error: t.kindsRequired }).min(1, t.kindsRequired),
     })
     .superRefine((value, ctx) => {
@@ -97,6 +100,9 @@ export interface ProfileDraft {
   competitorKinds: CompetitorKind[];
 }
 
+const LANGUAGE = /^[a-z]{2,3}$/;
+const MAX_LANGUAGES = 10;
+
 type TreeNode = DefaultTreeAdapterMap["childNode"] | DefaultTreeAdapterMap["document"];
 
 function collectLanguages(node: TreeNode, into: Set<string>): void {
@@ -106,7 +112,7 @@ function collectLanguages(node: TreeNode, into: Set<string>): void {
       if (child.tagName === "link") {
         const attribute = (name: string) => child.attrs.find((a) => a.name === name)?.value.trim().toLowerCase() ?? "";
         const language = attribute("hreflang").split("-")[0] ?? "";
-        if (attribute("rel").split(/\s+/).includes("alternate") && language && language !== "x") into.add(language);
+        if (attribute("rel").split(/\s+/).includes("alternate") && LANGUAGE.test(language) && into.size < MAX_LANGUAGES) into.add(language);
       }
       collectLanguages(child, into);
     }
@@ -140,7 +146,7 @@ export function proposeProfile(input: { html: string; url: string; city: string 
   const facts = extractPage(input.html, input.url);
   const notes: ProposalNote[] = [];
   const h1 = facts.headings.find((h) => h.level === 1)?.text ?? "";
-  const summary = facts.metaDescription ?? h1;
+  const summary = facts.metaDescription || h1;
   notes.push({ code: facts.metaDescription ? "summary_description" : h1 ? "summary_heading" : "summary_missing" });
 
   const fromHeadings = offeringsFrom(facts.headings);
@@ -178,7 +184,8 @@ export function proposeProfile(input: { html: string; url: string; city: string 
       summary: truncate(summary, PROFILE_LIMITS.summary),
       offerings: (fromHeadings.length > 0 ? fromHeadings : input.services).slice(0, PROFILE_LIMITS.offerings).map((o) => truncate(o, PROFILE_LIMITS.offering)),
       customerType,
-      targetCustomer: terms.join(", "),
+      // "Tu negocio" tells the customer is a company, not which one: that stays for the operator.
+      targetCustomer: terms.filter((term) => !term.startsWith("tu ")).join(", "),
       zoneRelevance,
       servedArea: needsArea(zoneRelevance) ? (city ?? localities[0] ?? "") : "",
       competitorKinds: ["direct", "indirect"],

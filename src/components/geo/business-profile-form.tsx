@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import type { GeoFormState } from "@/app/workspaces/[id]/geo/actions";
 import { SELECT_CLASS } from "@/components/geo/competitor-suggestions";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ export function BusinessProfileForm({
   const t = labels;
   const run: FormAction = (state, formData) => (formData.get("intent") === "propose" ? propose(state, formData) : save(state, formData));
   const [state, action, pending] = useActionState(run, initial);
+  const [intent, setIntent] = useState<"save" | "propose">("save");
   const v = state.values;
   const kinds: string[] = v.competitorKinds !== undefined ? v.competitorKinds.split(",") : (profile?.competitorKinds ?? ["direct", "indirect"]);
   return (
@@ -91,11 +92,11 @@ export function BusinessProfileForm({
           ))}
         </fieldset>
         <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-          <Button type="submit" name="intent" value="save" disabled={pending}>
-            {pending ? t.saving : t.save}
+          <Button type="submit" name="intent" value="save" disabled={pending} onClick={() => setIntent("save")}>
+            {pending && intent === "save" ? t.saving : t.save}
           </Button>
-          <Button type="submit" name="intent" value="propose" variant="outline" disabled={pending}>
-            {pending ? t.proposing : t.propose}
+          <Button type="submit" name="intent" value="propose" variant="outline" disabled={pending} onClick={() => setIntent("propose")}>
+            {pending && intent === "propose" ? t.proposing : t.propose}
           </Button>
         </div>
       </form>

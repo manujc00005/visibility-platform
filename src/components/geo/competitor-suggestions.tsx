@@ -155,7 +155,7 @@ function Card({
           <StatusPill tone="neutral">{card.kind ? t.kinds[card.kind] : t.noKind}</StatusPill>
         </li>
         <Factor label={t.sector} factor={card.factors.sector} states={t.factor} pill={t.factorPill} />
-        <Factor label={t.zone} factor={card.factors.zone} states={t.factor} pill={t.factorPill} />
+        {card.factors.zone.state !== "not_applicable" ? <Factor label={t.zone} factor={card.factors.zone} states={t.factor} pill={t.factorPill} /> : null}
         <Factor label={t.services} factor={card.factors.services} states={t.factor} pill={t.factorPill} />
         {web ? (
           <li>
@@ -296,10 +296,10 @@ export function CompetitorSuggestions({
         ))}
       </ol>
 
-      <form key={`${state.attempt}:${questions[0] ?? ""}`} action={formAction} className="flex flex-col gap-3">
+      <form key={state.attempt} action={formAction} className="flex flex-col gap-3">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="d-question">{t.question}</Label>
-          <Textarea id="d-question" name="question" rows={3} defaultValue={v.question ?? questions[0] ?? ""} required maxLength={2000} />
+          <Textarea key={questions[0]} id="d-question" name="question" rows={3} defaultValue={v.question ?? questions[0] ?? ""} required maxLength={2000} />
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="d-answer">{t.answer}</Label>

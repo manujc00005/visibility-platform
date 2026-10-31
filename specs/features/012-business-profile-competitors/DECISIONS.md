@@ -127,3 +127,17 @@
 **Reasoning:** cambiar una constante basta para los casos reales, sin añadir truncado al fetcher compartido.
 
 **Consequences:** una portada de más de 1 MiB sigue quedando sin comprobar, con aviso. El tope teórico por extracción sube a 25 MiB.
+
+### D010 - Riesgo aceptado: coste de `parse()` con HTML hostil
+
+**Date:** 2026-10-31
+
+**Status:** Accepted
+
+**Context:** La revisión de seguridad señaló que parse5 es síncrono y crece de forma cuadrática con anidación extrema, sin que los plazos lo interrumpan. Ya ocurre al leer candidatos desde la 001 y en auditorías y comparativa con hasta 3 MB.
+
+**Decision:** no se cambia en esta feature. La aplicación corre solo en la máquina del operador. Antes de desplegar debe resolverse junto a BL-07, con tope previo de etiquetas o proceso aparte. Los errores de `parse()` en la propuesta se capturan y dan `unreadable`.
+
+**Reasoning:** es un problema del lector compartido, no de la 012, y arreglarlo aquí excede el alcance.
+
+**Consequences:** una web citada podría bloquear el proceso local un tiempo. El límite de 1 MiB (D009) es menor que el que ya admite la auditoría.

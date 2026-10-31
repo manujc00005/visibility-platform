@@ -88,6 +88,7 @@ export const geoBusinessProfiles = pgTable(
   (t) => [
     check("geo_business_profiles_summary_length", sql`length(btrim(${t.summary})) between 1 and 400`),
     check("geo_business_profiles_offerings_count", sql`cardinality(${t.offerings}) <= 10`),
+    check("geo_business_profiles_offering_length", sql`array_to_string(${t.offerings}, E'\n') !~ '[^\n]{81}'`),
     check("geo_business_profiles_customer_type_valid", sql`${t.customerType} in ('b2b', 'b2c', 'both')`),
     check("geo_business_profiles_target_length", sql`length(btrim(${t.targetCustomer})) between 1 and 200`),
     check("geo_business_profiles_zone_valid", sql`${t.zoneRelevance} in ('local', 'regional', 'national', 'international')`),
