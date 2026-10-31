@@ -372,3 +372,40 @@ describe("collectSearchConsole previous position per query (feature 009)", () =>
     for (const secret of [SECRET, jwt, PRIVATE_PEM.split("\n")[1]!]) expect(text).not.toContain(secret);
   });
 });
+
+describe("tracked keyword capture", () => {
+  function provider(keywordResponse: unknown, status = 200) {
+    const bodies: string[] = [];
+    let calls = 0;
+    const fetcher = (async (input: string, init?: RequestInit) => {
+      calls++;
+      if (String(input).includes("oauth2.googleapis.com")) return Response.json({access_token:"token"});
+      if (String(input).endsWith("/sites")) return Response.json({siteEntry:[{siteUrl:"sc-domain:olessium.com",permissionLevel:"siteOwner"}]});
+      const body = String(init?.body); bodies.push(body);
+      if (JSON.parse(body).dimensions.includes("date")) return Response.json(keywordResponse,{status});
+      return Response.json({rows:[]});
+    }) as typeof fetch;
+    return {fetcher,bodies,get calls(){return calls;}};
+  }
+  it("keeps previous nine serialized requests and adds one date/query request", async () => {
+    const plain = provider({}); const tracked = provider({rows:[{keys:["2026-10-24","CRM"],clicks:1,impressions:5,ctr:.2,position:8}]});
+    const a = await collectSearchConsole(account,site,{fetchImpl:plain.fetcher,now:NOW});
+    const b = await collectSearchConsole(account,{...site,trackedKeywords:["crm"]},{fetchImpl:tracked.fetcher,now:NOW});
+    expect(a.ok).toBe(true); expect(b.ok).toBe(true);
+    expect(tracked.bodies.slice(0,9)).toEqual(plain.bodies);
+    expect(plain.calls).toBe(11); expect(tracked.calls).toBe(12);
+    expect(JSON.parse(tracked.bodies[9]!)).toMatchObject({startDate:"2026-04-26",endDate:"2026-10-24",dimensions:["date","query"],rowLimit:25000,type:"web",dataState:"final"});
+    if(a.ok) expect(a.data.keywordSeries.keywords).toEqual([]);
+    if(b.ok) expect(b.data.keywordSeries.keywords[0]!.weeks[0]).toMatchObject({position:8,daysWithData:1,impressions:5});
+  });
+  it.each([403,429,500])("fails the entire capture for keyword HTTP %s", async(status)=>{
+    const p=provider({error:{message:"secret upstream",status:"PERMISSION_DENIED"}},status);
+    const result=await collectSearchConsole(account,{...site,trackedKeywords:["crm"]},{fetchImpl:p.fetcher,now:NOW});
+    expect(result.ok).toBe(false); expect(JSON.stringify(result)).not.toContain("secret upstream");
+  });
+  it("rejects an oversized list before token",async()=>{
+    const p=provider({});
+    const result=await collectSearchConsole(account,{...site,trackedKeywords:Array.from({length:25},(_,i)=>`${i}${"界".repeat(78)}`)},{fetchImpl:p.fetcher,now:NOW});
+    expect(result.ok).toBe(false); expect(p.calls).toBe(0);
+  });
+});

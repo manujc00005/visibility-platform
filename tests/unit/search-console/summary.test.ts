@@ -22,6 +22,7 @@ function completed(overrides: Partial<SearchConsoleSnapshot> = {}): SearchConsol
     queries: [{ query: "crm agencias", clicks: 5, impressions: 50, ctr: 0.1, position: 4.2 }],
     pages: [],
     segments: null,
+    keywordSeries: null,
     errorKind: null,
     errorMessage: null,
     accessibleProperties: null,

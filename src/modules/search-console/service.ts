@@ -2,6 +2,7 @@ import { and, desc, eq } from "drizzle-orm";
 import type { Database } from "@/db/client";
 import type { CaptureSite, CollectOutcome } from "@/modules/search-console/collect";
 import { searchConsoleSnapshots, type SearchConsoleSnapshot } from "@/modules/search-console/schema";
+import { listTrackedKeywords } from "@/modules/search-console/tracked-keywords-service";
 import { getWorkspace } from "@/modules/workspaces/service";
 
 export interface SearchConsoleDeps {
@@ -16,8 +17,15 @@ const FK_VIOLATION = "23503";
 export async function refreshSearchConsole(db: Database, workspaceId: string, deps: SearchConsoleDeps): Promise<RefreshResult> {
   const workspace = await getWorkspace(db, workspaceId);
   if (!workspace) return { ok: false, error: "not_found" };
-  // Read once: name, aliases and domain come from the same moment (feature 007).
-  const pending = deps.collect({ domain: workspace.domain, hostname: workspace.hostname, name: workspace.name, brandAliases: workspace.brandAliases });
+  // Read once: the capture works with this company data and this keyword list, whatever changes during the network calls.
+  const keywords = await listTrackedKeywords(db, workspaceId);
+  const pending = deps.collect({
+    domain: workspace.domain,
+    hostname: workspace.hostname,
+    name: workspace.name,
+    brandAliases: workspace.brandAliases,
+    trackedKeywords: keywords.map((k) => k.keyword),
+  });
   if (!pending) return { ok: false, error: "not_configured" };
   const outcome = await pending;
 
@@ -35,6 +43,7 @@ export async function refreshSearchConsole(db: Database, workspaceId: string, de
         queries: outcome.data.queries,
         pages: outcome.data.pages,
         segments: outcome.data.segments,
+        keywordSeries: outcome.data.keywordSeries,
       }
     : {
         workspaceId: workspace.id,

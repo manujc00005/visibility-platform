@@ -42,11 +42,15 @@ export interface BrandTerms {
 const stripAccents = (value: string) => value.normalize("NFKD").replace(/\p{M}/gu, "");
 
 /** Words escaped one by one and joined so any run of spaces in the query matches. */
+export function escapeRe2Literal(text: string): string {
+  return text.replace(SPECIAL, "\\$&");
+}
+
 function literal(text: string): string {
   return text
     .split(/\s+/)
     .filter(Boolean)
-    .map((word) => word.replace(SPECIAL, "\\$&"))
+    .map(escapeRe2Literal)
     .join(" +");
 }
 

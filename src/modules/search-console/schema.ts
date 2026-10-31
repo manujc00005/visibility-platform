@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
-import { check, date, index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { check, date, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import type { KeywordSeries } from "@/modules/search-console/keywords";
 import type { PageRow, QueryRow, Segments, Totals } from "@/modules/search-console/collect";
 import { workspaces } from "@/modules/workspaces/schema";
 
@@ -44,12 +45,15 @@ export const searchConsoleSnapshots = pgTable(
     pages: jsonb("pages").$type<PageRow[]>().notNull().default(sql`'[]'::jsonb`),
     /** Brand / non-brand totals (feature 007). Null in failed rows and in captures taken before it. */
     segments: jsonb("segments").$type<Segments>(),
+    keywordSeries: jsonb("keyword_series").$type<KeywordSeries>(),
     errorKind: text("error_kind", { enum: ["invalid_credentials", "api_disabled", "no_access", "quota_exceeded", "error"] }),
     errorMessage: text("error_message"),
     accessibleProperties: integer("accessible_properties"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
+    check("search_console_snapshots_keyword_series_shape", sql`${t.keywordSeries} is null or tracked_keyword_series_valid(${t.keywordSeries})`),
+    check("search_console_snapshots_failed_without_keyword_series", sql`${t.status} <> 'failed' or ${t.keywordSeries} is null`),
     index("search_console_snapshots_workspace_created_idx").on(t.workspaceId, t.createdAt.desc()),
     check("search_console_snapshots_status_valid", sql`${t.status} in ('completed', 'failed')`),
     check(
@@ -71,3 +75,14 @@ export const searchConsoleSnapshots = pgTable(
 );
 
 export type SearchConsoleSnapshot = typeof searchConsoleSnapshots.$inferSelect;
+
+export const trackedKeywords = pgTable("tracked_keywords", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
+  keyword: text("keyword").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex("tracked_keywords_workspace_keyword_unique").on(t.workspaceId, t.keyword),
+  check("tracked_keywords_length", sql`char_length(${t.keyword}) between 2 and 80`),
+]);
+export type TrackedKeyword = typeof trackedKeywords.$inferSelect;

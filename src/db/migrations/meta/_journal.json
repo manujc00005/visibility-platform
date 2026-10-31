@@ -85,6 +85,13 @@
       "when": 1793292952292,
       "tag": "0011_analytics_key_events",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793394438194,
+      "tag": "0012_tracked_keywords",
+      "breakpoints": true
     }
   ]
 }

@@ -154,7 +154,7 @@ export interface DimensionFilterGroup {
 export interface AnalyticsQuery {
   startDate: string;
   endDate: string;
-  dimensions: ("query" | "page")[];
+  dimensions: ("query" | "page" | "date")[];
   rowLimit: number;
   /** Absent keys are left out of the request body, so unfiltered queries are unchanged. */
   dimensionFilterGroups?: DimensionFilterGroup[];

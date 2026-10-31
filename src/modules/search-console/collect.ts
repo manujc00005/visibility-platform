@@ -1,3 +1,4 @@
+import { aggregateKeywordSeries, keywordExpression, keywordWindow, KEYWORD_ROW_LIMIT, type KeywordSeries } from "@/modules/search-console/keywords";
 import { BrandTermsError, brandTerms } from "@/modules/search-console/brand-terms";
 import type { ServiceAccount } from "@/modules/search-console/credentials";
 import {
@@ -16,7 +17,7 @@ import {
  * One Search Console capture: token, property, then nine Search Analytics queries started
  * together: totals now and before, top queries, top pages, totals with and without the brand
  * in both periods (feature 007) and the queries of the previous period (feature 009). At most
- * 11 requests.
+ * 11 requests without tracked keywords, 12 with their single date/query query.
  */
 
 export interface Totals {
@@ -72,6 +73,7 @@ export interface CollectedData {
   queries: QueryRow[];
   pages: PageRow[];
   segments: Segments;
+  keywordSeries: KeywordSeries;
 }
 
 /** What a capture needs from the company, read once when the attempt starts. */
@@ -80,6 +82,7 @@ export interface CaptureSite {
   hostname: string;
   name: string;
   brandAliases: string[];
+  trackedKeywords?: readonly string[];
 }
 
 export type CollectFailure = {
@@ -138,6 +141,8 @@ export async function collectSearchConsole(account: ServiceAccount, site: Captur
   try {
     // Built before any request: an expression that cannot fit fails without touching Google.
     const brand = brandTerms(site);
+    const keywords = [...(site.trackedKeywords ?? [])];
+    const expression = keywordExpression(keywords);
     const token = await fetchAccessToken(account, { ...options, nowSeconds: Math.floor(now.getTime() / 1000) });
     const sites = await listSites(token, options);
     property = pickProperty(sites, site);
@@ -159,7 +164,7 @@ export async function collectSearchConsole(account: ServiceAccount, site: Captur
       rowLimit: 1,
       dimensionFilterGroups: [{ groupType: "and", filters: [{ dimension: "query", operator, expression: brand.expression }] }],
     });
-    const [totals, previousTotals, queries, pages, branded, nonBranded, previousBranded, previousNonBranded, previousQueries] = await Promise.all([
+    const [totals, previousTotals, queries, pages, branded, nonBranded, previousBranded, previousNonBranded, previousQueries, keywordRows] = await Promise.all([
       querySearchAnalytics(token, siteUrl, { ...range(current), dimensions: [], rowLimit: 1 }, options),
       querySearchAnalytics(token, siteUrl, { ...range(previous), dimensions: [], rowLimit: 1 }, options),
       querySearchAnalytics(token, siteUrl, { ...range(current), dimensions: ["query"], rowLimit: TOP_QUERIES }, options),
@@ -169,6 +174,7 @@ export async function collectSearchConsole(account: ServiceAccount, site: Captur
       querySearchAnalytics(token, siteUrl, filtered(previous, "includingRegex"), options),
       querySearchAnalytics(token, siteUrl, filtered(previous, "excludingRegex"), options),
       querySearchAnalytics(token, siteUrl, { ...range(previous), dimensions: ["query"], rowLimit: PREVIOUS_QUERIES }, options),
+      expression ? querySearchAnalytics(token, siteUrl, { startDate: keywordWindow(current.end).start, endDate: current.end, dimensions: ["date", "query"], rowLimit: KEYWORD_ROW_LIMIT, dimensionFilterGroups: [{ groupType: "and", filters: [{ dimension: "query", operator: "includingRegex", expression }] }] }, options) : Promise.resolve([]),
     ]);
     // Exact text only, and the first row wins: Google lists the queries with most clicks first.
     const before = new Map<string, Totals>();
@@ -190,6 +196,7 @@ export async function collectSearchConsole(account: ServiceAccount, site: Captur
           return { query: text.slice(0, MAX_QUERY_LENGTH), ...totalsOf(r), previous: before.get(text) ?? null };
         }),
         pages: pages.slice(0, TOP_PAGES).map((r) => ({ page: (r.keys[0] ?? "").slice(0, MAX_PAGE_LENGTH), ...totalsOf(r) })),
+        keywordSeries: aggregateKeywordSeries(keywords, current.end, keywordRows),
         segments: {
           version: 1,
           terms: brand.terms,

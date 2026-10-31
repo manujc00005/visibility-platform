@@ -1,0 +1,2471 @@
+{
+  "id": "f45447f7-e41f-483c-9506-7ffc32d655f3",
+  "prevId": "b76324a8-3837-425e-aaf6-7126b4a6d9c2",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.workspaces": {
+      "name": "workspaces",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "domain": {
+          "name": "domain",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hostname": {
+          "name": "hostname",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "original_url": {
+          "name": "original_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sector": {
+          "name": "sector",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "country": {
+          "name": "country",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "city": {
+          "name": "city",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "services": {
+          "name": "services",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "brand_aliases": {
+          "name": "brand_aliases",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "workspaces_domain_key": {
+          "name": "workspaces_domain_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "domain"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "workspaces_domain_normalized": {
+          "name": "workspaces_domain_normalized",
+          "value": "\"workspaces\".\"domain\" = lower(\"workspaces\".\"domain\") and \"workspaces\".\"domain\" !~ '^www\\.[^.]+\\.'"
+        },
+        "workspaces_hostname_lowercase": {
+          "name": "workspaces_hostname_lowercase",
+          "value": "\"workspaces\".\"hostname\" = lower(\"workspaces\".\"hostname\")"
+        },
+        "workspaces_name_not_blank": {
+          "name": "workspaces_name_not_blank",
+          "value": "length(btrim(\"workspaces\".\"name\")) between 1 and 120"
+        },
+        "workspaces_sector_not_blank": {
+          "name": "workspaces_sector_not_blank",
+          "value": "length(btrim(\"workspaces\".\"sector\")) between 1 and 80"
+        },
+        "workspaces_country_iso2": {
+          "name": "workspaces_country_iso2",
+          "value": "\"workspaces\".\"country\" ~ '^[A-Z]{2}$'"
+        },
+        "workspaces_services_count": {
+          "name": "workspaces_services_count",
+          "value": "cardinality(\"workspaces\".\"services\") between 1 and 10"
+        },
+        "workspaces_brand_aliases_count": {
+          "name": "workspaces_brand_aliases_count",
+          "value": "cardinality(\"workspaces\".\"brand_aliases\") <= 10"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.audit_findings": {
+      "name": "audit_findings",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "audit_id": {
+          "name": "audit_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rule_id": {
+          "name": "rule_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "severity": {
+          "name": "severity",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "evidence": {
+          "name": "evidence",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recommendation": {
+          "name": "recommendation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "audit_findings_audit_position_key": {
+          "name": "audit_findings_audit_position_key",
+          "columns": [
+            {
+              "expression": "audit_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "position",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "audit_findings_audit_id_audits_id_fk": {
+          "name": "audit_findings_audit_id_audits_id_fk",
+          "tableFrom": "audit_findings",
+          "tableTo": "audits",
+          "columnsFrom": [
+            "audit_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "audit_findings_severity_valid": {
+          "name": "audit_findings_severity_valid",
+          "value": "\"audit_findings\".\"severity\" in ('critical', 'warning', 'info')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.audits": {
+      "name": "audits",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'running'"
+        },
+        "requested_url": {
+          "name": "requested_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "final_url": {
+          "name": "final_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rules_version": {
+          "name": "rules_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "facts": {
+          "name": "facts",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fetch_log": {
+          "name": "fetch_log",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "critical_count": {
+          "name": "critical_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "warning_count": {
+          "name": "warning_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "info_count": {
+          "name": "info_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "started_at": {
+          "name": "started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "finished_at": {
+          "name": "finished_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "audits_one_running_per_workspace": {
+          "name": "audits_one_running_per_workspace",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"audits\".\"status\" = 'running'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audits_workspace_started_idx": {
+          "name": "audits_workspace_started_idx",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "started_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "audits_workspace_id_workspaces_id_fk": {
+          "name": "audits_workspace_id_workspaces_id_fk",
+          "tableFrom": "audits",
+          "tableTo": "workspaces",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "audits_status_valid": {
+          "name": "audits_status_valid",
+          "value": "\"audits\".\"status\" in ('running', 'completed', 'failed')"
+        },
+        "audits_finished_consistent": {
+          "name": "audits_finished_consistent",
+          "value": "(\"audits\".\"status\" = 'running') = (\"audits\".\"finished_at\" is null)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.reports": {
+      "name": "reports",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "audit_id": {
+          "name": "audit_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "template_version": {
+          "name": "template_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "geo_run_id": {
+          "name": "geo_run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "workspace_snapshot": {
+          "name": "workspace_snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "html": {
+          "name": "html",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pdf": {
+          "name": "pdf",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pdf_sha256": {
+          "name": "pdf_sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pdf_bytes": {
+          "name": "pdf_bytes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "reports_audit_created_idx": {
+          "name": "reports_audit_created_idx",
+          "columns": [
+            {
+              "expression": "audit_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "reports_audit_id_audits_id_fk": {
+          "name": "reports_audit_id_audits_id_fk",
+          "tableFrom": "reports",
+          "tableTo": "audits",
+          "columnsFrom": [
+            "audit_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "reports_workspace_id_workspaces_id_fk": {
+          "name": "reports_workspace_id_workspaces_id_fk",
+          "tableFrom": "reports",
+          "tableTo": "workspaces",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "reports_geo_run_id_geo_runs_id_fk": {
+          "name": "reports_geo_run_id_geo_runs_id_fk",
+          "tableFrom": "reports",
+          "tableTo": "geo_runs",
+          "columnsFrom": [
+            "geo_run_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.geo_competitors": {
+      "name": "geo_competitors",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "aliases": {
+          "name": "aliases",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::text[]"
+        },
+        "domain": {
+          "name": "domain",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "geo_competitors_workspace_idx": {
+          "name": "geo_competitors_workspace_idx",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "geo_competitors_workspace_id_workspaces_id_fk": {
+          "name": "geo_competitors_workspace_id_workspaces_id_fk",
+          "tableFrom": "geo_competitors",
+          "tableTo": "workspaces",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "geo_competitors_status_valid": {
+          "name": "geo_competitors_status_valid",
+          "value": "\"geo_competitors\".\"status\" in ('active', 'archived')"
+        },
+        "geo_competitors_name_not_blank": {
+          "name": "geo_competitors_name_not_blank",
+          "value": "length(btrim(\"geo_competitors\".\"name\")) between 1 and 120"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.geo_observations": {
+      "name": "geo_observations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "prompt_id": {
+          "name": "prompt_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "repetition": {
+          "name": "repetition",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "tag": {
+          "name": "tag",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider_task_id": {
+          "name": "provider_task_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "response_text": {
+          "name": "response_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "answer_present": {
+          "name": "answer_present",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sources": {
+          "name": "sources",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mentions": {
+          "name": "mentions",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "own_cited": {
+          "name": "own_cited",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "competitors_cited": {
+          "name": "competitors_cited",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cost_micro_usd": {
+          "name": "cost_micro_usd",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error": {
+          "name": "error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "submitted_at": {
+          "name": "submitted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "observed_at": {
+          "name": "observed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "geo_observations_run_prompt_rep_key": {
+          "name": "geo_observations_run_prompt_rep_key",
+          "columns": [
+            {
+              "expression": "run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "prompt_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "repetition",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "geo_observations_tag_key": {
+          "name": "geo_observations_tag_key",
+          "columns": [
+            {
+              "expression": "tag",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "geo_observations_run_idx": {
+          "name": "geo_observations_run_idx",
+          "columns": [
+            {
+              "expression": "run_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "geo_observations_run_id_geo_runs_id_fk": {
+          "name": "geo_observations_run_id_geo_runs_id_fk",
+          "tableFrom": "geo_observations",
+          "tableTo": "geo_runs",
+          "columnsFrom": [
+            "run_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "geo_observations_workspace_id_workspaces_id_fk": {
+          "name": "geo_observations_workspace_id_workspaces_id_fk",
+          "tableFrom": "geo_observations",
+          "tableTo": "workspaces",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "geo_observations_status_valid": {
+          "name": "geo_observations_status_valid",
+          "value": "\"geo_observations\".\"status\" in ('pending', 'submitted', 'completed', 'failed', 'uncertain')"
+        },
+        "geo_observations_repetition_valid": {
+          "name": "geo_observations_repetition_valid",
+          "value": "\"geo_observations\".\"repetition\" between 1 and 10"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.geo_prompts": {
+      "name": "geo_prompts",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "text": {
+          "name": "text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "intent": {
+          "name": "intent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "geo_prompts_workspace_idx": {
+          "name": "geo_prompts_workspace_idx",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "geo_prompts_workspace_id_workspaces_id_fk": {
+          "name": "geo_prompts_workspace_id_workspaces_id_fk",
+          "tableFrom": "geo_prompts",
+          "tableTo": "workspaces",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "geo_prompts_intent_valid": {
+          "name": "geo_prompts_intent_valid",
+          "value": "\"geo_prompts\".\"intent\" in ('discovery', 'recommendation', 'comparison', 'branded')"
+        },
+        "geo_prompts_status_valid": {
+          "name": "geo_prompts_status_valid",
+          "value": "\"geo_prompts\".\"status\" in ('active', 'archived')"
+        },
+        "geo_prompts_text_length": {
+          "name": "geo_prompts_text_length",
+          "value": "length(btrim(\"geo_prompts\".\"text\")) between 5 and 400"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.geo_runs": {
+      "name": "geo_runs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'collecting'"
+        },
+        "config": {
+          "name": "config",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "methodology_key": {
+          "name": "methodology_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "completed_at": {
+          "name": "completed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "geo_runs_workspace_created_idx": {
+          "name": "geo_runs_workspace_created_idx",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "geo_runs_workspace_id_workspaces_id_fk": {
+          "name": "geo_runs_workspace_id_workspaces_id_fk",
+          "tableFrom": "geo_runs",
+          "tableTo": "workspaces",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "geo_runs_provider_valid": {
+          "name": "geo_runs_provider_valid",
+          "value": "\"geo_runs\".\"provider\" in ('manual', 'dataforseo_chatgpt')"
+        },
+        "geo_runs_status_valid": {
+          "name": "geo_runs_status_valid",
+          "value": "\"geo_runs\".\"status\" in ('collecting', 'completed')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.provider_spend": {
+      "name": "provider_spend",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "operation": {
+          "name": "operation",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "observation_id": {
+          "name": "observation_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "amount_micro_usd": {
+          "name": "amount_micro_usd",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'USD'"
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'reserved'"
+        },
+        "price_version": {
+          "name": "price_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "settled_at": {
+          "name": "settled_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "provider_spend_created_idx": {
+          "name": "provider_spend_created_idx",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "provider_spend_observation_idx": {
+          "name": "provider_spend_observation_idx",
+          "columns": [
+            {
+              "expression": "observation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "provider_spend_workspace_id_workspaces_id_fk": {
+          "name": "provider_spend_workspace_id_workspaces_id_fk",
+          "tableFrom": "provider_spend",
+          "tableTo": "workspaces",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "provider_spend_run_id_geo_runs_id_fk": {
+          "name": "provider_spend_run_id_geo_runs_id_fk",
+          "tableFrom": "provider_spend",
+          "tableTo": "geo_runs",
+          "columnsFrom": [
+            "run_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "provider_spend_observation_id_geo_observations_id_fk": {
+          "name": "provider_spend_observation_id_geo_observations_id_fk",
+          "tableFrom": "provider_spend",
+          "tableTo": "geo_observations",
+          "columnsFrom": [
+            "observation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "provider_spend_amount_non_negative": {
+          "name": "provider_spend_amount_non_negative",
+          "value": "\"provider_spend\".\"amount_micro_usd\" >= 0"
+        },
+        "provider_spend_currency_usd": {
+          "name": "provider_spend_currency_usd",
+          "value": "\"provider_spend\".\"currency\" = 'USD'"
+        },
+        "provider_spend_status_valid": {
+          "name": "provider_spend_status_valid",
+          "value": "\"provider_spend\".\"status\" in ('reserved', 'settled', 'released', 'uncertain')"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.geo_competitor_dismissals": {
+      "name": "geo_competitor_dismissals",
+      "schema": "",
+      "columns": {
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "identity_key": {
+          "name": "identity_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "geo_competitor_dismissals_workspace_id_workspaces_id_fk": {
+          "name": "geo_competitor_dismissals_workspace_id_workspaces_id_fk",
+          "tableFrom": "geo_competitor_dismissals",
+          "tableTo": "workspaces",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "geo_competitor_dismissals_pkey": {
+          "name": "geo_competitor_dismissals_pkey",
+          "columns": [
+            "workspace_id",
+            "identity_key"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "geo_competitor_dismissals_key_prefixed": {
+          "name": "geo_competitor_dismissals_key_prefixed",
+          "value": "\"geo_competitor_dismissals\".\"identity_key\" ~ '^(host|name):.'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.geo_competitor_extractions": {
+      "name": "geo_competitor_extractions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'assisted'"
+        },
+        "question": {
+          "name": "question",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "answer_sha256": {
+          "name": "answer_sha256",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "input_fingerprint": {
+          "name": "input_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sources": {
+          "name": "sources",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rules_version": {
+          "name": "rules_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "context_snapshot": {
+          "name": "context_snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidates_total": {
+          "name": "candidates_total",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "candidates_shown": {
+          "name": "candidates_shown",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "warnings": {
+          "name": "warnings",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "geo_competitor_extractions_fingerprint_key": {
+          "name": "geo_competitor_extractions_fingerprint_key",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "input_fingerprint",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "geo_competitor_extractions_workspace_created_idx": {
+          "name": "geo_competitor_extractions_workspace_created_idx",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "geo_competitor_extractions_workspace_id_workspaces_id_fk": {
+          "name": "geo_competitor_extractions_workspace_id_workspaces_id_fk",
+          "tableFrom": "geo_competitor_extractions",
+          "tableTo": "workspaces",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "geo_competitor_extractions_workspace_id_key": {
+          "name": "geo_competitor_extractions_workspace_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workspace_id",
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "geo_competitor_extractions_source_valid": {
+          "name": "geo_competitor_extractions_source_valid",
+          "value": "\"geo_competitor_extractions\".\"source\" in ('assisted')"
+        },
+        "geo_competitor_extractions_question_length": {
+          "name": "geo_competitor_extractions_question_length",
+          "value": "length(\"geo_competitor_extractions\".\"question\") between 1 and 500"
+        },
+        "geo_competitor_extractions_answer_sha256_hex": {
+          "name": "geo_competitor_extractions_answer_sha256_hex",
+          "value": "\"geo_competitor_extractions\".\"answer_sha256\" ~ '^[0-9a-f]{64}$'"
+        },
+        "geo_competitor_extractions_fingerprint_hex": {
+          "name": "geo_competitor_extractions_fingerprint_hex",
+          "value": "\"geo_competitor_extractions\".\"input_fingerprint\" ~ '^[0-9a-f]{64}$'"
+        },
+        "geo_competitor_extractions_counts_non_negative": {
+          "name": "geo_competitor_extractions_counts_non_negative",
+          "value": "\"geo_competitor_extractions\".\"candidates_total\" >= 0 and \"geo_competitor_extractions\".\"candidates_shown\" >= 0"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.geo_competitor_suggestions": {
+      "name": "geo_competitor_suggestions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "extraction_id": {
+          "name": "extraction_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "candidate_key": {
+          "name": "candidate_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "domain": {
+          "name": "domain",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_urls": {
+          "name": "source_urls",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "snippet": {
+          "name": "snippet",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "page_title": {
+          "name": "page_title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "page_description": {
+          "name": "page_description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "factors": {
+          "name": "factors",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "web_status": {
+          "name": "web_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "initial_url": {
+          "name": "initial_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "final_url": {
+          "name": "final_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "checked_at": {
+          "name": "checked_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'suggested'"
+        },
+        "competitor_id": {
+          "name": "competitor_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "accepted_input": {
+          "name": "accepted_input",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "decided_at": {
+          "name": "decided_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "geo_competitor_suggestions_extraction_key": {
+          "name": "geo_competitor_suggestions_extraction_key",
+          "columns": [
+            {
+              "expression": "extraction_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "candidate_key",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "geo_competitor_suggestions_workspace_status_idx": {
+          "name": "geo_competitor_suggestions_workspace_status_idx",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "geo_competitor_suggestions_workspace_id_workspaces_id_fk": {
+          "name": "geo_competitor_suggestions_workspace_id_workspaces_id_fk",
+          "tableFrom": "geo_competitor_suggestions",
+          "tableTo": "workspaces",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "geo_competitor_suggestions_competitor_id_geo_competitors_id_fk": {
+          "name": "geo_competitor_suggestions_competitor_id_geo_competitors_id_fk",
+          "tableFrom": "geo_competitor_suggestions",
+          "tableTo": "geo_competitors",
+          "columnsFrom": [
+            "competitor_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "geo_competitor_suggestions_extraction_fk": {
+          "name": "geo_competitor_suggestions_extraction_fk",
+          "tableFrom": "geo_competitor_suggestions",
+          "tableTo": "geo_competitor_extractions",
+          "columnsFrom": [
+            "workspace_id",
+            "extraction_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "geo_competitor_suggestions_status_valid": {
+          "name": "geo_competitor_suggestions_status_valid",
+          "value": "\"geo_competitor_suggestions\".\"status\" in ('suggested', 'accepted', 'dismissed', 'superseded')"
+        },
+        "geo_competitor_suggestions_web_status_valid": {
+          "name": "geo_competitor_suggestions_web_status_valid",
+          "value": "\"geo_competitor_suggestions\".\"web_status\" is null or \"geo_competitor_suggestions\".\"web_status\" in ('reachable', 'unreachable', 'unverified', 'blocked')"
+        },
+        "geo_competitor_suggestions_key_prefixed": {
+          "name": "geo_competitor_suggestions_key_prefixed",
+          "value": "\"geo_competitor_suggestions\".\"candidate_key\" ~ '^(host|name):.'"
+        },
+        "geo_competitor_suggestions_name_length": {
+          "name": "geo_competitor_suggestions_name_length",
+          "value": "length(btrim(\"geo_competitor_suggestions\".\"name\")) between 1 and 120"
+        },
+        "geo_competitor_suggestions_snippet_length": {
+          "name": "geo_competitor_suggestions_snippet_length",
+          "value": "length(\"geo_competitor_suggestions\".\"snippet\") <= 200"
+        },
+        "geo_competitor_suggestions_title_length": {
+          "name": "geo_competitor_suggestions_title_length",
+          "value": "\"geo_competitor_suggestions\".\"page_title\" is null or length(\"geo_competitor_suggestions\".\"page_title\") <= 120"
+        },
+        "geo_competitor_suggestions_description_length": {
+          "name": "geo_competitor_suggestions_description_length",
+          "value": "\"geo_competitor_suggestions\".\"page_description\" is null or length(\"geo_competitor_suggestions\".\"page_description\") <= 500"
+        },
+        "geo_competitor_suggestions_accepted_complete": {
+          "name": "geo_competitor_suggestions_accepted_complete",
+          "value": "\"geo_competitor_suggestions\".\"status\" <> 'accepted' or (\"geo_competitor_suggestions\".\"decided_at\" is not null and \"geo_competitor_suggestions\".\"accepted_input\" is not null)"
+        },
+        "geo_competitor_suggestions_decided_when_final": {
+          "name": "geo_competitor_suggestions_decided_when_final",
+          "value": "\"geo_competitor_suggestions\".\"status\" in ('suggested', 'superseded') or \"geo_competitor_suggestions\".\"decided_at\" is not null"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.search_console_snapshots": {
+      "name": "search_console_snapshots",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'google_gsc'"
+        },
+        "capture_condition": {
+          "name": "capture_condition",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'owner_api'"
+        },
+        "property": {
+          "name": "property",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "current_start": {
+          "name": "current_start",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "current_end": {
+          "name": "current_end",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "previous_start": {
+          "name": "previous_start",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "previous_end": {
+          "name": "previous_end",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "totals": {
+          "name": "totals",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "previous_totals": {
+          "name": "previous_totals",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "queries": {
+          "name": "queries",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "pages": {
+          "name": "pages",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "segments": {
+          "name": "segments",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "keyword_series": {
+          "name": "keyword_series",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error_kind": {
+          "name": "error_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error_message": {
+          "name": "error_message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "accessible_properties": {
+          "name": "accessible_properties",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "search_console_snapshots_workspace_created_idx": {
+          "name": "search_console_snapshots_workspace_created_idx",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "search_console_snapshots_workspace_id_workspaces_id_fk": {
+          "name": "search_console_snapshots_workspace_id_workspaces_id_fk",
+          "tableFrom": "search_console_snapshots",
+          "tableTo": "workspaces",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "search_console_snapshots_keyword_series_shape": {
+          "name": "search_console_snapshots_keyword_series_shape",
+          "value": "\"search_console_snapshots\".\"keyword_series\" is null or tracked_keyword_series_valid(\"search_console_snapshots\".\"keyword_series\")"
+        },
+        "search_console_snapshots_failed_without_keyword_series": {
+          "name": "search_console_snapshots_failed_without_keyword_series",
+          "value": "\"search_console_snapshots\".\"status\" <> 'failed' or \"search_console_snapshots\".\"keyword_series\" is null"
+        },
+        "search_console_snapshots_status_valid": {
+          "name": "search_console_snapshots_status_valid",
+          "value": "\"search_console_snapshots\".\"status\" in ('completed', 'failed')"
+        },
+        "search_console_snapshots_error_kind_valid": {
+          "name": "search_console_snapshots_error_kind_valid",
+          "value": "\"search_console_snapshots\".\"error_kind\" is null or \"search_console_snapshots\".\"error_kind\" in ('invalid_credentials', 'api_disabled', 'no_access', 'quota_exceeded', 'error')"
+        },
+        "search_console_snapshots_completed_complete": {
+          "name": "search_console_snapshots_completed_complete",
+          "value": "\"search_console_snapshots\".\"status\" <> 'completed' or (\"search_console_snapshots\".\"property\" is not null and \"search_console_snapshots\".\"current_start\" is not null and \"search_console_snapshots\".\"current_end\" is not null and \"search_console_snapshots\".\"previous_start\" is not null and \"search_console_snapshots\".\"previous_end\" is not null and \"search_console_snapshots\".\"totals\" is not null and \"search_console_snapshots\".\"previous_totals\" is not null and \"search_console_snapshots\".\"error_kind\" is null)"
+        },
+        "search_console_snapshots_failed_has_reason": {
+          "name": "search_console_snapshots_failed_has_reason",
+          "value": "\"search_console_snapshots\".\"status\" <> 'failed' or (\"search_console_snapshots\".\"error_kind\" is not null and \"search_console_snapshots\".\"error_message\" is not null)"
+        },
+        "search_console_snapshots_rows_are_arrays": {
+          "name": "search_console_snapshots_rows_are_arrays",
+          "value": "jsonb_typeof(\"search_console_snapshots\".\"queries\") = 'array' and jsonb_typeof(\"search_console_snapshots\".\"pages\") = 'array'"
+        },
+        "search_console_snapshots_failed_without_segments": {
+          "name": "search_console_snapshots_failed_without_segments",
+          "value": "\"search_console_snapshots\".\"status\" <> 'failed' or \"search_console_snapshots\".\"segments\" is null"
+        },
+        "search_console_snapshots_segments_shape": {
+          "name": "search_console_snapshots_segments_shape",
+          "value": "\"search_console_snapshots\".\"segments\" is null or (jsonb_typeof(\"search_console_snapshots\".\"segments\") = 'object' and jsonb_path_exists(\"search_console_snapshots\".\"segments\", 'strict $ ? (@.version == 1 && @.termsTruncated.type() == \"boolean\" && @.terms.type() == \"array\" && @.terms.size() > 0 && !exists(@.terms[*] ? (@.type() != \"string\")) && @.branded.type() == \"object\" && @.branded.clicks.type() == \"number\" && @.branded.impressions.type() == \"number\" && @.branded.ctr.type() == \"number\" && @.branded.position.type() == \"number\" && @.nonBranded.type() == \"object\" && @.nonBranded.clicks.type() == \"number\" && @.nonBranded.impressions.type() == \"number\" && @.nonBranded.ctr.type() == \"number\" && @.nonBranded.position.type() == \"number\" && @.previousBranded.type() == \"object\" && @.previousBranded.clicks.type() == \"number\" && @.previousBranded.impressions.type() == \"number\" && @.previousBranded.ctr.type() == \"number\" && @.previousBranded.position.type() == \"number\" && @.previousNonBranded.type() == \"object\" && @.previousNonBranded.clicks.type() == \"number\" && @.previousNonBranded.impressions.type() == \"number\" && @.previousNonBranded.ctr.type() == \"number\" && @.previousNonBranded.position.type() == \"number\")'))"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.tracked_keywords": {
+      "name": "tracked_keywords",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "keyword": {
+          "name": "keyword",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "tracked_keywords_workspace_keyword_unique": {
+          "name": "tracked_keywords_workspace_keyword_unique",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "keyword",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "tracked_keywords_workspace_id_workspaces_id_fk": {
+          "name": "tracked_keywords_workspace_id_workspaces_id_fk",
+          "tableFrom": "tracked_keywords",
+          "tableTo": "workspaces",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "tracked_keywords_length": {
+          "name": "tracked_keywords_length",
+          "value": "char_length(\"tracked_keywords\".\"keyword\") between 2 and 80"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.bing_webmaster_snapshots": {
+      "name": "bing_webmaster_snapshots",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'bing_wmt'"
+        },
+        "capture_condition": {
+          "name": "capture_condition",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'owner_api'"
+        },
+        "site_url": {
+          "name": "site_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "current_start": {
+          "name": "current_start",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "current_end": {
+          "name": "current_end",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "previous_start": {
+          "name": "previous_start",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "previous_end": {
+          "name": "previous_end",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "totals": {
+          "name": "totals",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "previous_totals": {
+          "name": "previous_totals",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "queries": {
+          "name": "queries",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "pages": {
+          "name": "pages",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "rows_start": {
+          "name": "rows_start",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rows_end": {
+          "name": "rows_end",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error_kind": {
+          "name": "error_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error_message": {
+          "name": "error_message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "verified_sites": {
+          "name": "verified_sites",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "bing_webmaster_snapshots_workspace_created_idx": {
+          "name": "bing_webmaster_snapshots_workspace_created_idx",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "bing_webmaster_snapshots_workspace_id_workspaces_id_fk": {
+          "name": "bing_webmaster_snapshots_workspace_id_workspaces_id_fk",
+          "tableFrom": "bing_webmaster_snapshots",
+          "tableTo": "workspaces",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "bing_webmaster_snapshots_status_valid": {
+          "name": "bing_webmaster_snapshots_status_valid",
+          "value": "\"bing_webmaster_snapshots\".\"status\" in ('completed', 'failed')"
+        },
+        "bing_webmaster_snapshots_error_kind_valid": {
+          "name": "bing_webmaster_snapshots_error_kind_valid",
+          "value": "\"bing_webmaster_snapshots\".\"error_kind\" is null or \"bing_webmaster_snapshots\".\"error_kind\" in ('invalid_credentials', 'quota_exceeded', 'no_access', 'not_verified', 'error')"
+        },
+        "bing_webmaster_snapshots_completed_complete": {
+          "name": "bing_webmaster_snapshots_completed_complete",
+          "value": "\"bing_webmaster_snapshots\".\"status\" <> 'completed' or (\"bing_webmaster_snapshots\".\"site_url\" is not null and \"bing_webmaster_snapshots\".\"error_kind\" is null and num_nulls(\"bing_webmaster_snapshots\".\"current_start\", \"bing_webmaster_snapshots\".\"current_end\", \"bing_webmaster_snapshots\".\"previous_start\", \"bing_webmaster_snapshots\".\"previous_end\", \"bing_webmaster_snapshots\".\"totals\", \"bing_webmaster_snapshots\".\"previous_totals\") in (0, 6))"
+        },
+        "bing_webmaster_snapshots_failed_has_reason": {
+          "name": "bing_webmaster_snapshots_failed_has_reason",
+          "value": "\"bing_webmaster_snapshots\".\"status\" <> 'failed' or (\"bing_webmaster_snapshots\".\"error_kind\" is not null and \"bing_webmaster_snapshots\".\"error_message\" is not null)"
+        },
+        "bing_webmaster_snapshots_rows_are_arrays": {
+          "name": "bing_webmaster_snapshots_rows_are_arrays",
+          "value": "jsonb_typeof(\"bing_webmaster_snapshots\".\"queries\") = 'array' and jsonb_typeof(\"bing_webmaster_snapshots\".\"pages\") = 'array'"
+        },
+        "bing_webmaster_snapshots_rows_window": {
+          "name": "bing_webmaster_snapshots_rows_window",
+          "value": "num_nulls(\"bing_webmaster_snapshots\".\"rows_start\", \"bing_webmaster_snapshots\".\"rows_end\") in (0, 2)"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.analytics_snapshots": {
+      "name": "analytics_snapshots",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'ga4'"
+        },
+        "capture_condition": {
+          "name": "capture_condition",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'owner_api'"
+        },
+        "property": {
+          "name": "property",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "property_name": {
+          "name": "property_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "current_start": {
+          "name": "current_start",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "current_end": {
+          "name": "current_end",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "previous_start": {
+          "name": "previous_start",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "previous_end": {
+          "name": "previous_end",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "totals": {
+          "name": "totals",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "previous_totals": {
+          "name": "previous_totals",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "channels": {
+          "name": "channels",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "pages": {
+          "name": "pages",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
+        },
+        "quality": {
+          "name": "quality",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "key_events": {
+          "name": "key_events",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error_kind": {
+          "name": "error_kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "error_message": {
+          "name": "error_message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "accessible_properties": {
+          "name": "accessible_properties",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "properties_skipped": {
+          "name": "properties_skipped",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "analytics_snapshots_workspace_created_idx": {
+          "name": "analytics_snapshots_workspace_created_idx",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": false,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "analytics_snapshots_workspace_id_workspaces_id_fk": {
+          "name": "analytics_snapshots_workspace_id_workspaces_id_fk",
+          "tableFrom": "analytics_snapshots",
+          "tableTo": "workspaces",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "analytics_snapshots_status_valid": {
+          "name": "analytics_snapshots_status_valid",
+          "value": "\"analytics_snapshots\".\"status\" in ('completed', 'failed')"
+        },
+        "analytics_snapshots_error_kind_valid": {
+          "name": "analytics_snapshots_error_kind_valid",
+          "value": "\"analytics_snapshots\".\"error_kind\" is null or \"analytics_snapshots\".\"error_kind\" in ('invalid_credentials', 'admin_api_disabled', 'data_api_disabled', 'no_access', 'quota_exceeded', 'error')"
+        },
+        "analytics_snapshots_completed_complete": {
+          "name": "analytics_snapshots_completed_complete",
+          "value": "\"analytics_snapshots\".\"status\" <> 'completed' or (\"analytics_snapshots\".\"property\" is not null and \"analytics_snapshots\".\"error_kind\" is null and num_nulls(\"analytics_snapshots\".\"current_start\", \"analytics_snapshots\".\"current_end\", \"analytics_snapshots\".\"previous_start\", \"analytics_snapshots\".\"previous_end\", \"analytics_snapshots\".\"totals\", \"analytics_snapshots\".\"previous_totals\", \"analytics_snapshots\".\"quality\") = 0)"
+        },
+        "analytics_snapshots_failed_has_reason": {
+          "name": "analytics_snapshots_failed_has_reason",
+          "value": "\"analytics_snapshots\".\"status\" <> 'failed' or (\"analytics_snapshots\".\"error_kind\" is not null and \"analytics_snapshots\".\"error_message\" is not null)"
+        },
+        "analytics_snapshots_rows_are_arrays": {
+          "name": "analytics_snapshots_rows_are_arrays",
+          "value": "jsonb_typeof(\"analytics_snapshots\".\"channels\") = 'array' and jsonb_typeof(\"analytics_snapshots\".\"pages\") = 'array'"
+        },
+        "analytics_snapshots_failed_without_key_events": {
+          "name": "analytics_snapshots_failed_without_key_events",
+          "value": "\"analytics_snapshots\".\"status\" <> 'failed' or \"analytics_snapshots\".\"key_events\" is null"
+        },
+        "analytics_snapshots_key_events_shape": {
+          "name": "analytics_snapshots_key_events_shape",
+          "value": "\"analytics_snapshots\".\"key_events\" is null or (jsonb_typeof(\"analytics_snapshots\".\"key_events\") = 'object' and jsonb_path_exists(\"analytics_snapshots\".\"key_events\", 'strict $ ? (@.version == 1 && @.configured.type() == \"array\" && !exists(@.configured[*] ? (@.type() != \"string\")) && @.configuredMore.type() == \"boolean\" && @.total.type() == \"number\" && @.previousTotal.type() == \"number\" && @.organic.type() == \"number\" && @.previousOrganic.type() == \"number\" && @.organicByEvent.type() == \"array\")') and case when jsonb_typeof(\"analytics_snapshots\".\"key_events\" -> 'organicByEvent') = 'array' then jsonb_array_length(\"analytics_snapshots\".\"key_events\" -> 'organicByEvent') = jsonb_array_length(jsonb_path_query_array(\"analytics_snapshots\".\"key_events\", 'strict $.organicByEvent[*] ? (@.type() == \"object\" && @.event.type() == \"string\" && @.keyEvents.type() == \"number\")')) else false end)"
+        }
+      },
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

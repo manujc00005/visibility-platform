@@ -32,6 +32,7 @@ const OK: CollectOutcome = {
     previousTotals: { clicks: 8, impressions: 390, ctr: 0.02, position: 12.1 },
     queries: [{ query: "crm agencias", clicks: 5, impressions: 50, ctr: 0.1, position: 4.2 }],
     pages: [{ page: "https://olessium.com/es", clicks: 10, impressions: 300, ctr: 0.033, position: 8.1 }],
+    keywordSeries: {version:1,start:"2026-04-26",end:"2026-10-24",keywords:[]},
     segments: {
       version: 1,
       terms: ["Olessium", "olessium.com"],
@@ -61,7 +62,7 @@ describe("refreshSearchConsole", () => {
     const d = deps(OK);
     const result = await refreshSearchConsole(db, ws.id, d);
     expect(result.ok).toBe(true);
-    expect(d.sites).toEqual([{ domain: "olessium.com", hostname: "olessium.com", name: "Olessium", brandAliases: [] }]);
+    expect(d.sites).toEqual([{ domain: "olessium.com", hostname: "olessium.com", name: "Olessium", brandAliases: [], trackedKeywords: [] }]);
     const { latest, latestCompleted } = await latestSearchConsole(db, ws.id);
     expect(latest?.id).toBe(latestCompleted?.id);
     expect(latestCompleted).toMatchObject({
