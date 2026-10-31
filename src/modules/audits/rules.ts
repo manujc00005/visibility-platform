@@ -105,6 +105,7 @@ const FAILURE_LABELS: Record<FetchFailure["kind"], string> = {
   too_large: "la página es demasiado grande",
   unsupported_encoding: "compresión no soportada",
   budget_exhausted: "límite de la auditoría alcanzado",
+  refused_by_policy: "acceso no permitido por el robots.txt de la web",
 };
 
 /** Owner-readable failure reason; raw TLS/OpenSSL errors become a plain sentence. */

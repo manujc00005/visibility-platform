@@ -38,6 +38,15 @@ export interface CollectDeps {
   fieldData?: (url: string) => Promise<FieldDataResult>;
 }
 
+export interface CollectOptions {
+  /**
+   * Checks robots.txt before every home page request: each redirect hop and the http fallback
+   * too, on the origin of that URL (feature 011, D011). Off, a redirect's robots.txt is read
+   * after downloading the page, which is what audits of the operator's own sites have always done.
+   */
+  robotsBeforeEachRequest?: boolean;
+}
+
 interface RobotsFetch {
   result: RobotsResult;
   parsed: Robots | null;
@@ -117,12 +126,37 @@ async function fetchSitemap(
   return { ...base, status: "ok", httpStatus: status, error: null, sitemap, homepageListed };
 }
 
-export async function collectAuditFacts(hostname: string, deps: CollectDeps): Promise<{ facts: AuditFacts; log: FetchLogEntry[] }> {
+export async function collectAuditFacts(
+  hostname: string,
+  deps: CollectDeps,
+  options: CollectOptions = {},
+): Promise<{ facts: AuditFacts; log: FetchLogEntry[] }> {
   const budget = createBudget(AUDIT_LIMITS);
   const requestedUrl = `https://${hostname}/`;
   let origin = new URL(requestedUrl).origin;
 
-  let robots = await fetchRobots(origin, deps, budget);
+  // With the guard each origin's robots.txt is read once; it is fetched without the guard, so it cannot recurse.
+  const readRobots = new Map<string, Promise<RobotsFetch>>();
+  const robotsOf = (of: string) => {
+    if (!options.robotsBeforeEachRequest) return fetchRobots(of, deps, budget);
+    const known = readRobots.get(of) ?? fetchRobots(of, deps, budget);
+    readRobots.set(of, known);
+    return known;
+  };
+  let refused: URL | null = null;
+  const pageLimits = {
+    ...AUDIT_LIMITS.page,
+    ...(options.robotsBeforeEachRequest && {
+      allowRequest: async (url: URL) => {
+        const { parsed } = await robotsOf(url.origin);
+        const allowed = parsed ? isAllowedByRobots(parsed, OUR_ROBOTS_TOKEN, `${url.pathname}${url.search}`) : true;
+        if (!allowed) refused = url;
+        return allowed;
+      },
+    }),
+  };
+
+  let robots = await robotsOf(origin);
   let page: AuditFacts["page"];
   let httpsFailure: AuditFacts["httpsFailure"] = null;
 
@@ -130,26 +164,29 @@ export async function collectAuditFacts(hostname: string, deps: CollectDeps): Pr
   if (!allowedForUs) {
     page = { kind: "disallowed" };
   } else {
-    let response = await deps.fetcher.fetch(requestedUrl, AUDIT_LIMITS.page, budget);
+    let response = await deps.fetcher.fetch(requestedUrl, pageLimits, budget);
     // Some small-business sites still have no working HTTPS: fall back to http once.
     if (!response.ok && (response.failure.kind === "network" || response.failure.kind === "timeout")) {
-      const fallback = await deps.fetcher.fetch(`http://${hostname}/`, AUDIT_LIMITS.page, budget);
+      const fallback = await deps.fetcher.fetch(`http://${hostname}/`, pageLimits, budget);
       if (fallback.ok) {
         httpsFailure = response.failure;
         response = fallback;
+      } else if (refused) {
+        response = fallback;
       }
     }
-    page = response.ok ? { kind: "fetched", result: toPageResult(response.response) } : { kind: "failed", failure: response.failure };
+    if (response.ok) page = { kind: "fetched", result: toPageResult(response.response) };
+    else page = refused ? { kind: "disallowed" } : { kind: "failed", failure: response.failure };
   }
 
   // If the home page lives on another origin (www ↔ apex, http → https), its robots.txt applies.
   let path = "/";
-  if (page.kind === "fetched") {
-    const finalUrl = new URL(page.result.url);
-    path = `${finalUrl.pathname}${finalUrl.search}`;
-    if (finalUrl.origin !== origin) {
-      origin = finalUrl.origin;
-      robots = await fetchRobots(origin, deps, budget);
+  const reached = page.kind === "fetched" ? new URL(page.result.url) : (refused as URL | null);
+  if (reached) {
+    path = `${reached.pathname}${reached.search}`;
+    if (reached.origin !== origin) {
+      origin = reached.origin;
+      robots = await robotsOf(origin);
     }
   }
   const robotsResult = withPermissions(robots, path);

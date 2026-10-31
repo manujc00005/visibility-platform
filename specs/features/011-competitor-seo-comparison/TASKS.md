@@ -1,10 +1,11 @@
 # Tasks: Comparativa técnica y de autoridad con competidores
 
-Plan creado y auditado el 2026-10-31. Ninguna tarea está ejecutada. Las pruebas y capturas se registran al ejecutarse, no son evidencia antes. Sin evidencia real completa de AC-016, T009 y el cierre permanecen pendientes (D012).
+Plan creado y auditado el 2026-10-31. Las pruebas y capturas se registran al ejecutarse, no son evidencia antes. Sin evidencia real completa de AC-016, T009 y el cierre permanecen pendientes (D012).
 
 ## Phase 0: Acceso previo y compatibilidad
 
-- [ ] T000 - Añadir la política optativa de D011 al colector/fetcher, comprobando robots antes de cada acceso de portada, redirect y fallback HTTP, con cache por origen y presupuesto compartido. Covers: AC-003, AC-007, AC-018. Verify: `npx vitest run --project unit tests/unit/audits` con código 0; los tests nuevos demuestran que el destino prohibido nunca se solicita, también en cambios de path del mismo origen y fallback HTTP; no se invocan PageSpeed/CrUX, el origen permitido sí se mide, robots no recurre ni se descarga otra vez por origen, y se mantienen límites de redirects, presupuesto y defensas SSRF. Los tests previos del modo por defecto pasan sin cambiar sus expectativas. Quien implementa inspecciona el diff contra D011 para confirmar que solo la comparativa activa la política y no hay otro transporte HTTP.
+- [x] T000 - Añadir la política optativa de D011 al colector/fetcher, comprobando robots antes de cada acceso de portada, redirect y fallback HTTP, con cache por origen y presupuesto compartido. Covers: AC-003, AC-007, AC-018. Verify: `npx vitest run --project unit tests/unit/audits` con código 0; los tests nuevos demuestran que el destino prohibido nunca se solicita, también en cambios de path del mismo origen y fallback HTTP; no se invocan PageSpeed/CrUX, el origen permitido sí se mide, robots no recurre ni se descarga otra vez por origen, y se mantienen límites de redirects, presupuesto y defensas SSRF. Los tests previos del modo por defecto pasan sin cambiar sus expectativas. Quien implementa inspecciona el diff contra D011 para confirmar que solo la comparativa activa la política y no hay otro transporte HTTP.
+  - Hecho 2026-10-31: `allowRequest` en `FetchLimits` y `robotsBeforeEachRequest` en `collectAuditFacts`, solo activados por la comparativa. Pruebas con el fetcher real contra un servidor local, que confirma que el destino prohibido nunca recibe la petición, en cambio de ruta, cambio de origen y fallback a http. Cada `robots.txt` se lee una vez. Límites de redirects, presupuesto y direcciones sin cambios. Las pruebas previas del colector y del fetcher pasan sin tocar sus expectativas.
 
 ## Phase 1: Dominio y datos
 

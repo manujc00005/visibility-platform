@@ -165,6 +165,7 @@ export const en = {
         too_large: "Too large",
         unsupported_encoding: "Encoding",
         budget_exhausted: "Limit reached",
+        refused_by_policy: "Refused by robots.txt",
       },
       rating: { good: "Good", needs_improvement: "Needs improvement", poor: "Poor" },
       verdict: { good: "Good", unchecked: "Not checked", critical: "Poor", warning: "Fair", info: "Could improve" },

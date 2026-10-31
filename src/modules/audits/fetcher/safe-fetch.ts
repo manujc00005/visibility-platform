@@ -45,6 +45,8 @@ export interface FetchLimits {
   deadlineAt?: number;
   /** Cancels the fetch: pending DNS is ignored, open requests are destroyed. */
   signal?: AbortSignal;
+  /** Asked before every request of this fetch, redirect hops included; false refuses that URL unrequested. */
+  allowRequest?: (url: URL) => Promise<boolean>;
 }
 
 export type FetchFailureKind =
@@ -56,7 +58,8 @@ export type FetchFailureKind =
   | "too_many_redirects"
   | "too_large"
   | "unsupported_encoding"
-  | "budget_exhausted";
+  | "budget_exhausted"
+  | "refused_by_policy";
 
 export interface FetchFailure {
   kind: FetchFailureKind;
@@ -344,6 +347,7 @@ export function createSafeFetcher(deps: SafeFetcherDeps) {
       const entry: FetchLogEntry = { url: current.href, outcome: "ok", status: null, bytes: 0, ms: 0, ip: null, error: null };
       try {
         assertAllowedTarget(current);
+        if (limits.allowRequest && !(await limits.allowRequest(current))) throw new FetchError("refused_by_policy", "Refused before the request");
         if (budget.requests >= budget.maxRequests) throw new FetchError("budget_exhausted", "Audit request budget exhausted");
         if (Date.now() >= budget.deadline) throw new FetchError("budget_exhausted", "Audit time budget exhausted");
         if (budget.bytes >= budget.maxTotalBytes) throw new FetchError("budget_exhausted", "Audit byte budget exhausted");

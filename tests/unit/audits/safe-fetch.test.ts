@@ -168,6 +168,50 @@ describe("safe fetch: SSRF defences", () => {
   );
 });
 
+describe("safe fetch: refusing a request before it is made", () => {
+  it("asks about every hop and never connects to a refused URL", async () => {
+    const { fetcher, connectedTo } = setup();
+    const asked: string[] = [];
+    const allowRequest = async (url: URL) => {
+      asked.push(url.pathname);
+      return url.pathname !== "/chain/1";
+    };
+    const hops = budget();
+    const result = await fetcher.fetch("http://site.example/chain/3", { ...limits, allowRequest }, hops);
+    expect(result).toMatchObject({ ok: false, failure: { kind: "refused_by_policy", url: "http://site.example/chain/1" } });
+    expect(asked).toEqual(["/chain/3", "/chain/2", "/chain/1"]);
+    expect(connectedTo).toHaveLength(2);
+    expect(hops.requests).toBe(2);
+    expect(hops.log.at(-1)).toMatchObject({ url: "http://site.example/chain/1", outcome: "refused_by_policy", status: null, ip: null });
+  });
+
+  it("does not ask about a redirect target the fetcher itself refuses", async () => {
+    const { fetcher } = setup();
+    const asked: string[] = [];
+    const allowRequest = async (url: URL) => {
+      asked.push(url.href);
+      return true;
+    };
+    const result = await fetcher.fetch("http://site.example/to-ftp", { ...limits, allowRequest }, budget());
+    expect(result).toMatchObject({ ok: false, failure: { kind: "invalid_url" } });
+    expect(asked).toEqual(["http://site.example/to-ftp"]);
+  });
+
+  it("keeps the address checks after an allowed hop", async () => {
+    const { fetcher, connectedTo } = setup();
+    const result = await fetcher.fetch("http://site.example/to-private", { ...limits, allowRequest: async () => true }, budget());
+    expect(result).toMatchObject({ ok: false, failure: { kind: "blocked_destination" } });
+    expect(connectedTo).toEqual([PUBLIC]);
+  });
+
+  it("keeps the redirect limit and the request budget", async () => {
+    const allowRequest = async () => true;
+    expect(await setup().fetcher.fetch("http://site.example/chain/6", { ...limits, allowRequest }, budget())).toMatchObject({ ok: false, failure: { kind: "too_many_redirects" } });
+    const tight = createBudget({ maxRequests: 2, maxTotalBytes: 1_000_000, timeLimitMs: 10_000 });
+    expect(await setup().fetcher.fetch("http://site.example/chain/3", { ...limits, allowRequest }, tight)).toMatchObject({ ok: false, failure: { kind: "budget_exhausted" } });
+  });
+});
+
 describe("safe fetch: resource limits", () => {
   it("stops after 5 redirects", async () => {
     const { fetcher } = setup();

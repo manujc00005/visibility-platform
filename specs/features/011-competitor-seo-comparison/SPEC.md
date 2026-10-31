@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready (2026-10-31). Plan, tareas y decisiones en esta carpeta.
+In Progress (2026-10-31). Plan, tareas y decisiones en esta carpeta.
 
 ## Problem
 

@@ -166,6 +166,7 @@ export const es = {
         too_large: "Demasiado grande",
         unsupported_encoding: "Codificación",
         budget_exhausted: "Límite alcanzado",
+        refused_by_policy: "No permitido por robots.txt",
       } satisfies Record<FetchLogEntry["outcome"], string>,
       rating: { good: "Bueno", needs_improvement: "Mejorable", poor: "Malo" } satisfies Record<FieldRating, string>,
       verdict: { good: "Bien", unchecked: "No comprobado", critical: "Mal", warning: "Regular", info: "Mejorable" },
