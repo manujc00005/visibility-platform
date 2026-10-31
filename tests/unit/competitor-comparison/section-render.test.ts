@@ -122,6 +122,14 @@ describe("comparison section", () => {
     expect(page).not.toContain(t.authorityDetail("rival.es", displayDay("2026-10-01", locale)));
   });
 
+  it("adds no empty detail row, and no authority note where there is no authority", () => {
+    const t = getMessages("es").competitorComparison;
+    const bare = site({ access: "robots_disallowed", criticalCount: null, warningCount: null, lighthouse: { status: "skipped" }, field: { status: "skipped" }, authority: { status: "not_configured", requestedDomain: "rival.es" } });
+    expect(render(summary([measured(bare)])).match(/role="row"/g)).toHaveLength(2);
+    const notFound: AuthorityResult = { status: "not_found", requestedDomain: "blog.rival.es", effectiveDomain: "rival.es", scope: "registered_domain", asOf: "2026-10-01" };
+    expect(render(summary([measured(site({ authority: notFound }))]))).not.toContain(t.subdomainNote);
+  });
+
   it("does not mix the empty text with a failure", () => {
     const t = getMessages("es").competitorComparison;
     const html = render(summary([], { capture: null, failure: { error: "internal_error", at: new Date("2026-10-31T11:00:00Z") } }));

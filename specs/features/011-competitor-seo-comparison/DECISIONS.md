@@ -26,7 +26,7 @@ Registradas el 2026-10-31 al planificar y corregidas tras la auditoría de consi
 
 **Context:** `AuditFacts` lleva títulos, textos y URLs de la web, y `FetchFailure` trae mensajes con URL.
 
-**Decision:** `toSiteResult` construye el resultado campo a campo, nunca a partir de una copia de `facts`. Guarda estado de acceso (`analyzed`, `robots_disallowed`, `unreachable`, `http_error`, `non_html`), puntuaciones de las cuatro categorías, LCP, CLS y TBT de laboratorio, LCP, INP y CLS reales con `scope` y periodo, recuento de críticos y avisos, y autoridad con dominio solicitado/efectivo, alcance y fecha de publicación. Conserva domain/hostname capturados y cumple el contrato de persistencia de SPEC (unidades, valores finitos, ceros válidos, métricas parciales, estados y fechas). No guarda `error`, `key`, `finalUrl` ni títulos de comprobaciones de Lighthouse.
+**Decision:** `toSiteResult` construye el resultado campo a campo, nunca a partir de una copia de `facts`. Guarda estado de acceso (`analyzed`, `robots_disallowed`, `unreachable`, `http_error`, `non_html` y, desde D013, `processing_error`), puntuaciones de las cuatro categorías, LCP, CLS y TBT de laboratorio, LCP, INP y CLS reales con `scope` y periodo, recuento de críticos y avisos, y autoridad con dominio solicitado/efectivo, alcance y fecha de publicación. Conserva domain/hostname capturados y cumple el contrato de persistencia de SPEC (unidades, valores finitos, ceros válidos, métricas parciales, estados y fechas). No guarda `error`, `key`, `finalUrl` ni títulos de comprobaciones de Lighthouse.
 
 **Reasoning:** FR-009 es una lista cerrada, y construirla campo a campo impide que un dato nuevo de `facts` se cuele.
 
@@ -38,7 +38,7 @@ Registradas el 2026-10-31 al planificar y corregidas tras la auditoría de consi
 
 **Status:** Accepted
 
-**Context:** la [referencia API](https://keywordseverywhere.com/openpagerank/docs) y el [OpenAPI](https://openpagerank.keywordseverywhere.com/v1/openapi.json), consultados el 2026-10-31, fijan `POST /v1/domains/bulk`. El score es nullable cuando no se encuentra el dominio; la forma real completa de `found: false` aún debe verificarse en T009.
+**Context:** la [referencia API](https://keywordseverywhere.com/openpagerank/docs) y el [OpenAPI](https://openpagerank.keywordseverywhere.com/v1/openapi.json), consultados el 2026-10-31, fijan `POST /v1/domains/bulk`. El score es nullable cuando no se encuentra el dominio; T009 verificó la forma real de `found: false`, con las tres cifras nulas.
 
 **Decision:** una petición con hasta 6 dominios, `include_history: false` y 15 s de límite. Sin clave, cero peticiones. Se validan `as_of` y los campos conocidos de cada resultado; `as_of` se mapea a `asOf`, `open_page_rank` a score y `referring_domains` a referringDomains. El resto de campos externos se ignora, sin copiarlos al contrato estricto interno. Un `found: true` requiere score finito 0–10; rank/referentes pueden ser null pero no tener tipos o rangos inválidos. Un `found: false` admite cifras ausentes/nulas y no se transforma en cero. Resultado esperado ausente, emparejamiento ambiguo o cifras inválidas dan `error` para los sitios afectados; los otros resultados válidos sobreviven. Un fallo de envoltorio/HTTP aplica el estado común a todos. El campo `referring_domains` se etiqueta como recuento ponderado del proveedor, no como inventario exhaustivo de enlaces.
 
@@ -56,7 +56,7 @@ Por dominio: `ok`, `not_found` explícito o `error` de resultado. Se guarda `asO
 
 **Reasoning:** el cuerpo de un error nunca se guarda, y el mensaje mostrado sale del catálogo, así la clave no puede filtrarse.
 
-**Consequences:** T009 confirma con llamadas reales un resultado encontrado y uno no encontrado, sin guardar cuerpos crudos. Sin esa evidencia la tarea y el cierre siguen pendientes (D012).
+**Consequences:** T009 confirmó con llamadas reales un resultado encontrado y uno no encontrado, sin guardar cuerpos crudos.
 
 ### D004 - Emparejar dominios
 
@@ -193,7 +193,7 @@ Por dominio: `ok`, `not_found` explícito o `error` de resultado. Se guarda `asO
 
 **Decision:**
 - **Parsers:** `robots.ts` y `sitemap.ts` dejan de usar expresiones con retroceso. Un `robots.txt` o un sitemap hostiles podían colgar el proceso de forma síncrona. El resultado no cambia, lo que una prueba diferencial comprueba frente a la regla anterior, y también beneficia a las auditorías propias.
-- **Sitemap:** con la guardia activa, sin portada leída no se pide. Quien nos prohíbe la portada no recibe otra petición, y ese dato se descartaba igualmente. Corrige la redacción de SPEC y D011.
+- **Sitemap:** con la guardia activa, sin portada legible no se pide, tampoco si responde 4xx o 5xx. Quien nos prohíbe la portada no recibe otra petición, y ese dato se descartaba igualmente. Corrige la redacción de SPEC y D011.
 - **Aislamiento:** una excepción al procesar un sitio deja ese sitio como `processing_error`, un acceso nuevo que no finge que la web esté caída. Unas cifras de Google fuera de contrato dejan esa fuente en `error`. `internal_error` queda para fallos del proceso.
 - **Duplicados:** se listan aparte, porque FR-001 pide identificarlos y un competidor no debe desaparecer sin explicación.
 - **Tabla:** el detalle de cada sitio pasa a su propia fila, para que el nombre accesible de la fila siga siendo corto, y cada `colSpan` lleva `aria-colspan`.
@@ -210,4 +210,3 @@ Por dominio: `ok`, `not_found` explícito o `error` de resultado. Se guarda `asO
 - La acción bloquea las demás de la página mientras dura, porque Next las encola.
 - No hay enfriamiento entre ejecuciones; va con BL-07.
 - Una portada anidada muy profunda queda como `processing_error`: `html.ts` sigue siendo recursivo.
-- Con la clave real hay que confirmar que `referring_domains` es entero y `as_of` una fecha ISO.

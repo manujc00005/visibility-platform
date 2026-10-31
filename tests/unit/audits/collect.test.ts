@@ -204,6 +204,16 @@ describe("collectAuditFacts with robots checked before each request (D011)", () 
     expect(seen.every((entry) => entry.endsWith("robots.txt"))).toBe(true);
   });
 
+  it("does not ask for the sitemap of a home page that answers with an error", async () => {
+    const fetcher = fakeFetcher({ "https://cerrada.es/robots.txt": { status: 404 }, "https://cerrada.es/": { status: 403, body: "no", contentType: "text/html" } });
+    const { facts } = await collectAuditFacts("cerrada.es", { fetcher, pageSpeed }, { robotsBeforeEachRequest: true });
+    expect(facts.sitemap).toBeNull();
+    expect(fetcher.calls.some((call) => call.includes("sitemap"))).toBe(false);
+    const plain = fakeFetcher({ "https://cerrada.es/robots.txt": { status: 404 }, "https://cerrada.es/": { status: 403, body: "no", contentType: "text/html" } });
+    await collectAuditFacts("cerrada.es", { fetcher: plain, pageSpeed });
+    expect(plain.calls.some((call) => call.includes("sitemap"))).toBe(true);
+  });
+
   it("does not ask for the sitemap of a site that cannot be read", async () => {
     const fetcher = fakeFetcher({ "https://caida.es/robots.txt": { fail: "dns" }, "https://caida.es/": { fail: "dns" } });
     const { facts } = await collectAuditFacts("caida.es", { fetcher, pageSpeed }, { robotsBeforeEachRequest: true });

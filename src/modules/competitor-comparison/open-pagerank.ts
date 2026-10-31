@@ -26,7 +26,7 @@ const foundSchema = z.object({
   rank: z.number().int().positive().nullish(),
   referring_domains: z.number().int().nonnegative().nullish(),
 });
-const notFoundSchema = z.object({ found: z.literal(false), open_page_rank: z.null().optional() });
+const notFoundSchema = z.object({ found: z.literal(false), open_page_rank: z.null().optional(), rank: z.null().optional(), referring_domains: z.null().optional() });
 const figuresOf = (raw: unknown) => {
   const { found, open_page_rank, rank, referring_domains } = raw as Record<string, unknown>;
   return JSON.stringify([found, open_page_rank, rank, referring_domains]);

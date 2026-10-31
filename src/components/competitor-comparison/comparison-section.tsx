@@ -91,23 +91,25 @@ function Cells({ site, t, locale }: { site: SiteResult; t: Texts; locale: Locale
   );
 }
 
-function Details({ site, t, locale }: { site: SiteResult; t: Texts; locale: Locale }) {
+function detailsOf(site: SiteResult, t: Texts, locale: Locale): string[] {
   const { field, authority } = site;
-  const period = field.status === "ok" ? (field.period ? `${displayDay(field.period.firstDate, locale)} – ${displayDay(field.period.lastDate, locale)}` : t.fieldNoPeriod) : null;
-  const matched = authority.status === "ok" || authority.status === "not_found" ? authority : null;
-  const partialCount = site.access === "analyzed" && (site.lighthouse.status !== "ok" || field.status !== "ok");
-  return (
-    <>
-      {field.status === "ok" && period ? <span className="block">{t.fieldDetail(t.scope[field.scope], period)}</span> : null}
-      {matched ? <span className="block">{(authority.status === "ok" ? t.authorityDetail : t.authorityLookedUp)(matched.effectiveDomain, displayDay(matched.asOf, locale))}</span> : null}
-      {matched && matched.effectiveDomain !== matched.requestedDomain ? <span className="block">{t.subdomainNote}</span> : null}
-      {authority.status === "ok" ? <span className="block">{authority.rank === null ? t.noRank : t.rank(formatNumber(authority.rank, locale))}</span> : null}
-      {partialCount ? <span className="block">{t.partialCount}</span> : null}
-    </>
-  );
+  const lines: string[] = [];
+  if (field.status === "ok") {
+    const period = field.period ? `${displayDay(field.period.firstDate, locale)} – ${displayDay(field.period.lastDate, locale)}` : t.fieldNoPeriod;
+    lines.push(t.fieldDetail(t.scope[field.scope], period));
+  }
+  if (authority.status === "ok") {
+    lines.push(t.authorityDetail(authority.effectiveDomain, displayDay(authority.asOf, locale)));
+    if (authority.effectiveDomain !== authority.requestedDomain) lines.push(t.subdomainNote);
+    lines.push(authority.rank === null ? t.noRank : t.rank(formatNumber(authority.rank, locale)));
+  }
+  if (authority.status === "not_found") lines.push(t.authorityLookedUp(authority.effectiveDomain, displayDay(authority.asOf, locale)));
+  if (site.access === "analyzed" && (site.lighthouse.status !== "ok" || field.status !== "ok")) lines.push(t.partialCount);
+  return lines;
 }
 
 function Row({ row, t, locale }: { row: ComparisonRow; t: Texts; locale: Locale }) {
+  const details = row.state === "measured" ? detailsOf(row.site, t, locale) : [];
   return (
     <>
       <tr role="row" className="block border-t pt-3 first:border-t-0 lg:table-row lg:pt-0 lg:first:border-t">
@@ -125,10 +127,14 @@ function Row({ row, t, locale }: { row: ComparisonRow; t: Texts; locale: Locale 
           </td>
         )}
       </tr>
-      {row.state === "measured" ? (
+      {details.length > 0 ? (
         <tr role="row" className="block pb-3 lg:table-row lg:pb-0">
           <td role="cell" colSpan={COLUMNS.length + 1} aria-colspan={COLUMNS.length + 1} className="block pt-1 text-xs text-muted-foreground [overflow-wrap:anywhere] lg:table-cell lg:pb-2">
-            <Details site={row.site} t={t} locale={locale} />
+            {details.map((line) => (
+              <span key={line} className="block">
+                {line}
+              </span>
+            ))}
           </td>
         </tr>
       ) : null}

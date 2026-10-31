@@ -446,6 +446,8 @@ describe("capture", () => {
     await runComparison(db, ws.id, built);
     const stored = sitesOf((await rows(ws.id))[0]!.sites)[1]!;
     expect(stored.lighthouse).toMatchObject({ performance: { status: "ok", value: 0 }, seo: { status: "ok", value: 0 }, cls: { status: "ok", value: 0 } });
+    expect(stored.access).toBe("analyzed");
+    expect(typeof stored.criticalCount).toBe("number");
     expect(stored.authority).toMatchObject({ status: "ok", score: 0, referringDomains: 0 });
   });
 

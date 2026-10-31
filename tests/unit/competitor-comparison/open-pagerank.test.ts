@@ -95,8 +95,8 @@ describe("fetchAuthority", () => {
     for (const domain of ["mal.es", "rango.es", "doble.es", "nada.es", "ausente.es"]) expect(results.get(domain)).toEqual({ status: "error", requestedDomain: domain });
   });
 
-  it("rejects figures on a domain not found", async () => {
-    expect((await respond([{ domain: "uno.es", found: false, open_page_rank: 3 }], ["uno.es"])).get("uno.es")?.status).toBe("error");
+  it.each([{ open_page_rank: 3 }, { rank: 5 }, { referring_domains: 7 }])("rejects figures on a domain not found: %j", async (figures) => {
+    expect((await respond([{ domain: "uno.es", found: false, ...figures }], ["uno.es"])).get("uno.es")?.status).toBe("error");
   });
 
   it("invents no date", async () => {
