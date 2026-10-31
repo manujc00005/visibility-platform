@@ -73,7 +73,7 @@ export function parseKeywordSeries(raw: unknown): KeywordSeries | null {
       seen.add(item.keyword);
       let previous = "";
       for (const week of item.weeks) {
-        if (!window.starts.includes(week.start) || week.start <= previous || week.clicks > week.impressions) return null;
+        if (!window.starts.includes(week.start) || week.start <= previous) return null;
         previous = week.start;
       }
     }
@@ -93,7 +93,7 @@ export function aggregateKeywordSeries(keywords: readonly string[], end: string,
     const time = dayMillis(date);
     const weeks = data.get(canonical(query));
     if (!weeks) continue;
-    if (date < window.start || date > end || ![row.clicks, row.impressions, row.position].every(Number.isFinite) || row.clicks < 0 || row.impressions < 0 || row.clicks > row.impressions) throw invalid();
+    if (date < window.start || date > end || ![row.clicks, row.impressions, row.position].every(Number.isFinite) || row.clicks < 0 || row.impressions < 0) throw invalid();
     const originalKey = JSON.stringify([date, query]);
     if (originals.has(originalKey)) throw invalid();
     originals.add(originalKey);

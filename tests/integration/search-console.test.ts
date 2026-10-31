@@ -436,6 +436,13 @@ describe("search console tracked keywords (feature 010)", () => {
     for (const secret of [SECRET, new URLSearchParams(bodies[0]!).get("assertion")!, PRIVATE_PEM.split("\n")[1]!, "crm agencias"]) expect(stored).not.toContain(secret);
   });
 
+  it("stores a completed capture when Google reports more clicks than impressions", async () => {
+    const ws = await workspace();
+    await addTrackedKeyword(db, ws.id, "crm agencias");
+    await refreshSearchConsole(db, ws.id, google(() => Response.json({ rows: [{ ...row("crm agencias"), clicks: 3, impressions: 2, ctr: 1.5 }] })).deps);
+    expect(await snapshots(ws.id)).toMatchObject([{ status: "completed", keywordSeries: { keywords: [{ keyword: "crm agencias", weeks: [{ clicks: 3, impressions: 2 }] }] } }]);
+  });
+
   it("keeps the last good series after a failed keyword query (AC-009)", async () => {
     const ws = await workspace();
     await addTrackedKeyword(db, ws.id, "crm agencias");

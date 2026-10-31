@@ -60,10 +60,18 @@ describe("weekly collection", () => {
     expect(aggregateKeywordSeries([], end, []).keywords).toEqual([]);
   });
   it.each([
-    row("2026-02-30", "crm"), row("1999-01-01", "crm"), row(end, "crm", 0, 0, 1),
-    row(end, "crm", 1, 0), row(end, "crm", 1, NaN), row(end, "crm", 1, Infinity), row(end, "crm", 1, 8, 2),
+    row("2026-02-30", "crm"), row("1999-01-01", "crm"), row(end, "crm", 1, 8, -1),
+    row(end, "crm", 1, 0), row(end, "crm", 1, NaN), row(end, "crm", 1, Infinity),
     { ...row(end, "crm"), keys: [end] },
   ])("rejects invalid accepted rows", (bad) => expect(() => aggregateKeywordSeries(["crm"], end, [bad])).toThrow());
+  it("accepts clicks over impressions and ignores clicks without impressions: one odd day must not block every capture", () => {
+    const [crm] = aggregateKeywordSeries(["crm"], end, [row(end, "crm", 2, 8, 3), row("2026-10-26", "crm", 0, 0, 1)]).keywords;
+    expect(crm!.weeks).toEqual([{ start: keywordWindow(end).starts[25], clicks: 3, impressions: 2, position: 8, daysWithData: 1 }]);
+  });
+  it.each(["İstanbul", "ΣΑΣ", "ς σ", "\u212Aelvin", "\u212Bngstrom", "a\u00a0b", "cafe\u0301", "ﬃ crm"])("normalizes %s to a fixed point", (input) => {
+    const once = normalizeTrackedKeyword(input);
+    expect(normalizeTrackedKeyword(once)).toBe(once);
+  });
   it("rejects duplicate original rows and possible truncation", () => {
     expect(() => aggregateKeywordSeries(["crm"], end, [row(end, "crm"), row(end, "crm")])).toThrow();
     expect(() => aggregateKeywordSeries(["crm"], end, Array(25000).fill(row(end, "other")))).toThrow(expect.objectContaining({ kind: "keyword_limit" }));

@@ -31,7 +31,7 @@ export function TrackedKeywordsSection({ summary, locale, addAction, removeActio
   const count = (value: number) => formatNumber(value, locale, { maximumFractionDigits: 0 });
   const week = (start: string) => `${displayDay(start, locale)} – ${displayDay(weekEnd(start), locale)}`;
   return (
-    <section aria-labelledby="tracked-keywords-title" className="flex min-w-0 flex-col gap-4 rounded-2xl border bg-card p-4 sm:p-5">
+    <section aria-labelledby="tracked-keywords-title" className="flex min-w-0 flex-col gap-4 rounded-2xl border border-border/80 bg-card p-4 shadow-card sm:p-5">
       <div>
         <h3 id="tracked-keywords-title" className="font-semibold">{t.title}</h3>
         <p className="text-sm text-muted-foreground">{t.description}</p>
@@ -42,12 +42,13 @@ export function TrackedKeywordsSection({ summary, locale, addAction, removeActio
       ) : <p className="text-sm">{t.limit}</p>}
       {summary.warning ? <p role="alert" className="text-sm text-destructive">{t.warning}</p> : null}
       {summary.rows.length === 0 ? <p className="text-sm text-muted-foreground">{t.empty}</p> : (
-        <table className="block w-full min-w-0 table-fixed">
-          <thead className="sr-only"><tr><th scope="col">{t.label}</th><th scope="col">{t.remove}</th></tr></thead>
-          <tbody className="block w-full divide-y">
+        // The grid layout on mobile drops the implicit table semantics, so the roles are explicit.
+        <table role="table" aria-labelledby="tracked-keywords-title" className="block w-full min-w-0">
+          <thead role="rowgroup" className="sr-only"><tr role="row"><th role="columnheader" scope="col">{t.label}</th><th role="columnheader" scope="col">{t.remove}</th></tr></thead>
+          <tbody role="rowgroup" className="block w-full divide-y">
             {summary.rows.map((row) => (
-              <tr key={row.id} className="grid min-w-0 gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto]">
-                <td className="flex min-w-0 flex-col gap-2">
+              <tr key={row.id} role="row" className="grid min-w-0 gap-3 py-4 sm:grid-cols-[minmax(0,1fr)_auto]">
+                <td role="cell" className="flex min-w-0 flex-col gap-2">
                   <p className="font-medium [overflow-wrap:anywhere]">{row.keyword}</p>
                   {row.state !== "ok" ? <p className="text-sm text-muted-foreground">{t[row.state]}</p> : (
                     <>
@@ -65,7 +66,7 @@ export function TrackedKeywordsSection({ summary, locale, addAction, removeActio
                     </>
                   )}
                 </td>
-                <td className="block min-w-0">
+                <td role="cell" className="block min-w-0">
                   <RemoveTrackedKeywordForm action={removeAction(row.id)} label={t.remove} pendingLabel={t.pendingAction} keyword={row.keyword} />
                 </td>
               </tr>

@@ -52,6 +52,7 @@ export const searchConsoleSnapshots = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
+    // tracked_keyword_series_valid lives in migrations 0012 and 0013: drizzle-kit does not model functions.
     check("search_console_snapshots_keyword_series_shape", sql`${t.keywordSeries} is null or tracked_keyword_series_valid(${t.keywordSeries})`),
     check("search_console_snapshots_failed_without_keyword_series", sql`${t.status} <> 'failed' or ${t.keywordSeries} is null`),
     index("search_console_snapshots_workspace_created_idx").on(t.workspaceId, t.createdAt.desc()),

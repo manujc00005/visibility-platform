@@ -26,11 +26,15 @@ export function KeywordSparkline({ row, locale }: { row: TrackedKeywordView; loc
     }
   }
   if (current) segments.push(current);
-  const description = row.slots.map((start, i) => {
+  // Runs of absent weeks read as one gap: 26 repeated dates cannot be listened to.
+  const ranges: { from: string; to: string; value: string }[] = [];
+  row.slots.forEach((start, i) => {
     const point = points[i];
-    const value = point ? formatNumber(point.value, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : t.gap;
-    return `${displayDay(start, locale)} – ${displayDay(addDays(start, 6), locale)}: ${value}`;
-  }).join("; ");
+    const last = ranges.at(-1);
+    if (!point && last?.value === t.gap) last.to = start;
+    else ranges.push({ from: start, to: start, value: point ? formatNumber(point.value, locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : t.gap });
+  });
+  const description = ranges.map(({ from, to, value }) => `${displayDay(from, locale)} – ${displayDay(addDays(to, 6), locale)}: ${value}`).join("; ");
   return (
     <svg viewBox="0 0 216 48" role="img" aria-label={`${row.keyword}. ${t.history}. ${description}`} className="h-12 w-full max-w-60">
       {segments.map((d, i) => <path key={i} d={d} fill="none" stroke="currentColor" strokeWidth="2" />)}

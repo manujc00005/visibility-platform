@@ -35,7 +35,7 @@ describe("schema migration",()=>{
   for(const value of [[],{},[good],{...good,version:2},{...good,keywords:[{keyword:"crm",weeks:Array(27).fill(good.keywords[0]!.weeks[0])}]},{...good,version:[1]},{...good,keywords:{}},{...good,keywords:[{}]}, {...good,keywords:[{keyword:"a",weeks:[]}]}, {...good,keywords:[{keyword:"crm",weeks:[{}]}]}, {...good,keywords:[{keyword:"crm",weeks:[{...good.keywords[0]!.weeks[0],position:0}]}]}, {...good,keywords:[{keyword:"crm",weeks:[{...good.keywords[0]!.weeks[0],daysWithData:1.5}]}]}, {...good,keywords:Array(26).fill({keyword:"crm",weeks:[]})}]) {
     await expect(insertSnapshot(w.id,value)).rejects.toMatchObject({code:"23514",constraint:"search_console_snapshots_keyword_series_shape"});
   }
-  await expect(pool.query("select tracked_keyword_series_valid('[]'::jsonb) as v")).resolves.toMatchObject({rows:[{v:false}]});
+  for(const root of ["[]","null","1",'"x"']) await expect(pool.query("select tracked_keyword_series_valid($1::jsonb) as v",[root])).resolves.toMatchObject({rows:[{v:false}]});
   await expect(insertSnapshot(w.id,good,"failed")).rejects.toMatchObject({code:"23514",constraint:"search_console_snapshots_failed_without_keyword_series"});
  });
  it("enforces unique, length and cascade",async()=>{
@@ -75,6 +75,11 @@ describe("service concurrent",()=>{
   const w=await workspace();
   expect(await addTrackedKeyword(db,w.id,"café")).toEqual({ok:true});
   expect(await addTrackedKeyword(db,w.id,"CAFE\u0301")).toEqual({ok:false,error:"duplicate"});
+ });
+ it("reports a saved list that no longer validates as a failure, not as a list too long",async()=>{
+  const w=await workspace();
+  await pool.query("insert into tracked_keywords(workspace_id,keyword) values ($1,'old\u0007text')",[w.id]);
+  await expect(addTrackedKeyword(db,w.id,"crm")).rejects.toThrow();
  });
  it("rejects a NUL before Postgres can refuse it",async()=>{
   const w=await workspace();

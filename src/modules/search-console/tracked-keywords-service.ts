@@ -1,5 +1,6 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import type { Database } from "@/db/client";
+import { GscError } from "@/modules/search-console/google";
 import { keywordExpression, MAX_TRACKED_KEYWORDS, normalizeTrackedKeyword } from "@/modules/search-console/keywords";
 import { trackedKeywords } from "@/modules/search-console/schema";
 import { workspaces } from "@/modules/workspaces/schema";
@@ -23,7 +24,12 @@ export async function addTrackedKeyword(db: Database, workspaceId: string, raw: 
     const rows = await tx.select().from(trackedKeywords).where(eq(trackedKeywords.workspaceId, workspaceId));
     if (rows.some((r) => r.keyword === keyword)) return { ok: false, error: "duplicate" };
     if (rows.length >= MAX_TRACKED_KEYWORDS) return { ok: false, error: "limit" };
-    try { keywordExpression([...rows.map((r) => r.keyword), keyword]); } catch { return { ok: false, error: "bytes" }; }
+    try {
+      keywordExpression([...rows.map((r) => r.keyword), keyword]);
+    } catch (error) {
+      if (error instanceof GscError && error.kind === "keyword_limit") return { ok: false, error: "bytes" };
+      throw error;
+    }
     await tx.insert(trackedKeywords).values({ workspaceId, keyword });
     return { ok: true };
   });

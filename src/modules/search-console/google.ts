@@ -168,7 +168,7 @@ const analyticsSchema = z.object({
         keys: z.array(z.string()).optional(),
         clicks: metric,
         impressions: metric,
-        ctr: metric.max(1),
+        ctr: metric,
         position: metric,
       }),
     )

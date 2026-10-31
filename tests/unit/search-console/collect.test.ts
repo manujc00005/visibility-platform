@@ -408,6 +408,12 @@ describe("tracked keyword capture", () => {
     const result=await collectSearchConsole(account,{...site,trackedKeywords:["crm"]},{fetchImpl:p.fetcher,now:NOW});
     expect(result).toMatchObject({ok:false,kind}); expect(JSON.stringify(result)).not.toContain("secret upstream");
   });
+  it("keeps a day where Google reports more clicks than impressions",async()=>{
+    const p=provider({rows:[{keys:["2026-10-24","crm"],clicks:3,impressions:2,ctr:1.5,position:8}]});
+    const result=await collectSearchConsole(account,{...site,trackedKeywords:["crm"]},{fetchImpl:p.fetcher,now:NOW});
+    expect(result.ok).toBe(true);
+    if(result.ok) expect(result.data.keywordSeries.keywords[0]!.weeks[0]).toMatchObject({clicks:3,impressions:2});
+  });
   it.each([
     ["an impossible date",[{keys:["2026-02-30","crm"],clicks:1,impressions:5,ctr:.2,position:8}],"error"],
     ["a repeated row",Array(2).fill({keys:["2026-10-24","crm"],clicks:1,impressions:5,ctr:.2,position:8}),"error"],
