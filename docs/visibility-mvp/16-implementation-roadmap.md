@@ -286,6 +286,7 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 | D-33 | **Eventos clave de GA4 sin datos (spec 008, D009).** Olessium no tiene visitas, así que no se ha visto el canal `Organic Search` literal en una respuesta ni el formato real de un `keyEvents` distinto de cero | Si el canal llegara con otro nombre, la cifra orgánica saldría a cero (la sección lo advierte) | Cuando GA4 tenga visitas y eventos clave: «Actualizar datos» y comparar con los informes de GA4 del mismo periodo |
 | D-34 | **Cambios de posición sin comparar con datos (spec 009, D005).** Olessium no tiene impresiones, así que no se ha visto si el texto de una búsqueda coincide entre periodos | Si no coincidiera, las filas dirían «Sin dato anterior», sin inventar nada | Cuando olessium.com tenga impresiones: «Actualizar datos» y comparar varias posiciones con la interfaz de Search Console en los dos periodos |
 | D-35 | **Recorte de texto inseguro en los conectores (anterior a la 007, visto en la revisión de la 009).** Búsquedas y páginas de Search Console, y rutas, canales y nombre de propiedad de GA4, se recortan por unidades UTF-16 sin quitar NUL. Un carácter partido o un NUL haría que Postgres rechazara el `jsonb`. `clipName` de GA4 cubre el corte y el NUL, pero no un sustituto suelto que ya venga en la entrada | La captura se perdería sin dejar fila `failed`, y se repetiría mientras ese texto siga entre los principales. No se ha visto en real | Utilidad compartida de recorte con `toWellFormed`, usada en los dos conectores, y decidir qué hace el servicio con un fallo de base que no sea FK |
+| D-36 | **Filtro de búsquedas seguidas sin probar con datos (spec 010, AC-017).** Olessium no tiene impresiones, y Google acepta incluso expresiones inválidas cuando no hay datos, así que el filtro no se ha visto funcionar. Tampoco se ha medido cuánto tarda esa consulta | Si Google rechazara la expresión con datos, toda la captura de una empresa con búsquedas seguidas fallaría, aunque se conserva la última buena. La spec sigue abierta | Con una propiedad con datos: leer las filas sin filtrar, elegir una búsqueda seguida y otra de control, comprobar que solo entra la primera y anotar la duración |
 | D-07 | `neon init -y` instaló el plugin de Neon (skills y MCP) a nivel de usuario en Claude Code, Codex y VS Code | Configuración global del equipo, no del repo | Ninguno; el servidor MCP de Neon en Claude Code necesita autorizar OAuth con `/mcp` |
 | R-01 | Las fases 2–6 dependen de cuentas externas (PSI, DataForSEO, Stripe) aún no abiertas; la Fase 4 se cerró sin la de DataForSEO | Retraso de fases | Abrir PSI antes de Fase 2; DataForSEO antes de Fase 4; Stripe test antes de Fase 5 |
 | R-02 | El NORTE del workspace `lead-platform` sigue en mantenimiento | Conflicto de foco del único desarrollador | Decisión del owner; este repo no depende de ello técnicamente |
@@ -458,6 +459,16 @@ Los tres conectores siguen el mismo patrón: credencial del operador en el entor
 **Verificación:** 982 pruebas, lint, typecheck y build sobre `e8eaae2`. Dos pasadas anteriores fallaron por cortes de red contra Neon y Google Fonts, sin relación con el código. Captura real de olessium.com `completed` a cero, con 11 llamadas. Maquetación a 375 px en `es` y `en` con una fila sintética que se borró después; la primera prueba encontró que la tabla escondía la columna Posición y se corrigió. Tres revisiones independientes, con las correcciones en su D006.
 
 **Seguimiento:** D-34 y D-35.
+
+### Búsquedas que sigues (spec `specs/features/010-tracked-keywords`) — 2026-10-31, en progreso
+
+**Alcance:** hasta 25 búsquedas por empresa. Cada captura de Search Console añade una consulta filtrada de 182 días y guarda una serie semanal. La página SEO muestra posición media, impresiones, cambio frente a la primera semana con datos y una gráfica con huecos reales. Sin programación ni proveedor nuevo.
+
+**Commits:** `a6d1e4a`…`ed598a0`, más los de evidencia. **Migraciones:** `0012` y `0013`, en `test` y `dev`; `production` sin tocar.
+
+**Verificación:** 900 unitarias, 188 de integración, lint, typecheck y build sobre `ed598a0`. Navegador en los cinco estados de Search Console, a 375 px en `es` y `en` y a 1280 px en `es`. Captura real de olessium.com `completed` a cero, sin guardar.
+
+**Seguimiento:** D-36. No se cierra hasta tener esa evidencia (D011 de la 010).
 
 ### Categorías de Lighthouse (spec `specs/features/004-lighthouse-categories`) — 2026-10-28, en progreso
 

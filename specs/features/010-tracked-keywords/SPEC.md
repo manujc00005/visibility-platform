@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress (2026-10-31). T001–T007 hechas; T008 y T009 abiertas. El cierre exige la evidencia positiva de AC-017 (D011).
+In Progress (2026-10-31). T001–T008 hechas; T009 abierta solo por la evidencia positiva de AC-017 (D011). No se puede cerrar sin ella.
 
 ## Problem
 
