@@ -340,36 +340,41 @@ describe("capture", () => {
   it("closes a stale attempt, and its late worker touches neither that row nor the new one (AC-006)", async () => {
     const ws = await company();
     await rival(ws.id, "uno.es");
-    let release!: () => void;
-    let reached!: () => void;
-    const started = new Promise<void>((resolve) => (reached = resolve));
-    const held = new Promise<void>((resolve) => (release = resolve));
-    const slow = deps(
-      { ...open("olessium.com"), ...open("uno.es") },
-      {
-        pageSpeed: async () => {
-          reached();
-          await held;
-          return performance(10);
-        },
-      },
-    );
-    const late = runComparison(db, ws.id, slow.built);
-    await started;
+    const hold = () => {
+      let release!: () => void;
+      let reached!: () => void;
+      const started = new Promise<void>((resolve) => (reached = resolve));
+      const held = new Promise<void>((resolve) => (release = resolve));
+      return { started, release, pageSpeed: (score: number) => async () => (reached(), await held, performance(score)) };
+    };
+    const old = hold();
+    const late = runComparison(db, ws.id, deps({ ...open("olessium.com"), ...open("uno.es") }, { pageSpeed: old.pageSpeed(10) }).built);
+    await old.started;
     await pool.query("update competitor_comparisons set started_at = now() - interval '11 minutes' where workspace_id = $1", [ws.id]);
 
-    const fresh = await runComparison(db, ws.id, deps({ ...open("olessium.com"), ...open("uno.es") }).built);
-    expect(fresh.ok).toBe(true);
-    release();
+    const next = hold();
+    const fresh = runComparison(db, ws.id, deps({ ...open("olessium.com"), ...open("uno.es") }, { pageSpeed: next.pageSpeed(50) }).built);
+    await next.started;
+    old.release();
     expect(await late).toEqual({ ok: false, error: "capture_closed" });
-
-    const all = await rows(ws.id);
-    expect(all.map((r) => [r.status, r.error]).sort()).toEqual([
-      ["completed", null],
+    expect((await rows(ws.id)).map((r) => [r.status, r.error]).sort()).toEqual([
       ["failed", "interrupted"],
+      ["running", null],
     ]);
+
+    next.release();
+    expect((await fresh).ok).toBe(true);
     const { latestCompleted } = await latestComparison(db, ws.id);
     expect(sitesOf(latestCompleted!.sites)[0]!.lighthouse).toMatchObject({ performance: { value: 50 } });
+  });
+
+  it("closes only the stale attempts of the company it is working on", async () => {
+    const one = await company();
+    const other = await company("otra-empresa.es");
+    await rival(one.id, "uno.es");
+    await pool.query("insert into competitor_comparisons (workspace_id,status,rules_version,started_at) values ($1,'running','r',now() - interval '11 minutes')", [other.id]);
+    await runComparison(db, one.id, deps({ ...open("olessium.com"), ...open("uno.es") }).built);
+    expect(await rows(other.id)).toMatchObject([{ status: "running" }]);
   });
 
   it("answers not_found only when the company is really gone", async () => {
@@ -397,19 +402,51 @@ describe("capture", () => {
     expect(await rows(ws.id)).toHaveLength(0);
   });
 
-  it("marks only an internal error as failed, with a closed code", async () => {
+  it("keeps the other sites when one breaks the measurement (FR-005)", async () => {
     const ws = await company();
     await rival(ws.id, "uno.es");
+    await rival(ws.id, "dos.es");
     const { built } = deps(
-      { ...open("olessium.com"), ...open("uno.es") },
+      { ...open("olessium.com"), ...open("uno.es"), ...open("dos.es") },
       {
-        pageSpeed: async () => {
-          throw new Error("texto interno con detalle");
+        pageSpeed: async (url) => {
+          if (url.includes("uno.es")) throw new Error("texto interno con detalle");
+          return performance(50);
         },
       },
     );
     expect((await runComparison(db, ws.id, built)).ok).toBe(true);
+    const [row] = await rows(ws.id);
+    expect(row!.status).toBe("completed");
+    expect(JSON.stringify(row)).not.toContain("texto interno");
+    const sites = sitesOf(row!.sites);
+    expect(byDomain(sites, "uno.es")).toMatchObject({ access: "processing_error", lighthouse: { status: "error" }, authority: { status: "ok" } });
+    expect(byDomain(sites, "dos.es")).toMatchObject({ access: "analyzed", lighthouse: { status: "ok" } });
+  });
+
+  it("marks only a failure of the process as failed, with a closed code", async () => {
+    const ws = await company();
+    await rival(ws.id, "uno.es");
+    const { built } = deps({ ...open("olessium.com"), ...open("uno.es") }, { authority: () => Promise.reject(new Error("texto interno con detalle")) });
+    expect((await runComparison(db, ws.id, built)).ok).toBe(true);
     expect(await rows(ws.id)).toMatchObject([{ status: "failed", error: "internal_error", sites: null }]);
+  });
+
+  it("stores real zeros as zeros (AC-019)", async () => {
+    const ws = await company();
+    await rival(ws.id, "uno.es");
+    const zeros = { ...performance(0), metrics: { lcpMs: 0, cls: 0, tbtMs: 0, fcpMs: 0, speedIndexMs: 0 }, categories: { seo: scored(0), accessibility: scored(0), "best-practices": scored(0) } } as PerformanceResult;
+    const { built } = deps(
+      { ...open("olessium.com"), ...open("uno.es") },
+      {
+        pageSpeed: async () => zeros,
+        authority: async (domains) => new Map(domains.map((d) => [d, { status: "ok", requestedDomain: d, effectiveDomain: d, scope: "registered_domain", asOf: "2026-10-01", score: 0, rank: 1, referringDomains: 0 } as const])),
+      },
+    );
+    await runComparison(db, ws.id, built);
+    const stored = sitesOf((await rows(ws.id))[0]!.sites)[1]!;
+    expect(stored.lighthouse).toMatchObject({ performance: { status: "ok", value: 0 }, seo: { status: "ok", value: 0 }, cls: { status: "ok", value: 0 } });
+    expect(stored.authority).toMatchObject({ status: "ok", score: 0, referringDomains: 0 });
   });
 
   it.each<[string, string | null, () => Partial<ComparisonDeps>, string]>([
@@ -471,7 +508,7 @@ describe("capture", () => {
     await rival(ws.id, "uno.es");
     const good = deps({ ...open("olessium.com"), ...open("uno.es") });
     await runComparison(db, ws.id, good.built);
-    await runComparison(db, ws.id, deps({ ...open("olessium.com"), ...open("uno.es") }, { pageSpeed: async () => Promise.reject(new Error("x")) }).built);
+    await runComparison(db, ws.id, deps({ ...open("olessium.com"), ...open("uno.es") }, { authority: () => Promise.reject(new Error("x")) }).built);
     const { latest, latestCompleted } = await latestComparison(db, ws.id);
     expect(latest?.status).toBe("failed");
     expect(latestCompleted?.status).toBe("completed");

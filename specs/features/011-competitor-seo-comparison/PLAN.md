@@ -6,7 +6,7 @@ Módulo nuevo que mide en una captura la web de la empresa y las de sus competid
 
 ## Related spec
 
-`specs/features/011-competitor-seo-comparison/SPEC.md`; decisiones D001–D012 de esta carpeta.
+`specs/features/011-competitor-seo-comparison/SPEC.md`; decisiones D001–D013 de esta carpeta.
 
 ## Impacted areas
 

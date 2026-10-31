@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { CompetitorComparisonState } from "@/app/workspaces/[id]/seo/actions";
 import { ComparisonSection } from "@/components/competitor-comparison/comparison-section";
+import { formatDateTime, formatMs } from "@/i18n/format";
 import { getMessages } from "@/i18n/messages";
 import type { Locale } from "@/i18n/locale";
 import type { AuthorityResult, FieldResult, LighthouseResult, SiteResult } from "@/modules/competitor-comparison/sites";
@@ -41,6 +42,7 @@ const summary = (rows: ComparisonRow[], over: Partial<ComparisonSummary> = {}): 
   rows,
   mixedFieldScope: false,
   withoutWebsite: [],
+  duplicates: [],
   ...over,
 });
 const render = (s: ComparisonSummary, locale: Locale = "es") => renderToStaticMarkup(createElement(ComparisonSection, { s, action: noop, manageHref: "/workspaces/x/geo/setup", locale }));
@@ -63,29 +65,84 @@ describe("comparison section", () => {
     expect(html).toContain('role="rowheader"');
   });
 
-  it("names no winner and adds no combined score", () => {
-    const html = render(summary([measured(site({ role: "company", competitorId: null })), measured(site({ domain: "otro.es", hostname: "otro.es" }))]));
+  it.each(locales)("tells the capture from the data's own dates (%s)", (locale) => {
+    const t = getMessages(locale).competitorComparison;
+    const s = summary([measured(site())]);
+    const page = text(render(s, locale));
+    expect(page).toContain(t.captured(formatDateTime(s.capture!.startedAt, locale), formatDateTime(s.capture!.finishedAt!, locale)));
+    expect(page).toContain(t.authorityDetail("rival.es", displayDay("2026-10-01", locale)));
+    expect(page).toContain(t.fieldDetail(t.scope.origin, `${displayDay("2026-09-01", locale)} – ${displayDay("2026-09-28", locale)}`));
+    expect(text(render(summary([measured(site({ field: { ...field, scope: "url", period: null } as FieldResult }))]), locale))).toContain(t.fieldDetail(t.scope.url, t.fieldNoPeriod));
+  });
+
+  it.each(locales)("keeps the row header short: the detail has its own row (%s)", (locale) => {
+    const t = getMessages(locale).competitorComparison;
+    const html = render(summary([measured(site())]), locale);
+    const header = html.match(/<th role="rowheader".*?<\/th>/)![0];
+    expect(header).toContain("rival.es");
+    expect(header).not.toContain(t.fieldDetail(t.scope.origin, ""));
+    expect(html).toContain('aria-colspan="12"');
+  });
+
+  it.each(locales)("names no winner and adds no combined score (%s)", (locale) => {
+    const html = render(summary([measured(site({ role: "company", competitorId: null })), measured(site({ domain: "otro.es", hostname: "otro.es" }))]), locale);
     expect(html).not.toMatch(/ganador|mejor|peor|winner|best site|total/i);
   });
 
-  it("keeps real zeros", () => {
+  it.each(locales)("keeps real zeros cell by cell (%s)", (locale) => {
     const zero = site({
-      lighthouse: { ...lighthouse, performance: ok(0) } as LighthouseResult,
+      lighthouse: { ...lighthouse, performance: ok(0), seo: ok(0), accessibility: ok(0), bestPractices: ok(0) } as LighthouseResult,
       field: { ...field, cls: ok(0) } as FieldResult,
       criticalCount: 0,
       warningCount: 0,
       authority: { ...authority, score: 0, referringDomains: 0 } as AuthorityResult,
     });
-    const page = text(render(summary([measured(zero)])));
-    expect(page).toContain("0,00");
-    expect(page.match(/(^| )0( |$)/g)?.length).toBeGreaterThanOrEqual(3);
+    const cells = [...render(summary([measured(zero)]), locale).matchAll(/<td role="cell"[^>]*><span aria-hidden="true"[^>]*>[^<]*<\/span><span>([^<]*)<\/span>/g)].map((m) => m[1]);
+    const none = locale === "es" ? "0,00" : "0.00";
+    expect(cells).toEqual(["0", "0", "0", "0", formatMs(3100, locale), formatMs(240, locale), none, "0", "0", none, "0"]);
+  });
+
+  it.each(locales)("tells each column it spans to assistive technology (%s)", (locale) => {
+    const html = render(summary([measured(site({ lighthouse: { status: "quota_exceeded" }, field: { status: "no_data" } }))]), locale);
+    expect(html).toContain('aria-colspan="4"');
+    expect(html).toContain('aria-colspan="3"');
+  });
+
+  it.each(locales)("warns that a count is partial when a source is missing (%s)", (locale) => {
+    const t = getMessages(locale).competitorComparison;
+    expect(render(summary([measured(site({ field: { status: "no_data" } }))]), locale)).toContain(t.partialCount);
+    expect(render(summary([measured(site())]), locale)).not.toContain(t.partialCount);
+  });
+
+  it.each(locales)("does not say a domain not found was published (%s)", (locale) => {
+    const t = getMessages(locale).competitorComparison;
+    const notFound: AuthorityResult = { status: "not_found", requestedDomain: "rival.es", effectiveDomain: "rival.es", scope: "registered_domain", asOf: "2026-10-01" };
+    const page = text(render(summary([measured(site({ authority: notFound }))]), locale));
+    expect(page).toContain(t.authorityLookedUp("rival.es", displayDay("2026-10-01", locale)));
+    expect(page).not.toContain(t.authorityDetail("rival.es", displayDay("2026-10-01", locale)));
+  });
+
+  it("does not mix the empty text with a failure", () => {
+    const t = getMessages("es").competitorComparison;
+    const html = render(summary([], { capture: null, failure: { error: "internal_error", at: new Date("2026-10-31T11:00:00Z") } }));
+    expect(text(html)).toContain(t.failure.internal_error);
+    expect(html).not.toContain(t.empty);
+  });
+
+  it("lists competitors that share a domain", () => {
+    const t = getMessages("es").competitorComparison;
+    expect(render(summary([], { duplicates: ["Uno"], capture: null }))).toContain(t.duplicates("Uno"));
+  });
+
+  it("offers a place for the waiting text to be announced", () => {
+    expect(render(summary([]))).toContain('role="status"');
   });
 
   it.each(locales)("explains a metric not measured without losing the others (%s)", (locale) => {
     const t = getMessages(locale).competitorComparison;
     const html = render(summary([measured(site({ lighthouse: { ...lighthouse, seo: none } as LighthouseResult, field: { ...field, inpMs: none } as FieldResult }))]), locale);
     expect(html.match(new RegExp(t.notMeasured, "g"))).toHaveLength(2);
-    expect(html).not.toContain("colSpan");
+    expect(html).not.toMatch(/colSpan="[234]"/);
     expect(html).toContain(">41<");
   });
 
@@ -111,7 +168,7 @@ describe("comparison section", () => {
 
   it.each(locales)("says why a site was not analysed (%s)", (locale) => {
     const t = getMessages(locale).competitorComparison;
-    for (const access of ["robots_disallowed", "http_error", "non_html"] as const) {
+    for (const access of ["robots_disallowed", "http_error", "non_html", "processing_error"] as const) {
       const html = render(summary([measured(site({ access, criticalCount: null, warningCount: null, lighthouse: { status: "skipped" }, field: { status: "skipped" } }))]), locale);
       expect(html.match(new RegExp(t.access[access].replace(".", "\\."), "g"))!.length).toBe(3);
     }
@@ -119,25 +176,25 @@ describe("comparison section", () => {
     expect(render(summary([measured(down)]), locale)).toContain(t.access.unreachable);
   });
 
-  it("marks a host whose authority is that of its registered domain", () => {
-    const t = getMessages("es").competitorComparison;
-    const html = render(summary([measured(site({ domain: "blog.rival.es", hostname: "blog.rival.es", authority: { ...authority, requestedDomain: "blog.rival.es" } as AuthorityResult }))]));
-    expect(html).toContain(t.authorityDetail("rival.es", displayDay("2026-10-01")));
+  it.each(locales)("marks a host whose authority is that of its registered domain (%s)", (locale) => {
+    const t = getMessages(locale).competitorComparison;
+    const html = render(summary([measured(site({ domain: "blog.rival.es", hostname: "blog.rival.es", authority: { ...authority, requestedDomain: "blog.rival.es" } as AuthorityResult }))]), locale);
+    expect(text(html)).toContain(t.authorityDetail("rival.es", displayDay("2026-10-01", locale)));
     expect(html).toContain(t.subdomainNote);
-    expect(render(summary([measured(site())]))).not.toContain(t.subdomainNote);
+    expect(render(summary([measured(site())]), locale)).not.toContain(t.subdomainNote);
   });
 
-  it("explains rank and linking domains missing, without a zero", () => {
-    const t = getMessages("es").competitorComparison;
-    const html = render(summary([measured(site({ authority: { ...authority, rank: null, referringDomains: null } as AuthorityResult }))]));
+  it.each(locales)("explains rank and linking domains missing, without a zero (%s)", (locale) => {
+    const t = getMessages(locale).competitorComparison;
+    const html = render(summary([measured(site({ authority: { ...authority, rank: null, referringDomains: null } as AuthorityResult }))]), locale);
     expect(html).toContain(t.noRank);
     expect(html).toContain(t.unavailable);
   });
 
-  it("warns when real-user scopes differ", () => {
-    const t = getMessages("es").competitorComparison;
-    expect(render(summary([measured(site())], { mixedFieldScope: true }))).toContain(t.mixedScope);
-    expect(render(summary([measured(site())]))).not.toContain(t.mixedScope);
+  it.each(locales)("warns when real-user scopes differ (%s)", (locale) => {
+    const t = getMessages(locale).competitorComparison;
+    expect(render(summary([measured(site())], { mixedFieldScope: true }), locale)).toContain(t.mixedScope);
+    expect(render(summary([measured(site())]), locale)).not.toContain(t.mixedScope);
   });
 
   it("shows a name as plain text", () => {

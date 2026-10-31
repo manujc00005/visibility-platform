@@ -27,12 +27,17 @@ const foundSchema = z.object({
   referring_domains: z.number().int().nonnegative().nullish(),
 });
 const notFoundSchema = z.object({ found: z.literal(false), open_page_rank: z.null().optional() });
+const figuresOf = (raw: unknown) => {
+  const { found, open_page_rank, rank, referring_domains } = raw as Record<string, unknown>;
+  return JSON.stringify([found, open_page_rank, rank, referring_domains]);
+};
 const errorBodySchema = z.object({ error: z.object({ type: z.string() }) });
 
 function statusOf(status: number, body: unknown): CommonStatus {
+  const type = errorBodySchema.safeParse(body).data?.error.type;
   if (status === 401) return "invalid_key";
-  if (status === 429) return "quota_exceeded";
-  if (status === 403 && errorBodySchema.safeParse(body).data?.error.type === "address_error") return "ip_not_allowed";
+  if (status === 429 || type === "quota_error" || type === "rate_limit_error") return "quota_exceeded";
+  if (status === 403 && type === "address_error") return "ip_not_allowed";
   return "error";
 }
 
@@ -42,7 +47,7 @@ function resultFor(requested: string, entries: { domain: string; raw: unknown }[
   if (matching.length === 0) return null;
   const longest = Math.max(...matching.map(({ domain }) => domain.length));
   const best = matching.filter(({ domain }) => domain.length === longest);
-  const contradictory = new Set(best.map(({ raw }) => JSON.stringify(raw))).size > 1;
+  const contradictory = new Set(best.map(({ raw }) => figuresOf(raw))).size > 1;
   return contradictory ? null : best[0]!;
 }
 
@@ -69,6 +74,7 @@ export async function fetchAuthority(domains: readonly string[], options: Author
       method: "POST",
       headers: { authorization: `Bearer ${options.apiKey}`, "content-type": "application/json", accept: "application/json" },
       body: JSON.stringify({ domains: requested, include_history: false }),
+      redirect: "error",
       signal: AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_MS),
     });
     const body: unknown = await response.json().catch(() => null);

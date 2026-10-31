@@ -22,6 +22,7 @@ describe("fetchAuthority", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe(ENDPOINT);
     expect(calls[0]!.init.method).toBe("POST");
+    expect(calls[0]!.init.redirect).toBe("error");
     expect(calls[0]!.init.headers).toMatchObject({ authorization: `Bearer ${KEY}`, "content-type": "application/json" });
     expect(JSON.parse(String(calls[0]!.init.body))).toEqual({ domains: ["uno.es", "dos.es"], include_history: false });
   });
@@ -56,6 +57,17 @@ describe("fetchAuthority", () => {
     const results = await respond([found("otro.es", { rank: 2 }), found("uno.es", { rank: 1 })], ["blog.uno.es", "otro.es"]);
     expect(results.get("blog.uno.es")).toMatchObject({ status: "ok", requestedDomain: "blog.uno.es", effectiveDomain: "uno.es", rank: 1 });
     expect(results.get("otro.es")).toMatchObject({ rank: 2 });
+  });
+
+  it("gives two hosts of one registered domain the same authority", async () => {
+    const results = await respond([found("uno.es", { rank: 1 })], ["blog.uno.es", "tienda.uno.es"]);
+    expect(results.get("blog.uno.es")).toMatchObject({ requestedDomain: "blog.uno.es", effectiveDomain: "uno.es", rank: 1 });
+    expect(results.get("tienda.uno.es")).toMatchObject({ requestedDomain: "tienda.uno.es", effectiveDomain: "uno.es", rank: 1 });
+  });
+
+  it("accepts repeated entries that differ only in fields it ignores", async () => {
+    const results = await respond([found("uno.es", { hosts: [{ host: "a.uno.es" }] }), found("uno.es", { hosts: [{ host: "b.uno.es" }] })], ["uno.es"]);
+    expect(results.get("uno.es")?.status).toBe("ok");
   });
 
   it("prefers the exact domain and then the longest parent", async () => {
@@ -97,6 +109,7 @@ describe("fetchAuthority", () => {
     ["another 403", () => Response.json({ error: { type: "other", message: "x" } }, { status: 403 }), "error"],
     ["the monthly limit", () => Response.json({ error: { type: "quota_error", message: "x" } }, { status: 429 }), "quota_exceeded"],
     ["the minute limit", () => Response.json({ error: { type: "rate_limit_error", message: "x" } }, { status: 429 }), "quota_exceeded"],
+    ["a quota error with another status", () => Response.json({ error: { type: "quota_error", message: "x" } }, { status: 403 }), "quota_exceeded"],
     ["a server error", () => new Response("no", { status: 503 }), "error"],
     ["a body that is not JSON", () => new Response("<html>", { status: 200 }), "error"],
     ["an unexpected shape", () => Response.json({ results: "x" }), "error"],

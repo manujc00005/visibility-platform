@@ -64,11 +64,15 @@ export interface CompetitorComparisonState {
 
 export async function runCompetitorComparisonAction(workspaceId: string, _state: CompetitorComparisonState): Promise<CompetitorComparisonState> {
   void _state;
-  const result = await runComparison(getDb(), workspaceId, createComparisonDeps());
-  if (!result.ok) return { error: getMessages(await getLocale()).competitorComparison.actionErrors[result.error] };
-  // A failed attempt is stored too and explained by the page itself.
-  revalidatePath(`/workspaces/${workspaceId}/seo`);
-  return { error: null };
+  const t = getMessages(await getLocale()).competitorComparison.actionErrors;
+  try {
+    const result = await runComparison(getDb(), workspaceId, createComparisonDeps());
+    // A failed attempt is stored too and explained by the page itself, and so is one closed for taking too long.
+    if (result.ok || result.error === "capture_closed") revalidatePath(`/workspaces/${workspaceId}/seo`);
+    return { error: result.ok ? null : t[result.error] };
+  } catch {
+    return { error: t.failed };
+  }
 }
 
 export interface KeywordActionState {

@@ -54,6 +54,14 @@ sitemap: https://ejemplo.es/sitemap-blog.xml.gz
   });
 
   it("does not choke on garbage or regex metacharacters", () => {
+    const allowed = (rule: string, path: string) => isAllowedByRobots(parseRobots(`User-agent: *\nDisallow: ${rule}`), "Bot", path);
+    expect(allowed("/*a*b$", "/xaxb")).toBe(false);
+    expect(allowed("/*a*b$", "/xaxbc")).toBe(true);
+    expect(allowed("/a*$", "/a")).toBe(false);
+    expect(allowed("/a*b", "/ab/c")).toBe(false);
+    expect(allowed("/ab*b$", "/ab")).toBe(true);
+    expect(allowed("/x$", "/x")).toBe(false);
+    expect(allowed("/x$", "/xy")).toBe(true);
     const messy = parseRobots("User-agent: *\nDisallow: /(a|b)+[x]\n<html>not robots</html>\n:::");
     expect(isAllowedByRobots(messy, "Bot", "/(a|b)+[x]/y")).toBe(false);
     expect(isAllowedByRobots(messy, "Bot", "/aaa")).toBe(true);
@@ -108,5 +116,43 @@ describe("sitemap", () => {
     expect(parseSitemap(Buffer.from("<!doctype html><html><body>404</body></html>"))).toEqual({ ok: false, error: "not_a_sitemap" });
     expect(parseSitemap(Buffer.from("<html><body>Not found</body></html>"))).toEqual({ ok: false, error: "not_a_sitemap" });
     expect(parseSitemap(Buffer.from([0x1f, 0x8b, 1, 2, 3]))).toEqual({ ok: false, error: "invalid_gzip" });
+  });
+});
+
+describe("robots.txt and sitemaps written to hurt", () => {
+  it("answers at once on a rule built to backtrack", () => {
+    const rule = `/${"*a".repeat(40)}*b$`;
+    const started = performance.now();
+    expect(isAllowedByRobots(parseRobots(`User-agent: *\nDisallow: ${rule}`), "Bot", `/${"a".repeat(2000)}`)).toBe(true);
+    expect(performance.now() - started).toBeLessThan(100);
+  });
+
+  it("matches like the wildcard rule it replaces", () => {
+    const legacy = (pattern: string, path: string) => {
+      const anchored = pattern.endsWith("$");
+      const body = (anchored ? pattern.slice(0, -1) : pattern).split("*").map((part) => part.replace(/[.+?^${}()|[\]\\]/g, "\\$&")).join(".*");
+      return new RegExp(`^${body}${anchored ? "$" : ""}`).test(path);
+    };
+    let seed = 7;
+    const pick = (text: string) => text[(seed = (seed * 31 + 11) % 1009) % text.length]!;
+    const build = (alphabet: string, size: number) => Array.from({ length: 1 + (seed % size) }, () => pick(alphabet)).join("");
+    for (let i = 0; i < 4000; i++) {
+      const rule = `/${build("ab*.?", 6)}${pick("$x")}`;
+      const path = `/${build("ab.?x", 8)}`;
+      const blocked = !isAllowedByRobots(parseRobots(`User-agent: *\nDisallow: ${rule}`), "Bot", path);
+      expect(blocked, `${rule} ${path}`).toBe(legacy(rule, path));
+    }
+  });
+
+  it("reads a sitemap full of tags that never close without going quadratic", () => {
+    const started = performance.now();
+    const parsed = parseSitemap(Buffer.from(`<urlset>${"<loc>".repeat(900_000)}`));
+    expect(performance.now() - started).toBeLessThan(2000);
+    expect(parsed).toMatchObject({ ok: true, sitemap: { locCount: 0 } });
+  });
+
+  it("keeps reading CDATA, spaces and upper case tags", () => {
+    const parsed = parseSitemap(Buffer.from("<urlset><LOC> <![CDATA[https://a.es/x]]> </LOC><loc>https://a.es/y?a=1&amp;b=2</loc><loc>no es url</loc></urlset>"));
+    expect(parsed).toMatchObject({ ok: true, sitemap: { locCount: 3, invalidLocCount: 1, sample: ["https://a.es/x", "https://a.es/y?a=1&b=2"] } });
   });
 });

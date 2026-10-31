@@ -68,14 +68,24 @@ function groupFor(robots: Robots, userAgentToken: string): RobotsGroup | null {
   return robots.groups.find((group) => group.agents.includes("*")) ?? null;
 }
 
+/**
+ * Rules and paths come from the website, so no regex here: each piece between wildcards is looked
+ * for once, after the previous one, and a hostile rule has nothing to backtrack over.
+ */
 function ruleMatches(pattern: string, path: string): boolean {
   const anchored = pattern.endsWith("$");
-  const body = anchored ? pattern.slice(0, -1) : pattern;
-  const regex = body
-    .split("*")
-    .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
-    .join(".*");
-  return new RegExp(`^${regex}${anchored ? "$" : ""}`).test(path);
+  const pieces = (anchored ? pattern.slice(0, -1) : pattern).split("*");
+  const last = pieces.length - 1;
+  if (!path.startsWith(pieces[0]!)) return false;
+  if (last === 0) return !anchored || path.length === pieces[0]!.length;
+  let at = pieces[0]!.length;
+  for (const piece of pieces.slice(1, last)) {
+    const found = path.indexOf(piece, at);
+    if (found < 0) return false;
+    at = found + piece.length;
+  }
+  const tail = pieces[last]!;
+  return anchored ? path.length - tail.length >= at && path.endsWith(tail) : path.includes(tail, at);
 }
 
 /** Whether `path` (pathname + search) may be crawled by `userAgentToken`. */

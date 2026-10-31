@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import type { CompetitorComparisonState } from "@/app/workspaces/[id]/seo/actions";
 import { ComparisonButton } from "@/components/competitor-comparison/comparison-button";
 import { formatDateTime, formatMs, formatNumber } from "@/i18n/format";
@@ -19,7 +19,9 @@ const cellClass = "flex items-baseline justify-between gap-3 py-0.5 text-sm tabu
 function Value({ label, children }: { label: string; children: ReactNode }) {
   return (
     <td role="cell" className={cellClass}>
-      <span className="text-muted-foreground lg:hidden">{label}</span>
+      <span aria-hidden="true" className="text-muted-foreground lg:hidden">
+        {label}
+      </span>
       <span>{children}</span>
     </td>
   );
@@ -28,7 +30,7 @@ function Value({ label, children }: { label: string; children: ReactNode }) {
 /** A source with no data at all: its reason spans its columns (D008). */
 function Absent({ source, span, children }: { source: string; span: number; children: ReactNode }) {
   return (
-    <td role="cell" colSpan={span} className={cellClass}>
+    <td role="cell" colSpan={span} aria-colspan={span} className={cellClass}>
       <span className="text-muted-foreground lg:hidden">{source}</span>
       <span className="text-muted-foreground">{children}</span>
     </td>
@@ -93,38 +95,44 @@ function Details({ site, t, locale }: { site: SiteResult; t: Texts; locale: Loca
   const { field, authority } = site;
   const period = field.status === "ok" ? (field.period ? `${displayDay(field.period.firstDate, locale)} – ${displayDay(field.period.lastDate, locale)}` : t.fieldNoPeriod) : null;
   const matched = authority.status === "ok" || authority.status === "not_found" ? authority : null;
+  const partialCount = site.access === "analyzed" && (site.lighthouse.status !== "ok" || field.status !== "ok");
   return (
     <>
       {field.status === "ok" && period ? <span className="block">{t.fieldDetail(t.scope[field.scope], period)}</span> : null}
-      {matched ? <span className="block">{t.authorityDetail(matched.effectiveDomain, displayDay(matched.asOf, locale))}</span> : null}
+      {matched ? <span className="block">{(authority.status === "ok" ? t.authorityDetail : t.authorityLookedUp)(matched.effectiveDomain, displayDay(matched.asOf, locale))}</span> : null}
       {matched && matched.effectiveDomain !== matched.requestedDomain ? <span className="block">{t.subdomainNote}</span> : null}
       {authority.status === "ok" ? <span className="block">{authority.rank === null ? t.noRank : t.rank(formatNumber(authority.rank, locale))}</span> : null}
+      {partialCount ? <span className="block">{t.partialCount}</span> : null}
     </>
   );
 }
 
 function Row({ row, t, locale }: { row: ComparisonRow; t: Texts; locale: Locale }) {
   return (
-    <tr role="row" className="block py-3 lg:table-row lg:py-0">
-      <th role="rowheader" scope="row" className="block pb-1 text-left align-top font-normal lg:table-cell lg:py-2 lg:pr-3">
-        <span className="block font-medium [overflow-wrap:anywhere]">{row.name}</span>
-        <span className="block text-xs text-muted-foreground [overflow-wrap:anywhere]">{row.domain}</span>
-        {row.role === "company" ? <span className="mt-0.5 block text-xs font-medium">{t.you}</span> : null}
-        {row.state === "measured" && row.measuredAs ? <span className="block text-xs text-muted-foreground [overflow-wrap:anywhere]">{t.measuredAs(row.measuredAs)}</span> : null}
+    <>
+      <tr role="row" className="block border-t pt-3 first:border-t-0 lg:table-row lg:pt-0 lg:first:border-t">
+        <th role="rowheader" scope="row" className="block pb-1 text-left align-top font-normal lg:table-cell lg:py-2 lg:pr-3">
+          <span className="block font-medium [overflow-wrap:anywhere]">{row.name}</span>
+          <span className="block text-xs text-muted-foreground [overflow-wrap:anywhere]">{row.domain}</span>
+          {row.role === "company" ? <span className="mt-0.5 block text-xs font-medium">{t.you}</span> : null}
+          {row.state === "measured" && row.measuredAs ? <span className="block text-xs text-muted-foreground [overflow-wrap:anywhere]">{t.measuredAs(row.measuredAs)}</span> : null}
+        </th>
         {row.state === "measured" ? (
-          <span className="mt-1 block text-xs text-muted-foreground">
-            <Details site={row.site} t={t} locale={locale} />
-          </span>
-        ) : null}
-      </th>
+          <Cells site={row.site} t={t} locale={locale} />
+        ) : (
+          <td role="cell" colSpan={COLUMNS.length} aria-colspan={COLUMNS.length} className={`${cellClass} pb-3 lg:pb-2`}>
+            <span className="text-muted-foreground">{t.pending}</span>
+          </td>
+        )}
+      </tr>
       {row.state === "measured" ? (
-        <Cells site={row.site} t={t} locale={locale} />
-      ) : (
-        <td role="cell" colSpan={COLUMNS.length} className={cellClass}>
-          <span className="text-muted-foreground">{t.pending}</span>
-        </td>
-      )}
-    </tr>
+        <tr role="row" className="block pb-3 lg:table-row lg:pb-0">
+          <td role="cell" colSpan={COLUMNS.length + 1} aria-colspan={COLUMNS.length + 1} className="block pt-1 text-xs text-muted-foreground [overflow-wrap:anywhere] lg:table-cell lg:pb-2">
+            <Details site={row.site} t={t} locale={locale} />
+          </td>
+        </tr>
+      ) : null}
+    </>
   );
 }
 
@@ -150,7 +158,7 @@ export function ComparisonSection({ s, action, manageHref, locale }: Props) {
           ) : null}
         </p>
       ) : (
-        <ComparisonButton labels={{ idle: measured ? t.button.rerun : t.button.run, pending: t.button.pending }} action={action} />
+        <ComparisonButton labels={{ idle: measured ? t.button.rerun : t.button.run, pending: t.button.pending, failed: t.actionErrors.failed }} action={action} />
       )}
       {s.running ? <p className="text-sm">{t.running}</p> : null}
       {s.failure ? <p className="text-sm">{t.lastAttempt(formatDateTime(s.failure.at, locale), t.failure[s.failure.error])}</p> : null}
@@ -173,17 +181,20 @@ export function ComparisonSection({ s, action, manageHref, locale }: Props) {
               ))}
             </tr>
           </thead>
-          <tbody role="rowgroup" className="block divide-y lg:table-row-group">
+          <tbody role="rowgroup" className="block lg:table-row-group">
             {s.rows.map((row) => (
-              <Row key={row.key} row={row} t={t} locale={locale} />
+              <Fragment key={row.key}>
+                <Row row={row} t={t} locale={locale} />
+              </Fragment>
             ))}
           </tbody>
         </table>
-      ) : s.running ? null : (
+      ) : s.running || s.failure ? null : (
         <p className="text-sm text-muted-foreground">{t.empty}</p>
       )}
       {s.mixedFieldScope ? <p className="text-sm">{t.mixedScope}</p> : null}
       {s.withoutWebsite.length > 0 ? <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">{t.withoutWebsite(s.withoutWebsite.join(", "))}</p> : null}
+      {s.duplicates.length > 0 ? <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">{t.duplicates(s.duplicates.join(", "))}</p> : null}
       {s.capture ? (
         <div className="flex flex-col gap-1 text-xs text-muted-foreground">
           {s.capture.finishedAt ? <p>{t.captured(formatDateTime(s.capture.startedAt, locale), formatDateTime(s.capture.finishedAt, locale))}</p> : null}

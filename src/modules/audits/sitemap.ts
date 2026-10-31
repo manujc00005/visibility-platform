@@ -53,9 +53,17 @@ export function parseSitemap(body: Buffer): SitemapResult {
   const sample: string[] = [];
   let locCount = 0;
   let invalidLocCount = 0;
-  for (const match of text.matchAll(/<loc>\s*(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?\s*<\/loc>/gi)) {
+  // Two forward scans instead of one lazy regex, which is quadratic on opening tags that never close.
+  const open = /<loc>/gi;
+  const close = /<\/loc>/gi;
+  while (open.exec(text)) {
+    close.lastIndex = open.lastIndex;
+    const end = close.exec(text);
+    if (!end) break;
+    const inner = text.slice(open.lastIndex, end.index).trim();
+    open.lastIndex = close.lastIndex;
     locCount += 1;
-    const loc = decodeEntities(match[1]!.trim());
+    const loc = decodeEntities(inner.replace(/^<!\[CDATA\[/, "").replace(/\]\]>$/, "").trim());
     let valid = false;
     try {
       const url = new URL(loc);

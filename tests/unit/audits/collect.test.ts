@@ -193,7 +193,22 @@ describe("collectAuditFacts with robots checked before each request (D011)", () 
     expect(facts.page).toEqual({ kind: "disallowed" });
     expect(seen).toContain("dos.example/robots.txt");
     expect(seen).not.toContain("dos.example/");
+    expect(seen.filter((entry) => entry.endsWith("sitemap.xml"))).toEqual([]);
+    expect(facts.sitemap).toBeNull();
     expect(google).toEqual([]);
+  });
+
+  it("asks a site that forbids the home page for nothing else, not even a declared sitemap", async () => {
+    const { result } = run({ "uno.example": { "/robots.txt": { body: "User-agent: *\nDisallow: /\nSitemap: http://dos.example/s.xml", type: "text/plain" } } });
+    await result;
+    expect(seen.every((entry) => entry.endsWith("robots.txt"))).toBe(true);
+  });
+
+  it("does not ask for the sitemap of a site that cannot be read", async () => {
+    const fetcher = fakeFetcher({ "https://caida.es/robots.txt": { fail: "dns" }, "https://caida.es/": { fail: "dns" } });
+    const { facts } = await collectAuditFacts("caida.es", { fetcher, pageSpeed }, { robotsBeforeEachRequest: true });
+    expect(facts.sitemap).toBeNull();
+    expect(fetcher.calls.some((call) => call.includes("sitemap"))).toBe(false);
   });
 
   it("checks the http fallback against the robots.txt of the http origin", async () => {

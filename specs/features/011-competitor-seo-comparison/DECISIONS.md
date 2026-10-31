@@ -1,6 +1,6 @@
 # Decisions: Comparativa técnica y de autoridad con competidores
 
-Registradas el 2026-10-31 al planificar y corregidas tras la auditoría de consistencia del mismo día. D002–D009 se concretan; D011–D012 registran las correcciones de acceso y cierre. No certifican implementación ni acceso real al proveedor.
+Registradas el 2026-10-31 al planificar y corregidas tras la auditoría de consistencia del mismo día. D002–D009 se concretan; D011–D012 registran las correcciones de acceso y cierre, y D013 las de las revisiones. No certifican implementación ni acceso real al proveedor.
 
 ## Decision log
 
@@ -182,3 +182,32 @@ Por dominio: `ok`, `not_found` explícito o `error` de resultado. Se guarda `asO
 **Decision:** cerrar siempre por id de captura + workspaceId + status running, tanto en éxito como en fallo. Si no actualiza, releer: solo empresa inexistente devuelve `not_found`; captura terminal o ausente con empresa existente devuelve `capture_closed`. No reabrir ni sobrescribir filas terminales ni actualizar por empresa una captura nueva. Cierre por antigüedad deja failed/interrupted con finished_at. Prueba retenida: cerrar la vieja, iniciar otra y soltar el trabajador viejo.
 
 **Consequences:** T009 y spec-close siguen pendientes hasta cumplir AC-016 completo: positivo real de autoridad y evidencia real de no encontrado, además de PageSpeed/CrUX, navegador, checks y revisiones. Sin cuenta o datos se puede completar el desarrollo con fixtures y not_configured, pero no se declara la feature cerrada ni se rebaja el criterio mediante una nota. No se crean cuentas ni se transmite ninguna clave como parte de esta corrección documental.
+
+### D013 - Correcciones de las revisiones de T009
+
+**Date:** 2026-10-31
+
+**Status:** Accepted
+
+**Context:** las revisiones de seguridad, dominio y conformidad coincidieron en que leer webs de terceros cambia el riesgo de código pensado para webs propias, y en que un sitio podía tumbar la comparativa entera, en contra de FR-005.
+
+**Decision:**
+- **Parsers:** `robots.ts` y `sitemap.ts` dejan de usar expresiones con retroceso. Un `robots.txt` o un sitemap hostiles podían colgar el proceso de forma síncrona. El resultado no cambia, lo que una prueba diferencial comprueba frente a la regla anterior, y también beneficia a las auditorías propias.
+- **Sitemap:** con la guardia activa, sin portada leída no se pide. Quien nos prohíbe la portada no recibe otra petición, y ese dato se descartaba igualmente. Corrige la redacción de SPEC y D011.
+- **Aislamiento:** una excepción al procesar un sitio deja ese sitio como `processing_error`, un acceso nuevo que no finge que la web esté caída. Unas cifras de Google fuera de contrato dejan esa fuente en `error`. `internal_error` queda para fallos del proceso.
+- **Duplicados:** se listan aparte, porque FR-001 pide identificarlos y un competidor no debe desaparecer sin explicación.
+- **Tabla:** el detalle de cada sitio pasa a su propia fila, para que el nombre accesible de la fila siga siendo corto, y cada `colSpan` lleva `aria-colspan`.
+- **Acción:** captura sus errores y el botón también, porque tras minutos de espera un corte de red derribaría la página.
+- **Recuentos:** si falta PageSpeed o CrUX, la fila avisa de que el recuento puede salir más bajo. No se recalcula para seguir FR-009.
+- **Captura colgada:** se lee como `interrupted` sin esperar al siguiente intento.
+
+**Reasoning:** se corrige lo que causa fallos o accesos que la web no quiere. Lo que solo mejora el cumplimiento fino de robots afectaría también a las auditorías propias y merece su propio cambio.
+
+**Consequences:** quedan aceptados y registrados en el roadmap:
+- Un `robots.txt` que responde 5xx, falla o supera 512 KB sigue permitiendo el acceso (D011), aunque RFC 9309 pide no entrar con 5xx.
+- El emparejado de grupos de robots es menos estricto que la RFC: no combina grupos repetidos y compara agentes por subcadena.
+- Una portada que responde error deja sin PageSpeed ni CrUX, aunque Google podría medirla. La captura real lo dio en hubspot.com.
+- La acción bloquea las demás de la página mientras dura, porque Next las encola.
+- No hay enfriamiento entre ejecuciones; va con BL-07.
+- Una portada anidada muy profunda queda como `processing_error`: `html.ts` sigue siendo recursivo.
+- Con la clave real hay que confirmar que `referring_domains` es entero y `as_of` una fecha ISO.

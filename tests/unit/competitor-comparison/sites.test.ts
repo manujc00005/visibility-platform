@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { emptyFieldData, type FieldDataResult } from "@/modules/audits/crux";
 import { emptyResult, type PerformanceResult } from "@/modules/audits/pagespeed";
 import type { AuditFacts, Finding, PageResult } from "@/modules/audits/rules";
-import { MAX_SITES, parseComparison, selectSites, toSiteResult, type AuthorityResult, type SiteResult, type SiteTarget } from "@/modules/competitor-comparison/sites";
+import { MAX_SITES, parseComparison, selectSites, toSiteResult, unprocessedSite, type AuthorityResult, type SiteResult, type SiteTarget } from "@/modules/competitor-comparison/sites";
 
 const company = { name: "Olessium", domain: "olessium.com", hostname: "www.olessium.com" };
 const uuid = (n: number) => `00000000-0000-4000-8000-00000000000${n}`;
@@ -20,9 +20,10 @@ describe("selectSites", () => {
   });
 
   it("measures each domain once, keeping the oldest competitor and breaking ties by id", () => {
-    const { sites, withoutWebsite } = selectSites(company, [competitor(3, "uno.es", 1), competitor(1, "uno.es", 1), competitor(2, "uno.es", 9), competitor(4, null)]);
+    const { sites, withoutWebsite, duplicates } = selectSites(company, [competitor(3, "uno.es", 1), competitor(1, "uno.es", 1), competitor(2, "uno.es", 9), competitor(4, null), competitor(5, "olessium.com")]);
     expect(sites.map((s) => s.competitorId)).toEqual([null, uuid(1)]);
     expect(withoutWebsite.map((c) => c.id)).toEqual([uuid(4)]);
+    expect(duplicates.map((c) => c.id).sort()).toEqual([uuid(2), uuid(3), uuid(5)]);
   });
 
   it("is not eligible when every competitor repeats the company or has no website", () => {
@@ -123,6 +124,19 @@ describe("toSiteResult", () => {
     expect(site).toMatchObject({ access, cause, criticalCount: null, warningCount: null, lighthouse: { status: "skipped" }, field: { status: "skipped" } });
   });
 
+  it("fails only the source whose figures break the contract", () => {
+    const wrong = { ...performance, score: 140 } as PerformanceResult;
+    const reversed = { ...field, collectionPeriod: { firstDate: "2026-09-28", lastDate: "2026-09-01" } };
+    expect(toSiteResult(target, facts({ performance: wrong }), [], authority)).toMatchObject({ lighthouse: { status: "error" }, field: { status: "ok" }, access: "analyzed" });
+    expect(toSiteResult(target, facts({ fieldData: reversed }), [], authority)).toMatchObject({ lighthouse: { status: "ok" }, field: { status: "error" } });
+  });
+
+  it("leaves a site that could not be processed in contract, keeping its authority", () => {
+    const site = unprocessedSite(target, authority);
+    expect(site).toMatchObject({ access: "processing_error", lighthouse: { status: "error" }, field: { status: "error" }, criticalCount: null, authority });
+    expect(parseComparison({ version: 1, sites: [toSiteResult(own, facts(), [], ownAuthority), site] })).not.toBeNull();
+  });
+
   it("does not take a source without its scope as real-user data", () => {
     expect(toSiteResult(target, facts({ fieldData: { ...field, scope: null } }), [], authority).field).toEqual({ status: "error" });
   });
@@ -160,6 +174,10 @@ describe("parseComparison", () => {
     ["a competitor without id", edit((s) => (s.competitorId = null))],
     ["a competitor hostname other than its domain", edit((s) => (s.hostname = "www.rival.es"))],
     ["an empty name", edit((s) => (s.name = ""))],
+    ["a name over 120", edit((s) => (s.name = "x".repeat(121)))],
+    ["an unknown lighthouse state", edit((s) => (s.lighthouse = { status: "other" }))],
+    ["an unknown real-user state", edit((s) => (s.field = { status: "other" }))],
+    ["an unknown authority state", edit((s) => (s.authority = { status: "other", requestedDomain: "rival.es" }))],
     ["a score over 100", edit((s) => ((s.lighthouse as { seo: unknown }).seo = { status: "ok", value: 101 }))],
     ["a measured metric without value", edit((s) => ((s.lighthouse as { cls: unknown }).cls = { status: "ok" }))],
     ["figures on an absent source", edit((s) => (s.lighthouse = { status: "skipped", performance: { status: "ok", value: 1 } }))],

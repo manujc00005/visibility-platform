@@ -75,6 +75,16 @@ describe("summarizeComparison", () => {
     expect(summarize(stored(row("running", { startedAt: new Date("2026-10-31T11:40:00Z") }), null)).running).toBe(false);
   });
 
+  it("reads an attempt that stopped answering as interrupted", () => {
+    const hung = row("running", { startedAt: new Date("2026-10-31T11:40:00Z") });
+    expect(summarize(stored(hung, null)).failure).toEqual({ error: "interrupted", at: hung.startedAt });
+  });
+
+  it("leaves pending another competitor that took over the same domain", () => {
+    const s = summarize(stored(completed([own(), site("competitor", 1, "uno.es")])), [rival(2, "uno.es")]);
+    expect(states(s.rows)).toContainEqual(["uno.es", "pending"]);
+  });
+
   it("hides an archived competitor and leaves a new one pending", () => {
     const s = summarize(stored(completed([own(), site("competitor", 1, "uno.es")])), [rival(2, "dos.es")]);
     expect(states(s.rows)).toEqual([["olessium.com", "measured"], ["dos.es", "pending"]]);
@@ -107,6 +117,7 @@ describe("summarizeComparison", () => {
   it("creates no pending row for duplicates of the company or of another competitor", () => {
     const s = summarize(stored(completed([own(), site("competitor", 1, "uno.es")])), [rival(1, "uno.es"), rival(2, "uno.es"), rival(3, "olessium.com")]);
     expect(states(s.rows)).toEqual([["olessium.com", "measured"], ["uno.es", "measured"]]);
+    expect(s.duplicates).toEqual(["Rival 2", "Rival 3"]);
   });
 
   it("lists competitors without a website apart", () => {

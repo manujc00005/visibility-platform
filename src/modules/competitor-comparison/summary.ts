@@ -23,6 +23,8 @@ export interface ComparisonSummary {
   /** Real-user data of some rows is from the page and of others from the whole site (FR-013). */
   mixedFieldScope: boolean;
   withoutWebsite: string[];
+  /** Competitors sharing the domain of another site, which is what got measured. */
+  duplicates: string[];
 }
 
 interface CompanyInput {
@@ -64,8 +66,11 @@ export function summarizeComparison({ stored, company, competitors, config, now 
   });
 
   const scopes = new Set(rows.flatMap((row) => (row.state === "measured" && row.site.field.status === "ok" ? [row.site.field.scope] : [])));
-  const fresh = latest?.status === "running" && now.getTime() - latest.startedAt.getTime() < STALE_RUNNING_AFTER_MS;
-  const failed = latest?.status === "failed" && latest.error ? { error: latest.error, at: latest.finishedAt ?? latest.startedAt } : null;
+  const running = latest?.status === "running";
+  const fresh = running && now.getTime() - latest.startedAt.getTime() < STALE_RUNNING_AFTER_MS;
+  // A run that stopped answering is only closed by the next attempt, but it is already over for the reader.
+  const stale = running && !fresh ? { error: "interrupted" as const, at: latest.startedAt } : null;
+  const failed = latest?.status === "failed" && latest.error ? { error: latest.error, at: latest.finishedAt ?? latest.startedAt } : stale;
 
   return {
     blocker: !config.pageSpeed ? "not_configured" : selection.eligible ? null : "no_competitors",
@@ -76,5 +81,6 @@ export function summarizeComparison({ stored, company, competitors, config, now 
     rows,
     mixedFieldScope: scopes.size > 1,
     withoutWebsite: selection.withoutWebsite.map((c) => c.name),
+    duplicates: selection.duplicates.map((c) => c.name),
   };
 }

@@ -28,6 +28,7 @@ export const REDACTED_PATHS = [
   "apikey",
   "*.apikey",
   "BING_WEBMASTER_API_KEY",
+  "OPEN_PAGERANK_API_KEY",
 ];
 
 export function createLogger(options: { level?: string; destination?: pino.DestinationStream } = {}) {

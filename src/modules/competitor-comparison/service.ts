@@ -2,9 +2,9 @@ import { and, desc, eq, lt, sql } from "drizzle-orm";
 import type { Database } from "@/db/client";
 import { logger } from "@/lib/logger";
 import { collectAuditFacts, type CollectDeps } from "@/modules/audits/collect";
-import { evaluateAudit, RULES_VERSION, type AuditFacts } from "@/modules/audits/rules";
+import { evaluateAudit, RULES_VERSION } from "@/modules/audits/rules";
 import { competitorComparisons, type CompetitorComparison } from "@/modules/competitor-comparison/schema";
-import { parseComparison, selectSites, toSiteResult, type AuthorityResult, type SiteResult, type SiteTarget } from "@/modules/competitor-comparison/sites";
+import { parseComparison, selectSites, toSiteResult, unprocessedSite, type AuthorityResult, type SiteResult, type SiteTarget } from "@/modules/competitor-comparison/sites";
 import { listCompetitors } from "@/modules/geo/service";
 import { getWorkspace } from "@/modules/workspaces/service";
 
@@ -46,20 +46,24 @@ async function closeStaleRuns(db: Database, workspaceId: string): Promise<void> 
 
 async function measure(targets: readonly SiteTarget[], deps: ComparisonDeps): Promise<SiteResult[]> {
   const authority = deps.authority(targets.map((target) => target.domain));
-  const audited: AuditFacts[] = [];
+  const measured: ((authority: AuthorityResult) => SiteResult)[] = [];
   let next = 0;
   const worker = async () => {
     while (next < targets.length) {
       const index = next++;
-      const { facts } = await collectAuditFacts(targets[index]!.hostname, deps.audit, { robotsBeforeEachRequest: true });
-      audited[index] = facts;
+      const target = targets[index]!;
+      try {
+        const { facts } = await collectAuditFacts(target.hostname, deps.audit, { robotsBeforeEachRequest: true });
+        const findings = evaluateAudit(facts);
+        measured[index] = (result) => toSiteResult(target, facts, findings, result);
+      } catch (error) {
+        logger.error({ err: error, site: index }, "comparison could not process a site");
+        measured[index] = (result) => unprocessedSite(target, result);
+      }
     }
   };
   const [byDomain] = await Promise.all([authority, ...Array.from({ length: Math.min(MAX_PARALLEL_SITES, targets.length) }, worker)]);
-  return targets.map((target, index) => {
-    const facts = audited[index]!;
-    return toSiteResult(target, facts, evaluateAudit(facts), byDomain.get(target.domain) ?? { status: "error", requestedDomain: target.domain });
-  });
+  return targets.map((target, index) => measured[index]!(byDomain.get(target.domain) ?? { status: "error", requestedDomain: target.domain }));
 }
 
 /** Writes the outcome only if this very attempt is still open: a late worker changes nothing. */
@@ -112,12 +116,18 @@ export async function runComparison(db: Database, workspaceId: string, deps: Com
     if (!comparison) throw new Error("Comparison out of contract");
     const result = await close(db, workspaceId, id, { status: "completed", sites: comparison });
     logger.info(
-      { workspaceId, comparisonId: id, ms: Date.now() - started, sites: sites.map((s) => [s.access, s.lighthouse.status, s.field.status, s.authority.status].join("/")) },
+      {
+        workspaceId,
+        comparisonId: id,
+        ms: Date.now() - started,
+        outcome: result.ok ? "completed" : result.error,
+        sites: sites.map((s) => [s.access, s.lighthouse.status, s.field.status, s.authority.status].join("/")),
+      },
       "comparison finished",
     );
     return result;
   } catch (error) {
-    logger.error({ err: error, workspaceId, comparisonId: id }, "comparison failed");
+    logger.error({ err: error, workspaceId, comparisonId: id, ms: Date.now() - started }, "comparison failed");
     return close(db, workspaceId, id, { status: "failed", error: "internal_error" });
   }
 }

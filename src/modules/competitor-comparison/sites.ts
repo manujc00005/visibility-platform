@@ -83,7 +83,7 @@ const siteSchema = z
     name: z.string().min(1).max(120),
     domain: domainName,
     hostname: domainName,
-    access: z.enum(["analyzed", "robots_disallowed", "unreachable", "http_error", "non_html"]),
+    access: z.enum(["analyzed", "robots_disallowed", "unreachable", "http_error", "non_html", "processing_error"]),
     cause: z.enum(CAUSES).nullable(),
     lighthouse: lighthouseSchema,
     field: fieldSchema,
@@ -147,6 +147,8 @@ export interface SiteSelection<C> {
   sites: SiteTarget[];
   /** Competitors that have no website to measure. */
   withoutWebsite: C[];
+  /** Competitors sharing a domain with a site already listed: measured once, under that site. */
+  duplicates: C[];
   /** True when at least one competitor remains to compare with. */
   eligible: boolean;
 }
@@ -156,6 +158,7 @@ export function selectSites<C extends CompetitorInput>(company: CompanyInput, co
   const sites: SiteTarget[] = [{ role: "company", competitorId: null, name: company.name, domain: company.domain, hostname: company.hostname }];
   const taken = new Set([company.domain]);
   const withoutWebsite: C[] = [];
+  const duplicates: C[] = [];
   const stable = [...competitors].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id));
   for (const competitor of stable) {
     if (!competitor.domain) {
@@ -163,11 +166,12 @@ export function selectSites<C extends CompetitorInput>(company: CompanyInput, co
       continue;
     }
     const domain = competitor.domain.toLowerCase();
+    if (taken.has(domain)) duplicates.push(competitor);
     if (taken.has(domain) || sites.length >= MAX_SITES) continue;
     taken.add(domain);
     sites.push({ role: "competitor", competitorId: competitor.id, name: competitor.name, domain, hostname: domain });
   }
-  return { sites, withoutWebsite, eligible: sites.length > 1 };
+  return { sites, withoutWebsite, duplicates, eligible: sites.length > 1 };
 }
 
 const value = <T>(from: T | null | undefined) => (from === null || from === undefined ? { status: "not_measured" as const } : { status: "ok" as const, value: from });
@@ -182,9 +186,12 @@ function accessOf(page: AuditFacts["page"]): Pick<SiteResult, "access" | "cause"
   return { access: page.result.facts ? "analyzed" : "non_html", cause: null };
 }
 
+/** Out of contract, a source reads as failed: it does not take down the site or the comparison. */
+const checked = <T>(schema: z.ZodType<T>, built: T): T | { status: "error" } => (schema.safeParse(built).success ? built : { status: "error" });
+
 function lighthouseOf(result: AuditFacts["performance"]): LighthouseResult {
   if (result.status !== "ok") return { status: result.status };
-  return {
+  return checked(lighthouseSchema, {
     status: "ok",
     lighthouseVersion: result.lighthouseVersion,
     performance: value(result.score),
@@ -194,14 +201,14 @@ function lighthouseOf(result: AuditFacts["performance"]): LighthouseResult {
     lcpMs: value(result.metrics?.lcpMs),
     cls: value(result.metrics?.cls),
     tbtMs: value(result.metrics?.tbtMs),
-  };
+  });
 }
 
 function fieldOf(result: AuditFacts["fieldData"]): FieldResult {
   if (!result) return { status: "not_configured" };
   if (result.status !== "ok") return { status: result.status };
   if (!result.scope) return { status: "error" };
-  return {
+  return checked(fieldSchema, {
     status: "ok",
     formFactor: result.formFactor,
     scope: result.scope,
@@ -209,7 +216,7 @@ function fieldOf(result: AuditFacts["fieldData"]): FieldResult {
     lcpMs: value(result.metrics?.lcpMs),
     inpMs: value(result.metrics?.inpMs),
     cls: value(result.metrics?.cls),
-  };
+  });
 }
 
 export function toSiteResult(target: SiteTarget, facts: AuditFacts, findings: readonly Finding[], authority: AuthorityResult): SiteResult {
@@ -227,6 +234,24 @@ export function toSiteResult(target: SiteTarget, facts: AuditFacts, findings: re
     field: fieldOf(facts.fieldData),
     criticalCount: severity("critical"),
     warningCount: severity("warning"),
+    authority,
+  };
+}
+
+/** The measurement of this site broke; the others keep theirs and its authority is still valid. */
+export function unprocessedSite(target: SiteTarget, authority: AuthorityResult): SiteResult {
+  return {
+    role: target.role,
+    competitorId: target.competitorId,
+    name: target.name,
+    domain: target.domain,
+    hostname: target.hostname,
+    access: "processing_error",
+    cause: null,
+    lighthouse: { status: "error" },
+    field: { status: "error" },
+    criticalCount: null,
+    warningCount: null,
     authority,
   };
 }

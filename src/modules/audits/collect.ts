@@ -193,8 +193,10 @@ export async function collectAuditFacts(
   const homepage = page.kind === "fetched" ? page.result.url : null;
 
   const readable = page.kind === "fetched" && page.result.status < 400 ? page.result.url : null;
+  // Without a home page the comparison uses nothing from the sitemap: it does not ask, least of all whoever refused.
+  const skipSitemap = options.robotsBeforeEachRequest && page.kind !== "fetched";
   const [sitemap, performance, fieldData] = await Promise.all([
-    fetchSitemap(robotsResult, origin, homepage, deps, budget),
+    skipSitemap ? Promise.resolve(null) : fetchSitemap(robotsResult, origin, homepage, deps, budget),
     readable ? deps.pageSpeed(readable) : Promise.resolve(emptyResult("skipped")),
     !readable
       ? Promise.resolve(emptyFieldData("skipped"))
