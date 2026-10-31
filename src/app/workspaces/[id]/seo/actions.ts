@@ -8,6 +8,8 @@ import { createAnalyticsDeps } from "@/modules/analytics/deps";
 import { refreshAnalytics } from "@/modules/analytics/service";
 import { createBingWebmasterDeps } from "@/modules/bing-webmaster/deps";
 import { refreshBingWebmaster } from "@/modules/bing-webmaster/service";
+import { createComparisonDeps } from "@/modules/competitor-comparison/deps";
+import { runComparison } from "@/modules/competitor-comparison/service";
 import { createSearchConsoleDeps } from "@/modules/search-console/deps";
 import { refreshSearchConsole } from "@/modules/search-console/service";
 import { addTrackedKeyword, removeTrackedKeyword } from "@/modules/search-console/tracked-keywords-service";
@@ -52,6 +54,19 @@ export async function refreshAnalyticsAction(workspaceId: string): Promise<Refre
     return { error: result.error === "not_configured" ? t.notConfigured : t.workspaceGone };
   }
   // A failed capture is stored too and explained by the page itself.
+  revalidatePath(`/workspaces/${workspaceId}/seo`);
+  return { error: null };
+}
+
+export interface CompetitorComparisonState {
+  error: string | null;
+}
+
+export async function runCompetitorComparisonAction(workspaceId: string, _state: CompetitorComparisonState): Promise<CompetitorComparisonState> {
+  void _state;
+  const result = await runComparison(getDb(), workspaceId, createComparisonDeps());
+  if (!result.ok) return { error: getMessages(await getLocale()).competitorComparison.actionErrors[result.error] };
+  // A failed attempt is stored too and explained by the page itself.
   revalidatePath(`/workspaces/${workspaceId}/seo`);
   return { error: null };
 }

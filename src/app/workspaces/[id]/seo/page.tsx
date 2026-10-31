@@ -13,6 +13,7 @@ import { RunAuditButton } from "@/components/audits/run-audit-button";
 import { StatusPill, ToneIcon } from "@/components/audits/status-ui";
 import { AnalyticsSection } from "@/components/analytics/analytics-section";
 import { BingWebmasterSection } from "@/components/bing-webmaster/bing-webmaster-section";
+import { ComparisonSection } from "@/components/competitor-comparison/comparison-section";
 import { SearchConsoleSection } from "@/components/search-console/search-console-section";
 import { ChangeLine, NoticeList, type Notice } from "@/components/overview/overview-card";
 import { PageHeader } from "@/components/overview/page-header";
@@ -34,13 +35,24 @@ import { bingWebmasterConfig } from "@/modules/bing-webmaster/deps";
 import { latestBingWebmaster } from "@/modules/bing-webmaster/service";
 import { summarizeBingWebmaster } from "@/modules/bing-webmaster/summary";
 import { searchConsoleConfig } from "@/modules/search-console/deps";
+import { comparisonConfig } from "@/modules/competitor-comparison/deps";
+import { latestComparison } from "@/modules/competitor-comparison/service";
+import { summarizeComparison } from "@/modules/competitor-comparison/summary";
+import { listCompetitors } from "@/modules/geo/service";
 import { latestSearchConsole } from "@/modules/search-console/service";
 import { summarizeSearchConsole } from "@/modules/search-console/summary";
 import { seoCounts, seoFindings, seoHistoryPoints, splitAudits, summarizeSeo, type FindingsByAudit } from "@/modules/overview";
 import { displayDate } from "@/modules/workspaces/presentation";
 import { getWorkspace } from "@/modules/workspaces/service";
 import { runAuditAction } from "../audits/actions";
-import { addTrackedKeywordAction, removeTrackedKeywordAction, refreshAnalyticsAction, refreshBingWebmasterAction, refreshSearchConsoleAction } from "./actions";
+import {
+  addTrackedKeywordAction,
+  removeTrackedKeywordAction,
+  refreshAnalyticsAction,
+  refreshBingWebmasterAction,
+  refreshSearchConsoleAction,
+  runCompetitorComparisonAction,
+} from "./actions";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: getMessages(await getLocale()).seoPage.metaTitle };
@@ -77,13 +89,16 @@ export default async function SeoPage({ params }: PageProps<"/workspaces/[id]/se
   const t = m.seoPage;
   const L = auditLabels(locale);
 
-  const [audits, stored, storedBing, storedAnalytics, tracked] = await Promise.all([
+  const [audits, stored, storedBing, storedAnalytics, tracked, storedComparison, competitors] = await Promise.all([
     listAudits(db, workspace.id),
     latestSearchConsole(db, workspace.id),
     latestBingWebmaster(db, workspace.id),
     latestAnalytics(db, workspace.id),
     listTrackedKeywords(db, workspace.id),
+    latestComparison(db, workspace.id),
+    listCompetitors(db, workspace.id),
   ]);
+  const comparison = summarizeComparison({ stored: storedComparison, company: workspace, competitors, config: comparisonConfig(), now: new Date() });
   const gscConfig = searchConsoleConfig();
   const trackedSummary = summarizeTrackedKeywords(tracked, stored);
   const gsc = summarizeSearchConsole(stored, gscConfig, workspace.domain, locale);
@@ -144,6 +159,10 @@ export default async function SeoPage({ params }: PageProps<"/workspaces/[id]/se
 
       <Section id="analytics-title" title={m.analytics.section.title} description={m.analytics.section.description}>
         <AnalyticsSection s={analytics} config={analyticsConf} action={refreshAnalyticsAction.bind(null, workspace.id)} locale={locale} />
+      </Section>
+
+      <Section id="competitors-title" title={m.competitorComparison.section.title} description={m.competitorComparison.section.description}>
+        <ComparisonSection s={comparison} action={runCompetitorComparisonAction.bind(null, workspace.id)} manageHref={`/workspaces/${workspace.id}/geo/setup`} locale={locale} />
       </Section>
 
       <Section id="health-title" title={t.health.title} description={t.health.description}>
