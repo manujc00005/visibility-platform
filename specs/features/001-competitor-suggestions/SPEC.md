@@ -4,7 +4,7 @@
 
 In Progress
 
-Revisada el 2026-10-26 tras la revisión independiente. Implementación y pruebas ejecutadas ese mismo día (ver TASKS.md); pendientes la verificación manual con captura real y las revisiones de cierre.
+Revisada el 2026-10-26 tras la revisión independiente. Implementación, pruebas y revisiones ejecutadas ese mismo día (ver TASKS.md). Mecánica reverificada el 2026-10-31. Solo falta una respuesta real de ChatGPT pegada por el operador (T013): D008 no permite automatizarla.
 
 ## Problem
 

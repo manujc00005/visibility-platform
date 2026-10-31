@@ -86,4 +86,4 @@ Plan activo revisado el 2026-10-26. Captura asistida → extracción pura → le
 - [x] Cada AC tiene tarea y verificación definidas; T001–T012 marcadas hechas con evidencia el 2026-10-26, T013 parcial y T014 pendiente.
 - [x] Límites, unidades, transacciones, revisión manual y restricciones de la fuente son explícitos.
 - [x] Context budget, riesgos, pruebas, despliegue y rollback están descritos.
-- [ ] Revisiones de cierre (T014) y captura real para la verificación manual (T013); implementación y pruebas ejecutadas el 2026-10-26.
+- [ ] Captura real para la verificación manual (T013). Implementación, pruebas y revisiones (T014) ejecutadas el 2026-10-26.

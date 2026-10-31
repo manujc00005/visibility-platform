@@ -396,7 +396,7 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 
 **Pruebas:** 395 en total (antes 341): unitarias de extracción, exclusiones, evaluación, lector de portada y deadline/cancelación del fetcher real instrumentado; 19 de integración contra Neon `test` con carreras en dos conexiones, rollback inducido y aislamiento por empresa. Lint, typecheck y build en verde.
 
-**Verificación manual:** mecánica de la interfaz comprobada en `dev` con una respuesta sintética marcada como prueba (Clínica García): extracción con el fetcher real (example.com, host inexistente, directorio excluido), nombre hostil renderizado como texto, aceptación con nombre corregido, descarte, persistencia al recargar, 375 px sin desbordamiento. **Pendiente:** captura real de ChatGPT para Olessium (T013) y revisiones de cierre (T014).
+**Verificación manual:** mecánica de la interfaz comprobada en `dev` con una respuesta sintética marcada como prueba (Clínica García): extracción con el fetcher real (example.com, host inexistente, directorio excluido), nombre hostil renderizado como texto, aceptación con nombre corregido, descarte, persistencia al recargar, 375 px sin desbordamiento. Reverificado el 2026-10-31 con teclado y a 375 px sobre el código actual. **Pendiente:** captura real de ChatGPT para Olessium (T013) y revisiones de cierre (T014).
 
 **Incidencia durante la migración:** un patrón `LIKE 'geo_competitor_%'` usado para limpiar un intento fallido coincidió también con `geo_competitors` y la tabla se borró en `test` y `dev`. Se recreó con el SQL de `0004_geo` y en `dev` se restauró su única fila (el competidor de ejemplo de Olessium) desde el panel congelado en `geo_runs.config`. `production` no se tocó. Deuda: D-25.
 
