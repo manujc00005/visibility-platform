@@ -6,7 +6,7 @@ Módulo nuevo que mide en una captura la web de la empresa y las de sus competid
 
 ## Related spec
 
-`specs/features/011-competitor-seo-comparison/SPEC.md`; decisiones D001–D010 de esta carpeta.
+`specs/features/011-competitor-seo-comparison/SPEC.md`; decisiones D001–D012 de esta carpeta.
 
 ## Impacted areas
 
@@ -17,6 +17,7 @@ Módulo nuevo que mide en una captura la web de la empresa y las de sus competid
   - `service.ts`: captura, lectura y concurrencia.
   - `summary.ts`: proyección para la página.
   - `deps.ts`: conexión real y estado de configuración.
+- `src/modules/audits/collect.ts` y `fetcher/safe-fetch.ts`: política optativa de robots previa por URL de portada, con los consumidores actuales compatibles (T000/D011). Reutilizar `robots.ts` y los presupuestos existentes, sin otro transporte. Pruebas de colector/fetcher para el modo optativo y la regresión del modo anterior.
 - `src/db/schema/index.ts` y migración generada `0014` con sus metadatos.
 - `src/config/env.ts` y `.env.example`: `OPEN_PAGERANK_API_KEY`.
 - `src/app/workspaces/[id]/seo/actions.ts` y `seo/page.tsx`.
@@ -30,7 +31,7 @@ Módulo nuevo que mide en una captura la web de la empresa y las de sus competid
 ### Reading list
 
 - Esta carpeta de spec.
-- `src/modules/audits/{collect,deps,service,rules,crux,pagespeed}.ts` y `schema.ts`.
+- `src/modules/audits/{collect,deps,service,rules,crux,pagespeed,robots}.ts`, `schema.ts` y `fetcher/safe-fetch.ts`, con las pruebas existentes de robots, colector y fetcher. Leer solo los límites, redirects y validaciones necesarios para T000.
 - `src/modules/geo/service.ts` (`listCompetitors`) y `schema.ts` (`geoCompetitors`).
 - `src/modules/search-console/{deps,service,summary}.ts` como patrón de configuración, captura y proyección.
 - `src/modules/bing-webmaster/` como patrón de cliente con clave.
@@ -43,18 +44,19 @@ Un solo agente con el modelo actual. Concurrencia, captura parcial y tabla acces
 
 ## Proposed approach
 
-1. **Dominio puro (T001).** `selectSites` deduplica y separa los competidores sin web. `toSiteResult` convierte `AuditFacts` y hallazgos en métricas y estados, sin textos de la web. `parseComparison` valida con Zod al leer.
-2. **Autoridad (T002).** `POST https://openpagerank.keywordseverywhere.com/v1/domains/bulk` con `Authorization: Bearer`, `{ domains, include_history: false }` y 15 s de límite. Devuelve un mapa por dominio o un estado común (D003).
-3. **Persistencia (T003).** `competitor_comparisons` con índice único parcial `running`, CHECK de estado y forma con jsonpath `strict`, y sin función en plpgsql (D005).
+0. **Acceso respetuoso y compatible (T000).** Implementar D011 antes de capturar: política optativa en el colector y guardia de portada antes de cada petición/salto/fallback del fetcher. Cache de robots por origen y presupuesto compartido, sin recursión ni bypass SSRF. Default anterior intacto y regresiones de auditoría propia.
+1. **Dominio puro (T001).** `selectSites` prioriza empresa, ordena competidores por created_at/id y deduplica antes de comprobar elegibilidad. Separar sin web y duplicados sin crear pendientes ficticios. `toSiteResult` convierte campo a campo con mapeo exacto, estados parciales y ceros válidos; `parseComparison` valida el contrato estricto de SPEC al escribir y al leer. Identidades congeladas incluyen domain y hostname.
+2. **Autoridad (T002).** `POST https://openpagerank.keywordseverywhere.com/v1/domains/bulk` con `Authorization: Bearer`, `{ domains, include_history: false }` y 15 s de límite. Devuelve resultados por dominio sin depender del orden: igualdad o sufijo más largo no ambiguo (D004). Solo found:false produce not_found; ausencia inesperada/ambigüedad produce error por sitio, sin perder otros válidos. Conservar requested/effective domain, alcance registered_domain y asOf. No consumir hosts; explicar la limitación de plataformas compartidas y los referentes ponderados. Sin clave no hay red.
+3. **Persistencia (T003).** `competitor_comparisons` con índice único parcial `running`, CHECK de correspondencia status/sites/error/fechas y forma con jsonpath `strict` e `IS TRUE`, sin función plpgsql (D005). Zod valida el detalle y las identidades antes de completar y al leer, sin copiar respuestas externas crudas.
 4. **Captura (T004).** `runComparison(db, workspaceId, deps)`:
-   - Cierra capturas colgadas.
-   - Lee empresa y competidores una vez, y comprueba requisitos.
+   - Valida workspaceId y existencia de empresa antes de cualquier cierre o inserción. Cierra solo las capturas colgadas de esa empresa.
+   - Lee empresa/competidores una vez para congelar la identidad; usa el selector compartido para comprobar PageSpeed y al menos un competidor distinto después de deduplicar. Rechazos sin fila ni red. Congela nombre/domain/hostname y lista para todas las llamadas.
    - Inserta `running`, con choque de índice convertido en `already_running`.
-   - Lanza Open PageRank y mide sitios con 3 trabajadores, sin transacción abierta.
-   - Cierra con `update … where status = 'running'`. Cero filas actualizadas significa empresa borrada.
-5. **Proyección (T005).** `summarizeComparison` cruza la última fila completada con los competidores activos actuales y resuelve estados de sección y de fila.
-6. **Interfaz (T006).** Server Action, botón con estado pendiente, sección y textos. Las ausencias ocupan todas las columnas de su fuente (D008).
-7. **Regresión, evidencia y cierre (T007–T009).** Integración completa, navegador, captura real y revisiones.
+   - Lanza Open PageRank y mide sitios con 3 trabajadores, sin transacción abierta; todos activan D011. Traducir fallos de fuente a su estado y conservar métricas válidas de otros sitios/fuentes. Solo errores internos del proceso cierran failed/internal_error.
+   - Cierra por id + empresa + status running (también en el catch). Ante cero filas, relee: solo empresa borrada da not_found; una captura terminal/ausente con empresa existente da capture_closed. Nunca sobrescribir una captura cerrada ni otra posterior. Probar cierre por antigüedad con trabajador retenido y captura nueva (D012).
+5. **Proyección (T005).** `summarizeComparison` cruza la última fila completada (started_at/id descendente) con la lista actual deduplicada. Empresa: workspaceId/domain/hostname; competidor: id/domain/hostname. Cambios de sitio quedan pendientes, cambios solo de nombre no invalidan mediciones. Captura ilegible da aviso y pendientes. Resuelve estados por fuente y por métrica sin ocultar valores parciales o ceros.
+6. **Interfaz (T006).** Server Action, botón con pendiente y requisitos deduplicados, sección y textos, incluido capture_closed. Solo una ausencia completa ocupa todas las columnas de su fuente; datos parciales mantienen las celdas (D008). Mostrar alcance/periodo CrUX y dominio efectivo/alcance/asOf de autoridad, distinguiendo fechas de consulta y publicación; motivos por métrica ausente, conservando ceros válidos.
+7. **Regresión, evidencia y cierre (T007–T009).** Integración completa, navegador, captura real y revisiones. Mapeo exacto respecto de las mismas respuestas saneadas usadas en la captura; segunda ejecución solo documenta variabilidad, sin tolerancia de aprobación. Sin clave/datos reales de autoridad, T009 y cierre pendientes (D009/D012).
 
 ## Alternatives considered
 
@@ -75,11 +77,14 @@ Un solo agente con el modelo actual. Concurrencia, captura parcial y tabla acces
 ## Risks
 
 - **IP de la clave gratuita:** una IP doméstica cambia y la de la cuenta solo se puede cambiar una vez por semana. La columna mostrará el motivo y el resto seguirá (FR-005).
-- **`found: false` sin documentar en `bulk`:** el esquema acepta campos ausentes o nulos y T009 lo confirma con una llamada real.
-- **Dominio con subdominio:** Open PageRank responde por dominio registrado; se empareja por sufijo (D004).
+- **Contrato vs evidencia real:** OpenAPI y referencia son las fuentes de tipos; T009 aún debe verificar un positivo y un found:false reales. Ausencia inesperada de resultado es error, nunca prueba de no encontrado.
+- **Dominio con subdominio:** se empareja de forma no ambigua y se muestra dominio efectivo/alcance registrado y asOf. Hosts quedan fuera de alcance, con explicación para plataformas compartidas (D004).
+- **Robots tras redirects:** la protección actual llega tarde. T000 añade política optativa antes de cada acceso y mantiene todas las defensas de fetcher y el default anterior.
+- **Cierre tardío:** un trabajador antiguo no puede resucitar una captura ni finalizar otra; los cierres usan id/empresa/running y capture_closed (D012).
+- **Datos parciales y cero:** un estado ok de fuente no implica todas las métricas presentes; mantener valores válidos y explicar ausencias por celda.
 - **Competidor que solo responde en `www`:** si el dominio raíz no resuelve, el sitio queda sin analizar. Se muestra el motivo y no se añaden más accesos.
 - **Cuota de PageSpeed no documentada:** un 429 afecta a los sitios restantes, sin perder los medidos.
-- **Duración:** hasta unos 4 minutos en el peor caso (D006). Si se cierra la pestaña, la captura termina en el servidor o se cierra por antigüedad.
+- **Duración:** estimación de unos 4 minutos, no un SLA (D006). Si se cierra la pestaña, la captura termina en el servidor o se cierra por antigüedad.
 - **WAF de competidores:** devuelven 403 a nuestro agente. Queda como estado, no se evita.
 - **Variación de Lighthouse:** una diferencia pequeña no significa nada; lo explica FR-014.
 - **Perímetro sin autenticación:** cualquiera que alcance la app puede lanzar peticiones y gastar cuota. Se añade a BL-07.
@@ -88,9 +93,10 @@ Un solo agente con el modelo actual. Concurrencia, captura parcial y tabla acces
 ## Test strategy
 
 - Unitarias: selección, mapeo sin textos, cliente con matriz de errores, proyección y render en `es` y `en`.
-- Integración: colector real con dobles de red, matriz de fallos por fuente, promesa retenida, concurrencia, separación de `audits`, migración y cascada.
+- Integración: colector/fetcher real con dobles de red; robots prohibitivo antes del destino, fallback y límites; matriz parcial por fuente/métrica, ceros válidos, promesa retenida con cambios de competidores y empresa, cierre de vieja captura seguido de una nueva, separación de audits, migración/cascada y requisitos deduplicados.
+- Contrato: pruebas SQL estructurales y de lifecycle separadas de pruebas Zod de detalle (campos extra, identidades duplicadas, fechas, rangos y estados). Mapeo exacto con valores distintos por campo para detectar intercambios y unidades equivocadas.
 - Navegador: fixtures `[TEST]` en la base de pruebas, 375 y 1280 px, limpiados después.
-- Real: AC-016, con la tolerancia de D009.
+- Real: AC-016/D009, mapeo exacto frente a las respuestas de la propia captura y variación independiente solo informativa. No cerrar sin positivo de autoridad y respuesta real found:false. Evidencia saneada sin claves, URLs completas ni contenidos.
 - Regresión: suite completa, incluidas auditorías y página SEO.
 
 ## Rollback strategy
