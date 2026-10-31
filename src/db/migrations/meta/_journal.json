@@ -92,6 +92,13 @@
       "when": 1793394438194,
       "tag": "0012_tracked_keywords",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793464326144,
+      "tag": "0013_tracked_keywords_hardening",
+      "breakpoints": true
     }
   ]
 }

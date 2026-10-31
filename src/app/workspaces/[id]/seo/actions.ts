@@ -62,17 +62,20 @@ export interface KeywordActionState {
   revision: number;
 }
 
+const revisionOf = (state: KeywordActionState) => (Number.isInteger(state?.revision) ? state.revision : 0);
+
 export async function addTrackedKeywordAction(workspaceId: string, state: KeywordActionState, form: FormData): Promise<KeywordActionState> {
   const t = getMessages(await getLocale()).searchConsole.tracked;
-  const raw = form.get("keyword");
+  const revision = revisionOf(state);
+  const raw = form instanceof FormData ? form.get("keyword") : null;
   const value = typeof raw === "string" ? raw.slice(0, 1000) : "";
   try {
     const result = await addTrackedKeyword(getDb(), workspaceId, raw);
-    if (!result.ok) return { error: t[result.error], value, revision: state.revision };
+    if (!result.ok) return { error: t[result.error], value, revision };
     revalidatePath(`/workspaces/${workspaceId}/seo`);
-    return { error: null, value: "", revision: state.revision + 1 };
+    return { error: null, value: "", revision: revision + 1 };
   } catch {
-    return { error: t.failure, value, revision: state.revision };
+    return { error: t.failure, value, revision };
   }
 }
 
@@ -82,7 +85,7 @@ export async function removeTrackedKeywordAction(workspaceId: string, keywordId:
     const result = await removeTrackedKeyword(getDb(), workspaceId, keywordId);
     if (!result.ok) return { ...state, error: t[result.error] };
     revalidatePath(`/workspaces/${workspaceId}/seo`);
-    return { error: null, value: "", revision: state.revision + 1 };
+    return { error: null, value: "", revision: revisionOf(state) + 1 };
   } catch {
     return { ...state, error: t.failure };
   }

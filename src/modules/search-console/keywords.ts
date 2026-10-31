@@ -7,26 +7,30 @@ export const KEYWORD_ROW_LIMIT = 25000;
 const DAY = 86_400_000;
 const canonical = (text: string) => text.normalize("NFC").trim().toLowerCase().replace(/\s+/gu, " ").normalize("NFC");
 const invalid = () => new GscError("error", "Los datos de búsquedas seguidas no tienen un formato válido.");
+/** Controls, lone surrogates and bidi overrides: Postgres or the page would not show what was typed. */
+const FORBIDDEN = /[\p{Cc}\p{Cs}\u202A-\u202E\u2066-\u2069]/u;
 
 export function normalizeTrackedKeyword(raw: unknown): string {
   if (typeof raw !== "string" || raw.length > 1000) throw invalid();
   const keyword = canonical(raw);
   const length = Array.from(keyword).length;
-  if (length < 2 || length > 80) throw invalid();
+  if (length < 2 || length > 80 || FORBIDDEN.test(keyword)) throw invalid();
   return keyword;
 }
 
-/** Same safe RE2/JS subset as brand literals; keywords have their own identity policy. */
+/** Escaped literals, whitespace-tolerant between words and anchored: only whole queries match. */
 export function keywordExpression(keywords: readonly string[]): string | null {
   if (keywords.length > MAX_TRACKED_KEYWORDS) throw invalid();
   if (keywords.length === 0) return null;
-  const variants = keywords.map((input) => normalizeTrackedKeyword(input).split(" ").map((word) => {
+  const normalized = keywords.map(normalizeTrackedKeyword);
+  if (new Set(normalized).size !== keywords.length) throw invalid();
+  const variants = normalized.map((keyword) => keyword.split(" ").map((word) => {
     const forms = [...new Set([word, word.normalize("NFD")])].map(escapeRe2Literal);
     return forms.length === 1 ? forms[0] : `(?:${forms.join("|")})`;
   }).join("[\\s\\p{Z}]+"));
   const expression = `(?i)^(?:${variants.join("|")})$`;
   if (Buffer.byteLength(expression, "utf8") > MAX_EXPRESSION_LENGTH) {
-    throw new GscError("error", "La expresión de búsquedas seguidas supera el límite de Search Console.");
+    throw new GscError("keyword_limit", "La expresión de búsquedas seguidas supera el límite de Search Console.");
   }
   return expression;
 }
@@ -79,17 +83,16 @@ export function parseKeywordSeries(raw: unknown): KeywordSeries | null {
 
 export function aggregateKeywordSeries(keywords: readonly string[], end: string, rows: AnalyticsRow[]): KeywordSeries {
   const window = keywordWindow(end);
-  if (rows.length >= KEYWORD_ROW_LIMIT) throw new GscError("error", "Search Console alcanzó el límite de filas de búsquedas seguidas; la respuesta puede estar truncada.");
+  if (rows.length >= KEYWORD_ROW_LIMIT) throw new GscError("keyword_limit", "Search Console alcanzó el límite de filas de búsquedas seguidas; la respuesta puede estar truncada.");
   keywordExpression(keywords);
   const data = new Map(keywords.map((k) => [normalizeTrackedKeyword(k), new Map<string, { clicks: number; impressions: number; weighted: number; days: Set<string> }>()]));
-  if (data.size !== keywords.length) throw invalid();
   const originals = new Set<string>();
   for (const row of rows) {
     if (row.keys.length !== 2 || row.keys.some((k) => typeof k !== "string")) throw invalid();
     const [date, query] = row.keys as [string, string];
+    const time = dayMillis(date);
     const weeks = data.get(canonical(query));
     if (!weeks) continue;
-    const time = dayMillis(date);
     if (date < window.start || date > end || ![row.clicks, row.impressions, row.position].every(Number.isFinite) || row.clicks < 0 || row.impressions < 0 || row.clicks > row.impressions) throw invalid();
     const originalKey = JSON.stringify([date, query]);
     if (originals.has(originalKey)) throw invalid();

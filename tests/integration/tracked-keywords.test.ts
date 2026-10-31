@@ -13,8 +13,8 @@ import { createTestDb } from "./db";
 const { pool, db } = createTestDb();
 afterAll(() => pool.end());
 beforeEach(async () => { await db.delete(workspaces); });
-async function workspace() {
-  const result = await createWorkspace(db, {name:"[TEST] Keywords",website:"example.com",sector:"Testing",country:"ES",city:"",services:"Testing"});
+async function workspace(website="example.com") {
+  const result = await createWorkspace(db, {name:"[TEST] Keywords",website,sector:"Testing",country:"ES",city:"",services:"Testing"});
   if (!result.ok) throw new Error("fixture");
   return result.workspace;
 }
@@ -32,9 +32,10 @@ describe("schema migration",()=>{
  });
  it("rejects malformed JSON with named check 23514, never a cast error",async()=>{
   const w=await workspace();const good=series();
-  for(const value of [[],{},[good],{...good,version:[1]},{...good,keywords:{}},{...good,keywords:[{}]}, {...good,keywords:[{keyword:"a",weeks:[]}]}, {...good,keywords:[{keyword:"crm",weeks:[{}]}]}, {...good,keywords:[{keyword:"crm",weeks:[{...good.keywords[0]!.weeks[0],position:0}]}]}, {...good,keywords:[{keyword:"crm",weeks:[{...good.keywords[0]!.weeks[0],daysWithData:1.5}]}]}, {...good,keywords:Array(26).fill({keyword:"crm",weeks:[]})}]) {
+  for(const value of [[],{},[good],{...good,version:2},{...good,keywords:[{keyword:"crm",weeks:Array(27).fill(good.keywords[0]!.weeks[0])}]},{...good,version:[1]},{...good,keywords:{}},{...good,keywords:[{}]}, {...good,keywords:[{keyword:"a",weeks:[]}]}, {...good,keywords:[{keyword:"crm",weeks:[{}]}]}, {...good,keywords:[{keyword:"crm",weeks:[{...good.keywords[0]!.weeks[0],position:0}]}]}, {...good,keywords:[{keyword:"crm",weeks:[{...good.keywords[0]!.weeks[0],daysWithData:1.5}]}]}, {...good,keywords:Array(26).fill({keyword:"crm",weeks:[]})}]) {
     await expect(insertSnapshot(w.id,value)).rejects.toMatchObject({code:"23514",constraint:"search_console_snapshots_keyword_series_shape"});
   }
+  await expect(pool.query("select tracked_keyword_series_valid('[]'::jsonb) as v")).resolves.toMatchObject({rows:[{v:false}]});
   await expect(insertSnapshot(w.id,good,"failed")).rejects.toMatchObject({code:"23514",constraint:"search_console_snapshots_failed_without_keyword_series"});
  });
  it("enforces unique, length and cascade",async()=>{
@@ -58,6 +59,26 @@ describe("service concurrent",()=>{
   expect(await removeTrackedKeyword(db,w.id,row!.id)).toEqual({ok:true});
   expect(await removeTrackedKeyword(db,w.id,row!.id)).toEqual({ok:true});
   expect(await addTrackedKeyword(db,w.id,"x")).toEqual({ok:false,error:"invalid"});
+ });
+ it("keeps each company's list apart (AC-002)",async()=>{
+  const a=await workspace();const b=await workspace("example.org");
+  expect(await addTrackedKeyword(db,a.id,"crm")).toEqual({ok:true});
+  expect(await addTrackedKeyword(db,b.id,"crm")).toEqual({ok:true});
+  const [row]=await listTrackedKeywords(db,a.id);
+  expect(await removeTrackedKeyword(db,b.id,row!.id)).toEqual({ok:true});
+  expect(await listTrackedKeywords(db,a.id)).toHaveLength(1);
+  for(let i=0;i<24;i++) expect(await addTrackedKeyword(db,a.id,`query ${i}`)).toEqual({ok:true});
+  expect(await addTrackedKeyword(db,a.id,"one more")).toEqual({ok:false,error:"limit"});
+  expect(await addTrackedKeyword(db,b.id,"one more")).toEqual({ok:true});
+ });
+ it("treats the decomposed form of a saved keyword as a duplicate (AC-001)",async()=>{
+  const w=await workspace();
+  expect(await addTrackedKeyword(db,w.id,"café")).toEqual({ok:true});
+  expect(await addTrackedKeyword(db,w.id,"CAFE\u0301")).toEqual({ok:false,error:"duplicate"});
+ });
+ it("rejects a NUL before Postgres can refuse it",async()=>{
+  const w=await workspace();
+  expect(await addTrackedKeyword(db,w.id,"a\0b")).toEqual({ok:false,error:"invalid"});
  });
  it("serializes two additions from 24 at the workspace boundary",async()=>{
   const w=await workspace();

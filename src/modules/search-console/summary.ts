@@ -200,6 +200,7 @@ function failureText(s: NonNullable<LatestSearchConsole["latest"]>, config: Sear
     case "api_disabled":
     case "invalid_credentials":
     case "quota_exceeded":
+    case "keyword_limit":
       return t.failures[s.errorKind];
     default:
       return t.failures.error;

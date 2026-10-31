@@ -40,6 +40,10 @@ describe("keyword summary",()=>{
   const snapshot=capture([]);
   expect(summarizeTrackedKeywords(active,{latest:snapshot,latestCompleted:snapshot}).rows[0]!.state).toBe("no_data");
  });
+ it("keeps the data of a key already in the capture when it is added again with a new id (AC-006)",()=>{
+  const snapshot=capture([8]);
+  expect(summarizeTrackedKeywords([{id:"new id",keyword:active[0]!.keyword}],{latest:snapshot,latestCompleted:snapshot}).rows[0]!.state).toBe("ok");
+ });
  it.each([[12,8,"better"],[8,12,"worse"],[8,8.5,"worse"],[8,7.5,"better"],[8,8.499999,"same"],[8,8.4999999999,"worse"]])("compares raw %s to %s as %s",(first,last,direction)=>{
   const snapshot=capture([Number(first),Number(last)]);
   const row=summarizeTrackedKeywords(active,{latest:null,latestCompleted:snapshot}).rows[0]!;

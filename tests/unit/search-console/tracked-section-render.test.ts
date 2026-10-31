@@ -23,6 +23,10 @@ describe("tracked section render",()=>{
   expect(html).toContain(locale==="es"?"Esto no indica que no haya demanda":"This does not mean there is no demand");
   expect(html).toContain("<table");
  });
+ it.each(["es","en"] as const)("explains the position in %s with or without rows",locale=>{
+  const note=getMessages(locale).searchConsole.tracked.positionNote;
+  expect(render([],locale)).toContain(note);expect(render([base],locale)).toContain(note);
+ });
  it("hides add at 25 but retains all removals and warning",()=>{
   const html=render(Array.from({length:25},(_,i)=>({...base,id:String(i),keyword:`query ${i}`})),"es",true);
   expect(html).not.toContain('name="keyword"');expect(html.match(/aria-label="Quitar:/g)).toHaveLength(25);
@@ -73,5 +77,29 @@ describe("tracked section with data, from the stored series to the HTML", () => 
     expect(html).toContain(displayDay(end));
     expect(html).toContain("<strong>8,0</strong>");
     expect(html).toContain("12,3");
+  });
+
+  it("gives impressions, days and the source of the capture (AC-006, AC-007)", () => {
+    const html = view("crm", [row(end, "crm", 8, 25)]);
+    expect(html).toContain("Impresiones: 25");
+    expect(html).toContain("Días con datos: 1/7");
+    expect(html).toContain("sc-domain:olessium.com");
+    expect(html).toContain(displayDay(end, "es"));
+  });
+
+  it.each([
+    ["es", "Sin datos devueltos en los últimos 25 tramos de 7 días", "Posición media de la última semana con datos:"],
+    ["en", "No data returned in the last 25 7-day slots", "Average position in the last week with data:"],
+  ] as const)("does not present an old week as recent in %s (FR-010)", (locale, notice, label) => {
+    const html = view("crm", [row(early, "crm", 12)], locale);
+    expect(html).toContain(notice);
+    expect(html).toContain(label);
+  });
+
+  it("uses the singular for one final slot and says nothing when the last one has data", () => {
+    expect(view("crm", [row("2026-10-17", "crm", 12)])).toContain("Sin datos devueltos en el último tramo de 7 días");
+    const html = view("crm", [row(end, "crm", 12)]);
+    expect(html).not.toContain("Sin datos devueltos");
+    expect(html).toContain("Posición media:");
   });
 });

@@ -15,7 +15,7 @@ export const TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
 export const API_BASE = "https://www.googleapis.com/webmasters/v3";
 export const SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
 
-export type GscErrorKind = "invalid_credentials" | "api_disabled" | "no_access" | "quota_exceeded" | "error";
+export type GscErrorKind = "invalid_credentials" | "api_disabled" | "no_access" | "quota_exceeded" | "keyword_limit" | "error";
 
 /** Messages are owner-readable and never contain key material, tokens or response bodies. */
 export class GscError extends Error {

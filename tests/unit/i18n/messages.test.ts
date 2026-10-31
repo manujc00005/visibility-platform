@@ -102,6 +102,7 @@ const FUNCTION_CALLS: Record<string, unknown[][]> = {
   "searchConsole.failures.lastAttempt": [["27 oct 2026, 17:02", "Vuelve a intentarlo."]],
   "searchConsole.units.clicks": [[1], [12]],
   "searchConsole.units.impressions": [[1], [400]],
+  "searchConsole.tracked.trailing": [[1], [25]],
   "searchConsole.percent": [["3,0"]],
   "searchConsole.changes.before": [["0 clics"]],
   "searchConsole.changes.same": [["390 impresiones"]],

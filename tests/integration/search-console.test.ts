@@ -1,10 +1,12 @@
 import { eq, sql } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { searchConsoleSnapshots, workspaces } from "@/db/schema";
+import { searchConsoleSnapshots, trackedKeywords, workspaces } from "@/db/schema";
 import { brandTerms } from "@/modules/search-console/brand-terms";
 import { collectSearchConsole, type CaptureSite, type CollectOutcome } from "@/modules/search-console/collect";
 import { parseServiceAccount } from "@/modules/search-console/credentials";
+import { keywordExpression } from "@/modules/search-console/keywords";
 import { latestSearchConsole, refreshSearchConsole, type SearchConsoleDeps } from "@/modules/search-console/service";
+import { addTrackedKeyword, listTrackedKeywords, removeTrackedKeyword } from "@/modules/search-console/tracked-keywords-service";
 import { createWorkspace } from "@/modules/workspaces/service";
 import { PRIVATE_PEM, serviceAccountJson } from "../unit/search-console/fixtures";
 import { createTestDb } from "./db";
@@ -342,5 +344,125 @@ describe("search console previous position per query (feature 009)", () => {
     const { latest, latestCompleted } = await latestSearchConsole(db, ws.id);
     expect(latest?.status).toBe("failed");
     expect(latestCompleted?.queries[0]?.previous).toEqual(previous);
+  });
+});
+
+describe("search console tracked keywords (feature 010)", () => {
+  const parsedAccount = parseServiceAccount(serviceAccountJson());
+  if (!parsedAccount?.ok) throw new Error("fixture");
+  const account = parsedAccount.value;
+  const SECRET = "ya29.integration-secret-010";
+  const DAY = "2026-10-24";
+  const row = (query: string) => ({ keys: [DAY, query], clicks: 1, impressions: 5, ctr: 0.2, position: 8 });
+  type Filtered = { dimensions: string[]; dimensionFilterGroups?: { filters: { expression: string }[] }[] };
+
+  /** Google double: `keywords` answers the date/query request, the only one with that dimension. */
+  function google(keywords: () => Response | Promise<Response>) {
+    const bodies: string[] = [];
+    const fetchImpl = (async (input: string, init?: RequestInit) => {
+      const url = String(input);
+      const body = String(init?.body ?? "");
+      bodies.push(body);
+      if (url.includes("oauth2")) return Response.json({ access_token: SECRET });
+      if (url.endsWith("/sites")) return Response.json({ siteEntry: [{ siteUrl: "sc-domain:olessium.com", permissionLevel: "siteOwner" }] });
+      return (JSON.parse(body) as Filtered).dimensions.includes("date") ? keywords() : Response.json({});
+    }) as typeof fetch;
+    const filter = () =>
+      bodies
+        .filter((b) => b.startsWith("{"))
+        .map((b) => JSON.parse(b) as Filtered)
+        .find((b) => b.dimensions.includes("date"))?.dimensionFilterGroups?.[0]?.filters[0]?.expression;
+    return { bodies, filter, deps: { collect: (site: CaptureSite) => collectSearchConsole(account, site, { fetchImpl, now: new Date("2026-10-27T10:00:00Z") }) } };
+  }
+  const held = () => {
+    let release!: (response: Response) => void;
+    let reached!: () => void;
+    const started = new Promise<void>((resolve) => (reached = resolve));
+    const answer = () => {
+      reached();
+      return new Promise<Response>((resolve) => (release = resolve));
+    };
+    return { started, answer, release: (response: Response) => release(response) };
+  };
+  const snapshots = (id: string) => db.select().from(searchConsoleSnapshots).where(eq(searchConsoleSnapshots.workspaceId, id));
+
+  it("sends the list read at the start and leaves the company unlocked while Google answers (AC-018)", async () => {
+    const ws = await workspace();
+    await addTrackedKeyword(db, ws.id, "crm agencias");
+    const google1 = held();
+    const { filter, deps: live } = google(google1.answer);
+    const pending = refreshSearchConsole(db, ws.id, live);
+    await google1.started;
+
+    const [saved] = await listTrackedKeywords(db, ws.id);
+    expect(await removeTrackedKeyword(db, ws.id, saved!.id)).toEqual({ ok: true });
+    expect(await addTrackedKeyword(db, ws.id, "otra busqueda")).toEqual({ ok: true });
+    google1.release(Response.json({ rows: [row("CRM  Agencias"), row("otra busqueda")] }));
+
+    expect((await pending).ok).toBe(true);
+    expect(filter()).toBe(keywordExpression(["crm agencias"]));
+    const { latestCompleted } = await latestSearchConsole(db, ws.id);
+    expect(latestCompleted?.keywordSeries?.keywords.map((k) => [k.keyword, k.weeks.length])).toEqual([["crm agencias", 1]]);
+  });
+
+  it("stores nothing when the company is deleted while Google answers (AC-018)", async () => {
+    const ws = await workspace();
+    await addTrackedKeyword(db, ws.id, "crm agencias");
+    const google1 = held();
+    const pending = refreshSearchConsole(db, ws.id, google(google1.answer).deps);
+    await google1.started;
+    await db.delete(workspaces).where(eq(workspaces.id, ws.id));
+    google1.release(Response.json({ rows: [row("crm agencias")] }));
+
+    expect(await pending).toEqual({ ok: false, error: "not_found" });
+    expect(await snapshots(ws.id)).toHaveLength(0);
+    expect(await db.select().from(trackedKeywords).where(eq(trackedKeywords.workspaceId, ws.id))).toHaveLength(0);
+  });
+
+  it.each([
+    [403, { error: { details: [{ reason: "SERVICE_DISABLED" }] } }, "api_disabled"],
+    [403, { error: { message: "User does not have sufficient permission for site." } }, "no_access"],
+    [429, {}, "quota_exceeded"],
+    [500, {}, "error"],
+  ])("stores one failed row without secrets when the keyword query answers %i (AC-009)", async (status, body, kind) => {
+    const ws = await workspace();
+    await addTrackedKeyword(db, ws.id, "crm agencias");
+    const { bodies, deps: failing } = google(() => Response.json(body, { status }));
+    await refreshSearchConsole(db, ws.id, failing);
+    const rows = await snapshots(ws.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ status: "failed", errorKind: kind, keywordSeries: null, queries: [] });
+    const stored = JSON.stringify(rows[0]);
+    for (const secret of [SECRET, new URLSearchParams(bodies[0]!).get("assertion")!, PRIVATE_PEM.split("\n")[1]!, "crm agencias"]) expect(stored).not.toContain(secret);
+  });
+
+  it("keeps the last good series after a failed keyword query (AC-009)", async () => {
+    const ws = await workspace();
+    await addTrackedKeyword(db, ws.id, "crm agencias");
+    await refreshSearchConsole(db, ws.id, google(() => Response.json({ rows: [row("crm agencias")] })).deps);
+    await refreshSearchConsole(db, ws.id, google(() => Response.json({}, { status: 500 })).deps);
+    const { latest, latestCompleted } = await latestSearchConsole(db, ws.id);
+    expect(latest?.status).toBe("failed");
+    expect(latestCompleted?.keywordSeries?.keywords[0]?.weeks).toHaveLength(1);
+  });
+
+  it("stores one actionable failed row for a list over the filter limit, without calling Google (AC-004)", async () => {
+    const ws = await workspace();
+    await db.insert(trackedKeywords).values(Array.from({ length: 25 }, (_, i) => ({ workspaceId: ws.id, keyword: `${i}${"界".repeat(78)}` })));
+    const { bodies, deps: live } = google(() => Response.json({}));
+    await refreshSearchConsole(db, ws.id, live);
+    expect(bodies).toHaveLength(0);
+    expect(await snapshots(ws.id)).toMatchObject([{ status: "failed", errorKind: "keyword_limit", keywordSeries: null }]);
+  });
+
+  it.each([
+    ["the row limit", () => Array(25000).fill(row("otra")), "keyword_limit"],
+    ["an invalid row", () => [{ ...row("crm agencias"), keys: ["2026-02-30", "crm agencias"] }], "error"],
+    ["a repeated row", () => [row("crm agencias"), row("crm agencias")], "error"],
+  ])("stores a failed row and no partial series for %s (AC-016)", async (_, rows, kind) => {
+    const ws = await workspace();
+    await addTrackedKeyword(db, ws.id, "crm agencias");
+    await refreshSearchConsole(db, ws.id, google(() => Response.json({ rows: rows() })).deps);
+    expect(await snapshots(ws.id)).toMatchObject([{ status: "failed", errorKind: kind, keywordSeries: null }]);
   });
 });

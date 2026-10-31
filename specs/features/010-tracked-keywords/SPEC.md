@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress (2026-10-31). T001–T005 hechas. El cierre exige la evidencia positiva de AC-017 (D011).
+In Progress (2026-10-31). T001–T007 hechas; T008 y T009 abiertas. El cierre exige la evidencia positiva de AC-017 (D011).
 
 ## Problem
 
@@ -76,9 +76,9 @@ El operador elige hasta 25 keywords por empresa. Cada captura de Search Console 
 
 - `AnalyticsQuery.dimensions` admite `date`.
 - `brand-terms.ts` reutiliza/exporta escape literal puro sin cambiar la política de variantes de marca ni su salida.
-- `CaptureSite` gana `trackedKeywords: string[]`; `CollectedData` gana `keywordSeries`.
-- Nuevas Server Actions `addTrackedKeywordAction(workspaceId, previousState, formData)` y `removeTrackedKeywordAction(workspaceId, keywordId)`. El alta sigue el patrón `useActionState`: `(workspaceId, previousState, formData)` para conservar valor/errores; locale resuelto en servidor. Ambas validan ids e input y revalidan SEO.
-- `SearchConsoleSummary` gana `trackedKeywords: TrackedKeywordView[]` y `trackedKeywordsWarning: string | null`; la proyección nueva puede componerse en SEO sin cambiar las llamadas previas del overview.
+- `CaptureSite` gana `trackedKeywords?: readonly string[]`; `CollectedData` gana `keywordSeries`.
+- Nuevas Server Actions `addTrackedKeywordAction(workspaceId, previousState, formData)` y `removeTrackedKeywordAction(workspaceId, keywordId, previousState)`. El alta sigue el patrón `useActionState`: `(workspaceId, previousState, formData)` para conservar valor/errores; locale resuelto en servidor. Ambas validan ids e input y revalidan SEO.
+- `SearchConsoleSummary` no cambia (D013): la página SEO compone aparte `TrackedKeywordSummary`, con `rows` y `warning: boolean`, sin cambiar las llamadas previas del overview.
 
 ## Data model changes
 
@@ -128,7 +128,7 @@ Quitar una keyword borra su fila: la evolución sale de Google y no se pierde hi
 - AC-011 Una keyword con `<script>` se pinta como texto y el filtro la trata como literal.
 - AC-012 Con 25 keywords, el formulario muestra la frase del límite. Sin credencial o con credencial inválida se pueden gestionar keywords y no hay botón de captura. Formularios con pending/error localizado y conservación del valor; baja actualiza la lista y la revalidación SEO no dispara captura. Probar los estados globales de Search Console que podrían ocultar la sección.
 - AC-013 Textos en `es` y `en`; la prueba de catálogos pasa.
-- AC-014 Lint, typecheck, unitarias, integración y build en verde sobre la revisión identificada de esta feature; registrar base/diff incremental sin incluir cambios ajenos de 004. Sin commits automáticos ni despliegue en producción.
+- AC-014 Lint, typecheck, unitarias, integración y build en verde sobre la revisión identificada de esta feature; registrar base/diff incremental sin incluir cambios ajenos de 004. Commits locales solo por instrucción del responsable (D013), sin despliegue en producción.
 - AC-015 En el navegador, con fixtures identificados en la base de pruebas protegida, limpiados por su fixture después, a 375 px en `es` y `en`: `scrollWidth` igual a `clientWidth` en la página y en la tabla. Con la cuenta real, olessium.com termina en completed o motivo accionable: es solo una comprobación de acceso y manejo de respuesta; la prueba positiva del filtro se evalúa separadamente en AC-017. No insertar resultados sintéticos en dev.
 
 - AC-016 Casos inválidos de runtime: claves/fechas inexistentes o fuera de rango, duplicado date/query original, posición cero/NaN/infinita con impresiones, clics > impresiones, y serie con anclajes/orden/duplicados inválidos. Se rechazan según Contrato de datos sin guardar completed parcial. Fila de cero impresiones/clics no genera posición cero. Respuesta con 25000 filas falla como potencialmente truncada. Series no nulas inválidas al leer muestran aviso y pending, no no_data.

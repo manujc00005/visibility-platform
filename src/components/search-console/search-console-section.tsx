@@ -173,8 +173,11 @@ export function SearchConsoleSection({
 }) {
   const t = getMessages(locale).searchConsole;
   const canRun = config.state === "ready";
-  const notices =
-    s.state === "ok" && s.lastFailure ? [{ kind: "failed" as const, text: t.failures.lastAttempt(displayDate(s.lastFailure.at, locale), s.lastFailure.text) }] : [];
+  const notices = [
+    ...(s.state === "ok" && s.lastFailure ? [{ kind: "failed" as const, text: t.failures.lastAttempt(displayDate(s.lastFailure.at, locale), s.lastFailure.text) }] : []),
+    // Stored figures stay, but without a usable credential there is no button to refresh them.
+    ...(s.state === "ok" && config.state === "invalid" ? [{ kind: "info" as const, text: t.reasons.invalidConfig[config.reason] }] : []),
+  ];
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-4 rounded-2xl border border-border/80 bg-card p-5 shadow-card">

@@ -46,7 +46,7 @@ export const searchConsoleSnapshots = pgTable(
     /** Brand / non-brand totals (feature 007). Null in failed rows and in captures taken before it. */
     segments: jsonb("segments").$type<Segments>(),
     keywordSeries: jsonb("keyword_series").$type<KeywordSeries>(),
-    errorKind: text("error_kind", { enum: ["invalid_credentials", "api_disabled", "no_access", "quota_exceeded", "error"] }),
+    errorKind: text("error_kind", { enum: ["invalid_credentials", "api_disabled", "no_access", "quota_exceeded", "keyword_limit", "error"] }),
     errorMessage: text("error_message"),
     accessibleProperties: integer("accessible_properties"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -58,7 +58,7 @@ export const searchConsoleSnapshots = pgTable(
     check("search_console_snapshots_status_valid", sql`${t.status} in ('completed', 'failed')`),
     check(
       "search_console_snapshots_error_kind_valid",
-      sql`${t.errorKind} is null or ${t.errorKind} in ('invalid_credentials', 'api_disabled', 'no_access', 'quota_exceeded', 'error')`,
+      sql`${t.errorKind} is null or ${t.errorKind} in ('invalid_credentials', 'api_disabled', 'no_access', 'quota_exceeded', 'keyword_limit', 'error')`,
     ),
     check(
       "search_console_snapshots_completed_complete",

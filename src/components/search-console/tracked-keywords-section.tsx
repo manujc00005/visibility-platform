@@ -35,6 +35,7 @@ export function TrackedKeywordsSection({ summary, locale, addAction, removeActio
       <div>
         <h3 id="tracked-keywords-title" className="font-semibold">{t.title}</h3>
         <p className="text-sm text-muted-foreground">{t.description}</p>
+        <p className="text-sm text-muted-foreground">{t.positionNote}</p>
       </div>
       {summary.rows.length < MAX_TRACKED_KEYWORDS ? (
         <TrackedKeywordForm action={addAction} labels={{ label: t.label, add: t.add, pendingAction: t.pendingAction }} />
@@ -50,8 +51,9 @@ export function TrackedKeywordsSection({ summary, locale, addAction, removeActio
                   <p className="font-medium [overflow-wrap:anywhere]">{row.keyword}</p>
                   {row.state !== "ok" ? <p className="text-sm text-muted-foreground">{t[row.state]}</p> : (
                     <>
+                      {row.trailingMissing > 0 ? <p className="text-sm">{t.trailing(row.trailingMissing)}</p> : null}
                       <p className="text-sm">
-                        {t.position}: <strong>{position(row.latest!.position)}</strong> · {t.impressions}: {count(row.latest!.impressions)} · {t.days}: {row.latest!.daysWithData}/7
+                        {row.trailingMissing > 0 ? t.lastKnownPosition : t.position}: <strong>{position(row.latest!.position)}</strong> · {t.impressions}: {count(row.latest!.impressions)} · {t.days}: {row.latest!.daysWithData}/7
                       </p>
                       <p className="text-xs text-muted-foreground">
                         {t.first}: {week(row.first!.start)} · {position(row.first!.position)}
@@ -60,7 +62,6 @@ export function TrackedKeywordsSection({ summary, locale, addAction, removeActio
                       </p>
                       {row.change ? <ChangeLine change={changeOf(row.change, locale)} /> : <p className="text-sm">{t.oneWeek}</p>}
                       <KeywordSparkline row={row} locale={locale} />
-                      {row.trailingMissing > 0 ? <p className="text-xs text-muted-foreground">{t.trailing}: {row.trailingMissing}</p> : null}
                     </>
                   )}
                 </td>

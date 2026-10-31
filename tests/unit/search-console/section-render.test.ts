@@ -274,4 +274,12 @@ describe("tracked-keyword management capture perimeter (010 AC-012)",()=>{
   const html=render(completed(),config);
   expect(html).not.toContain("<button");
  });
+ it("says why stored figures cannot be refreshed with an invalid credential",()=>{
+  const html=render(completed(),{state:"invalid",reason:"not_json"});
+  expect(html).toContain(getMessages("es").searchConsole.reasons.invalidConfig.not_json);
+ });
+ it.each(["es","en"] as const)("explains a keyword list over Google's limits without suggesting a plain retry (%s)",locale=>{
+  const html=render(completed({id:"f1",status:"failed",property:null,totals:null,previousTotals:null,queries:[],segments:null,errorKind:"keyword_limit",errorMessage:"x"}),READY,locale);
+  expect(html).toContain(getMessages(locale).searchConsole.failures.keyword_limit);
+ });
 });

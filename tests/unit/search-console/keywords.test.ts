@@ -10,6 +10,15 @@ describe("tracked keyword identity and expression", () => {
     expect(normalizeTrackedKeyword("😀😀")).toBe("😀😀");
     for (const input of ["a", "x".repeat(81), 42, "", " \n "]) expect(() => normalizeTrackedKeyword(input)).toThrow();
     expect(normalizeTrackedKeyword("😀".repeat(80))).toHaveLength(160);
+    for (const input of ["😀", "😀".repeat(81)]) expect(() => normalizeTrackedKeyword(input)).toThrow();
+  });
+  it("keeps marks that do not compose and joiners, as a different identity", () => {
+    expect(normalizeTrackedKeyword("x\u0301y")).toBe("x\u0301y");
+    expect(normalizeTrackedKeyword("x\u0301y")).not.toBe(normalizeTrackedKeyword("xy"));
+    expect(normalizeTrackedKeyword("👩\u200d💻")).toBe("👩\u200d💻");
+  });
+  it.each(["a\0b", "ab\u0007", "\ud800ab", "crm\u202e", "\u2066crm"])("rejects text Postgres or the page would not show as typed: %j", (input) => {
+    expect(() => normalizeTrackedKeyword(input)).toThrow();
   });
   it("matches literal case, repeated spaces, NFC/NFD but not unrelated text", () => {
     const expression = keywordExpression(["café c++", "a|b", "[x].*", "<script>"]);
@@ -17,6 +26,7 @@ describe("tracked keyword identity and expression", () => {
     for (const q of ["CAFÉ   C++", "cafe\u0301 c++", "a|b", "[x].*", "<script>"]) expect(matcher.test(q), q).toBe(true);
     for (const q of ["cafe c++", "a", "b", "xxx", "otro café c++"]) expect(matcher.test(q), q).toBe(false);
     expect(keywordExpression([])).toBeNull();
+    expect(() => keywordExpression(["CRM", "crm"])).toThrow();
   });
   it("enforces the real UTF-8 budget including pattern overhead", () => {
     const keywords = Array.from({ length: 25 }, (_, i) => `${i} ${"界".repeat(77)}`);
@@ -27,7 +37,7 @@ describe("tracked keyword identity and expression", () => {
     for(let i=0;i<boundary.length;i++){ const n=Math.min(remaining,78); boundary[i]=boundary[i]!.slice(0,2)+"界".repeat(n)+"a".repeat(78-n); remaining-=n; }
     expect(Buffer.byteLength(keywordExpression(boundary)!,"utf8")).toBe(4096);
     boundary[24]=boundary[24]!.replace(/a$/,".");
-    expect(()=>keywordExpression(boundary)).toThrow();
+    expect(()=>keywordExpression(boundary)).toThrow(expect.objectContaining({kind:"keyword_limit"}));
   });
 });
 
@@ -56,7 +66,19 @@ describe("weekly collection", () => {
   ])("rejects invalid accepted rows", (bad) => expect(() => aggregateKeywordSeries(["crm"], end, [bad])).toThrow());
   it("rejects duplicate original rows and possible truncation", () => {
     expect(() => aggregateKeywordSeries(["crm"], end, [row(end, "crm"), row(end, "crm")])).toThrow();
-    expect(() => aggregateKeywordSeries(["crm"], end, Array(25000).fill(row(end, "other")))).toThrow();
+    expect(() => aggregateKeywordSeries(["crm"], end, Array(25000).fill(row(end, "other")))).toThrow(expect.objectContaining({ kind: "keyword_limit" }));
+  });
+  it("rejects dimensions in the wrong order instead of reading them as no data", () => {
+    expect(() => aggregateKeywordSeries(["crm"], end, [{ ...row(end, "crm"), keys: ["crm", end] }])).toThrow();
+  });
+  it.each([
+    ["end of month", "2026-10-02", "2026-09-30", "2026-10-01"],
+    ["end of year", "2027-01-01", "2026-12-31", "2027-01-01"],
+    ["leap day", "2024-03-04", "2024-02-29", "2024-03-01"],
+    ["daylight saving change", "2026-03-30", "2026-03-28", "2026-03-29"],
+  ])("sums the days of one slot across %s", (_, last, a, b) => {
+    const [week] = aggregateKeywordSeries(["crm"], last, [row(a, "crm", 10, 4, 1), row(b, "crm", 30, 8, 2)]).keywords[0]!.weeks;
+    expect(week).toEqual({ start: keywordWindow(last).starts[25], clicks: 3, impressions: 40, position: 7, daysWithData: 2 });
   });
   it("rejects malformed persisted dates, anchors, duplicate keywords and weeks", () => {
     const good = aggregateKeywordSeries(["crm"], end, [row(end, "crm")]);
@@ -65,6 +87,7 @@ describe("weekly collection", () => {
       {...good, keywords:[{keyword:"CRM", weeks:[]}]},
       {...good, keywords:[{keyword:"crm", weeks:[{...good.keywords[0]!.weeks[0],start:end}]}]},
       {...good, keywords:[{keyword:"crm", weeks:[...good.keywords[0]!.weeks,...good.keywords[0]!.weeks]}]},
+      {...good, version:2},
     ]) expect(parseKeywordSeries(bad)).toBeNull();
   });
 });

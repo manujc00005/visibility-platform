@@ -4,7 +4,7 @@ import { keywordExpression, MAX_TRACKED_KEYWORDS, normalizeTrackedKeyword } from
 import { trackedKeywords } from "@/modules/search-console/schema";
 import { workspaces } from "@/modules/workspaces/schema";
 
-const uuid = (v: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
+const uuid = (v: string) => typeof v === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 export type KeywordError = "not_found" | "invalid" | "duplicate" | "limit" | "bytes";
 export type KeywordResult = { ok: true } | { ok: false; error: KeywordError };
 

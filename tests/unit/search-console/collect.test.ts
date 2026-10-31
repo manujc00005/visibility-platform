@@ -394,18 +394,31 @@ describe("tracked keyword capture", () => {
     expect(a.ok).toBe(true); expect(b.ok).toBe(true);
     expect(tracked.bodies.slice(0,9)).toEqual(plain.bodies);
     expect(plain.calls).toBe(11); expect(tracked.calls).toBe(12);
-    expect(JSON.parse(tracked.bodies[9]!)).toMatchObject({startDate:"2026-04-26",endDate:"2026-10-24",dimensions:["date","query"],rowLimit:25000,type:"web",dataState:"final"});
+    expect(JSON.parse(tracked.bodies[9]!)).toEqual({startDate:"2026-04-26",endDate:"2026-10-24",dimensions:["date","query"],rowLimit:25000,type:"web",dataState:"final",dimensionFilterGroups:[{groupType:"and",filters:[{dimension:"query",operator:"includingRegex",expression:"(?i)^(?:crm)$"}]}]});
     if(a.ok) expect(a.data.keywordSeries.keywords).toEqual([]);
     if(b.ok) expect(b.data.keywordSeries.keywords[0]!.weeks[0]).toMatchObject({position:8,daysWithData:1,impressions:5});
   });
-  it.each([403,429,500])("fails the entire capture for keyword HTTP %s", async(status)=>{
-    const p=provider({error:{message:"secret upstream",status:"PERMISSION_DENIED"}},status);
+  it.each([
+    [403,{error:{message:"secret upstream",details:[{reason:"SERVICE_DISABLED"}]}},"api_disabled"],
+    [403,{error:{message:"secret upstream",status:"PERMISSION_DENIED"}},"no_access"],
+    [429,{error:{message:"secret upstream"}},"quota_exceeded"],
+    [500,{error:{message:"secret upstream"}},"error"],
+  ])("fails the entire capture for keyword HTTP %s", async(status,body,kind)=>{
+    const p=provider(body,status);
     const result=await collectSearchConsole(account,{...site,trackedKeywords:["crm"]},{fetchImpl:p.fetcher,now:NOW});
-    expect(result.ok).toBe(false); expect(JSON.stringify(result)).not.toContain("secret upstream");
+    expect(result).toMatchObject({ok:false,kind}); expect(JSON.stringify(result)).not.toContain("secret upstream");
+  });
+  it.each([
+    ["an impossible date",[{keys:["2026-02-30","crm"],clicks:1,impressions:5,ctr:.2,position:8}],"error"],
+    ["a repeated row",Array(2).fill({keys:["2026-10-24","crm"],clicks:1,impressions:5,ctr:.2,position:8}),"error"],
+    ["the row limit",Array(25000).fill({keys:["2026-10-24","other"],clicks:1,impressions:5,ctr:.2,position:8}),"keyword_limit"],
+  ])("fails with %s in the keyword answer, without a partial series",async(_,rows,kind)=>{
+    const result=await collectSearchConsole(account,{...site,trackedKeywords:["crm"]},{fetchImpl:provider({rows}).fetcher,now:NOW});
+    expect(result).toMatchObject({ok:false,kind,property:"sc-domain:olessium.com"});
   });
   it("rejects an oversized list before token",async()=>{
     const p=provider({});
     const result=await collectSearchConsole(account,{...site,trackedKeywords:Array.from({length:25},(_,i)=>`${i}${"界".repeat(78)}`)},{fetchImpl:p.fetcher,now:NOW});
-    expect(result.ok).toBe(false); expect(p.calls).toBe(0);
+    expect(result).toMatchObject({ok:false,kind:"keyword_limit"}); expect(p.calls).toBe(0);
   });
 });
