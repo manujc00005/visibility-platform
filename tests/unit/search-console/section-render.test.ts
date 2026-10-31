@@ -50,6 +50,7 @@ function completed(overrides: Partial<SearchConsoleSnapshot> = {}): SearchConsol
     ],
     pages: [],
     segments: SEGMENTS,
+    keywordSeries: null,
     errorKind: null,
     errorMessage: null,
     accessibleProperties: null,
@@ -266,4 +267,11 @@ describe("SearchConsoleSection position change per query (feature 009)", () => {
     expect(html).toContain(en.changes.querySame);
     expect(html).toContain(en.changes.queryNoPrevious);
   });
+});
+
+describe("tracked-keyword management capture perimeter (010 AC-012)",()=>{
+ it.each([{state:"not_configured"} as const,{state:"invalid",reason:"not_json"} as const])("has no capture button with unavailable credentials: %s",config=>{
+  const html=render(completed(),config);
+  expect(html).not.toContain("<button");
+ });
 });

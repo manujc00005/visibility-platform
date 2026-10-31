@@ -10,6 +10,7 @@ import { createBingWebmasterDeps } from "@/modules/bing-webmaster/deps";
 import { refreshBingWebmaster } from "@/modules/bing-webmaster/service";
 import { createSearchConsoleDeps } from "@/modules/search-console/deps";
 import { refreshSearchConsole } from "@/modules/search-console/service";
+import { addTrackedKeyword, removeTrackedKeyword } from "@/modules/search-console/tracked-keywords-service";
 
 /** Private operator only (no authentication until Phase 5, roadmap D-03). */
 
@@ -53,4 +54,36 @@ export async function refreshAnalyticsAction(workspaceId: string): Promise<Refre
   // A failed capture is stored too and explained by the page itself.
   revalidatePath(`/workspaces/${workspaceId}/seo`);
   return { error: null };
+}
+
+export interface KeywordActionState {
+  error: string | null;
+  value: string;
+  revision: number;
+}
+
+export async function addTrackedKeywordAction(workspaceId: string, state: KeywordActionState, form: FormData): Promise<KeywordActionState> {
+  const t = getMessages(await getLocale()).searchConsole.tracked;
+  const raw = form.get("keyword");
+  const value = typeof raw === "string" ? raw.slice(0, 1000) : "";
+  try {
+    const result = await addTrackedKeyword(getDb(), workspaceId, raw);
+    if (!result.ok) return { error: t[result.error], value, revision: state.revision };
+    revalidatePath(`/workspaces/${workspaceId}/seo`);
+    return { error: null, value: "", revision: state.revision + 1 };
+  } catch {
+    return { error: t.failure, value, revision: state.revision };
+  }
+}
+
+export async function removeTrackedKeywordAction(workspaceId: string, keywordId: string, state: KeywordActionState): Promise<KeywordActionState> {
+  const t = getMessages(await getLocale()).searchConsole.tracked;
+  try {
+    const result = await removeTrackedKeyword(getDb(), workspaceId, keywordId);
+    if (!result.ok) return { ...state, error: t[result.error] };
+    revalidatePath(`/workspaces/${workspaceId}/seo`);
+    return { error: null, value: "", revision: state.revision + 1 };
+  } catch {
+    return { ...state, error: t.failure };
+  }
 }

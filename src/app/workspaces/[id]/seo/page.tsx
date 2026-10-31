@@ -1,3 +1,6 @@
+import { TrackedKeywordsSection } from "@/components/search-console/tracked-keywords-section";
+import { listTrackedKeywords } from "@/modules/search-console/tracked-keywords-service";
+import { summarizeTrackedKeywords } from "@/modules/search-console/keyword-summary";
 import { ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -35,7 +38,7 @@ import { seoCounts, seoFindings, seoHistoryPoints, splitAudits, summarizeSeo, ty
 import { displayDate } from "@/modules/workspaces/presentation";
 import { getWorkspace } from "@/modules/workspaces/service";
 import { runAuditAction } from "../audits/actions";
-import { refreshAnalyticsAction, refreshBingWebmasterAction, refreshSearchConsoleAction } from "./actions";
+import { addTrackedKeywordAction, removeTrackedKeywordAction, refreshAnalyticsAction, refreshBingWebmasterAction, refreshSearchConsoleAction } from "./actions";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: getMessages(await getLocale()).seoPage.metaTitle };
@@ -72,13 +75,15 @@ export default async function SeoPage({ params }: PageProps<"/workspaces/[id]/se
   const t = m.seoPage;
   const L = auditLabels(locale);
 
-  const [audits, stored, storedBing, storedAnalytics] = await Promise.all([
+  const [audits, stored, storedBing, storedAnalytics, tracked] = await Promise.all([
     listAudits(db, workspace.id),
     latestSearchConsole(db, workspace.id),
     latestBingWebmaster(db, workspace.id),
     latestAnalytics(db, workspace.id),
+    listTrackedKeywords(db, workspace.id),
   ]);
   const gscConfig = searchConsoleConfig();
+  const trackedSummary = summarizeTrackedKeywords(tracked, stored);
   const gsc = summarizeSearchConsole(stored, gscConfig, workspace.domain, locale);
   const bingConfig = bingWebmasterConfig();
   const bing = summarizeBingWebmaster(storedBing, bingConfig, workspace.domain, locale);
@@ -128,6 +133,7 @@ export default async function SeoPage({ params }: PageProps<"/workspaces/[id]/se
         description={t.ranking.description}
       >
         <SearchConsoleSection s={gsc} config={gscConfig} action={refreshSearchConsoleAction.bind(null, workspace.id)} locale={locale} />
+        <TrackedKeywordsSection summary={trackedSummary} locale={locale} addAction={addTrackedKeywordAction.bind(null,workspace.id)} removeAction={(keywordId) => removeTrackedKeywordAction.bind(null,workspace.id,keywordId)} />
       </Section>
 
       <Section id="bing-title" title={m.bingWebmaster.section.title} description={m.bingWebmaster.section.description}>

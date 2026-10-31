@@ -172,7 +172,7 @@ export function SearchConsoleSection({
   locale: Locale;
 }) {
   const t = getMessages(locale).searchConsole;
-  const canRun = config.state !== "not_configured";
+  const canRun = config.state === "ready";
   const notices =
     s.state === "ok" && s.lastFailure ? [{ kind: "failed" as const, text: t.failures.lastAttempt(displayDate(s.lastFailure.at, locale), s.lastFailure.text) }] : [];
   return (
