@@ -573,7 +573,6 @@ export const en = {
       breaks: (reasons: string) => `The line only joins comparable measurements. It breaks because of ${reasons}.`,
       breakVersion: "different versions of Google's test",
       breakUnknown: "measurements whose test version is not recorded",
-      breakGap: "audits that did not measure speed",
       and: " and ",
       none: "No audit has measured speed yet.",
     },

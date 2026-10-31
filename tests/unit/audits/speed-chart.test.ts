@@ -5,7 +5,7 @@ import { SpeedChart } from "@/components/audits/evolution-chart";
 import type { Locale } from "@/i18n/locale";
 import type { EvolutionPoint } from "@/modules/audits/evolution";
 
-/** What the speed chart paints: audits as named points, the zoomed scale said aloud, gaps not faked as data. */
+/** What the speed chart paints: audits as named points, the zoomed scale said aloud, audits without measurement not faked as data. */
 
 const point = (id: string, iso: string, score: number | null): EvolutionPoint => ({
   id,
@@ -42,8 +42,16 @@ describe("SpeedChart", () => {
     expect(html).not.toContain("Auditoría sin medir");
   });
 
-  it("does not join audits across a gap", () => {
-    expect(render(POINTS).match(/<path/g)).toHaveLength(1);
+  it("joins comparable audits across one that measured nothing", () => {
+    const lines = render(POINTS).match(/ d="[^"]+"/g);
+    expect(lines).toHaveLength(1);
+    expect(lines![0]!.match(/[ML]/g)).toEqual(["M", "L", "L"]);
+  });
+
+  it("does not join audits across a version change", () => {
+    const newer: EvolutionPoint = { ...point("e", "2026-10-29T09:27:00Z", 90), methodology: { strategy: "mobile", major: "14" } };
+    expect(render([...POINTS, newer]).match(/ d="[^"]+"/g)).toHaveLength(1);
+    expect(render([point("a", "2026-10-26T11:37:00Z", 95), newer]).match(/ d="[^"]+"/g)).toBeNull();
   });
 
   it("follows the interface language", () => {

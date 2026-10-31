@@ -66,20 +66,15 @@ export function toPoint(audit: AuditLike): EvolutionPoint {
 type SpeedPoint = Pick<EvolutionPoint, "score" | "methodology">;
 
 /**
- * Indices of the points a speed line may join: runs of consecutive points that all have a
- * score and the same known methodology. A different or unknown version, or an audit
- * without measurement in between, starts a new segment (D019). Unmeasured points belong
- * to no segment.
+ * Indices of the points a speed line may join: runs of measured points with the same known
+ * methodology. A different or unknown version starts a new segment; an audit that measured
+ * nothing says nothing about speed, so it belongs to no segment and does not cut one (D025).
  */
 export function speedSegments(points: SpeedPoint[]): number[][] {
   const segments: number[][] = [];
   let current: number[] = [];
   points.forEach((p, i) => {
-    if (p.score === null) {
-      if (current.length) segments.push(current);
-      current = [];
-      return;
-    }
+    if (p.score === null) return;
     const previous = current.length ? points[current.at(-1)!]! : null;
     if (previous && !sameMethodology(previous.methodology, p.methodology)) {
       segments.push(current);
@@ -92,17 +87,13 @@ export function speedSegments(points: SpeedPoint[]): number[][] {
 }
 
 /** Why the line is broken among the points shown, to explain it under the chart. */
-export function speedBreaks(points: SpeedPoint[]): { differentVersion: boolean; unknownVersion: boolean; gap: boolean } {
-  const measured = points.map((p, i) => ({ p, i })).filter(({ p }) => p.score !== null);
-  let differentVersion = false;
-  let gap = false;
-  for (let k = 1; k < measured.length; k++) {
-    const a = measured[k - 1]!;
-    const b = measured[k]!;
-    if (b.i - a.i > 1) gap = true;
-    if (a.p.methodology && b.p.methodology && !sameMethodology(a.p.methodology, b.p.methodology)) differentVersion = true;
-  }
-  return { differentVersion, unknownVersion: measured.some(({ p }) => p.methodology === null), gap };
+export function speedBreaks(points: SpeedPoint[]): { differentVersion: boolean; unknownVersion: boolean } {
+  const measured = points.filter((p) => p.score !== null);
+  const differentVersion = measured.some((p, k) => {
+    const previous = measured[k - 1];
+    return Boolean(previous?.methodology && p.methodology && !sameMethodology(previous.methodology, p.methodology));
+  });
+  return { differentVersion, unknownVersion: measured.some((p) => p.methodology === null) };
 }
 
 /** Lighthouse mobile scores vary this much between identical runs; smaller moves are noise. */

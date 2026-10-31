@@ -56,10 +56,18 @@ describe("speed methodology and segments (D019)", () => {
     expect(speedSegments([point("a", 60, "13"), point("b", 70, "13"), point("c", 65, "13")])).toEqual([[0, 1, 2]]);
   });
 
-  it("breaks the line at a different major, an unknown version or an audit without measurement", () => {
+  it("breaks the line at a different major or an unknown version", () => {
     expect(speedSegments([point("a", 60, "12"), point("b", 70, "13"), point("c", 65, "13")])).toEqual([[0], [1, 2]]);
     expect(speedSegments([point("a", 60, "13"), point("b", 70, null), point("c", 65, "13")])).toEqual([[0], [1], [2]]);
-    expect(speedSegments([point("a", 60, "13"), point("b", null, null), point("c", 65, "13")])).toEqual([[0], [2]]);
+  });
+
+  it("joins comparable measurements across audits that measured nothing", () => {
+    expect(speedSegments([point("x", null, null), point("a", 95, "13"), point("b", 86, "13"), point("y", null, null), point("c", 96, "13")])).toEqual([[1, 2, 4]]);
+  });
+
+  it("still breaks at a version change hidden behind an audit that measured nothing", () => {
+    expect(speedSegments([point("a", 60, "12"), point("x", null, null), point("b", 70, "13")])).toEqual([[0], [2]]);
+    expect(speedBreaks([point("a", 60, "12"), point("x", null, null), point("b", 70, "13")])).toMatchObject({ differentVersion: true });
   });
 
   it("starts the speed axis a noise margin below the lowest score, in tens", () => {
@@ -74,11 +82,9 @@ describe("speed methodology and segments (D019)", () => {
   });
 
   it("explains the breaks found among the points shown", () => {
-    expect(speedBreaks([point("a", 60, "13"), point("b", 70, "13")])).toEqual({ differentVersion: false, unknownVersion: false, gap: false });
+    expect(speedBreaks([point("a", 60, "13"), point("b", 70, "13")])).toEqual({ differentVersion: false, unknownVersion: false });
     expect(speedBreaks([point("a", 60, "12"), point("b", 70, "13")])).toMatchObject({ differentVersion: true });
     expect(speedBreaks([point("a", 60, null), point("b", 70, "13")])).toMatchObject({ unknownVersion: true });
-    expect(speedBreaks([point("a", 60, "13"), point("x", null, null), point("b", 70, "13")])).toMatchObject({ gap: true });
-    // Unmeasured audits before the first or after the last measurement do not break any line.
-    expect(speedBreaks([point("x", null, null), point("a", 60, "13"), point("b", 70, "13"), point("y", null, null)]).gap).toBe(false);
+    expect(speedBreaks([point("a", 60, "13"), point("x", null, null), point("b", 70, "13")])).toEqual({ differentVersion: false, unknownVersion: false });
   });
 });

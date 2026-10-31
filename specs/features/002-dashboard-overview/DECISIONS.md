@@ -154,7 +154,7 @@
 
 ### D019 - Línea de velocidad segmentada por metodología
 
-**Date:** 2026-10-26 · **Status:** Accepted · Excepción a FR-008 («sin cambiar el dibujo»), amplía D017
+**Date:** 2026-10-26 · **Status:** Accepted, modificada por D025 (auditorías sin medición) · Excepción a FR-008 («sin cambiar el dibujo»), amplía D017
 
 **Context:** El resumen rechaza comparar versiones mayores distintas de Lighthouse, pero `SpeedChart` unía todas las puntuaciones; la nota bajo la gráfica de T004 no evitaba la lectura visual de continuidad, y se calculaba sobre todas las auditorías, no sobre las mostradas.
 
@@ -220,3 +220,13 @@
 **Decision:** `src/proxy.ts` (patrón documentado por Next para un 404 en tiempo de petición) comprueba, solo en peticiones de documento GET/HEAD, que la empresa existe y, si la ruta lo incluye, la auditoría o la medición de esa empresa (`src/modules/routing/`). Si no existen o el id está mal formado, reescribe a `/_not-found`, que responde 404 con la nueva página global `src/app/not-found.tsx` en español. Se descartó reescribir a la misma URL con `status: 404`, porque el estado se ignora (probado). Si la consulta falla, la petición continúa como antes.
 
 **Consequences:** AC-008 se cumple también en producción. Hay una o dos consultas por clave primaria más por visita directa. En una visita directa, el texto es el genérico «Página no encontrada»; en la navegación interna se mantiene «Empresa no encontrada».
+
+### D025 - Una auditoría sin medición no corta la línea de velocidad
+
+**Date:** 2026-10-31 · **Status:** Accepted · Modifica D019
+
+**Context:** Con los datos reales de Olessium, 95, 86 y 96 se midieron igual (Lighthouse 13 en móvil), pero una auditoría sin medición entre 86 y 96 dejaba el último punto suelto y la gráfica no contaba la evolución. El propietario pidió ver la línea unida. Que una auditoría no mida no dice nada sobre la velocidad: no hace incomparables las mediciones que la rodean.
+
+**Decision:** `speedSegments` ignora las auditorías sin medición al formar segmentos; solo corta una versión distinta o desconocida, también si hay una auditoría sin medición en medio. `speedBreaks` deja de informar de huecos y desaparece esa nota bajo la gráfica. Las auditorías sin medición siguen visibles como línea discontinua, explicada en la leyenda.
+
+**Consequences:** Cambian FR-008 y AC-021. La comparación del resumen (FR-002) no cambia: sigue usando la auditoría completada inmediatamente anterior, así que con esa auditoría sin medición dice «Sin comparación», aunque la línea una 86 con 96. Las dos afirmaciones son ciertas; igualarlas sería otra decisión.

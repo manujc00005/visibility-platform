@@ -62,7 +62,7 @@ Nunca se muestra un cero sin medición; un cero solo aparece con denominador vá
 - **Velocidad:** solo con la auditoría completada inmediatamente anterior, misma estrategia y misma versión mayor de Lighthouse; ±9 puntos es ruido, ±10 es cambio.
 - **Google:** conteos sin velocidad; misma cobertura (categorías comprobadas y versión de reglas). Si no, «Sin comparación».
 - **IA:** solo la medición completada inmediatamente anterior, misma configuración, ambas **completas** y mismas preguntas evaluadas («Antes: k de n»). Completa (D018) = todo recogido, todo con respuesta válida y al menos una pregunta sin marca evaluada; la misma definición decide el estado `ok`/`partial`. Un caso A/B/A no compara la última A con la primera.
-- **Gráfica de velocidad (D019):** la línea solo une puntos consecutivos con puntuación y misma estrategia y versión mayor conocidas; se corta con versión distinta, desconocida o auditoría sin medición. El aviso bajo la gráfica se calcula sobre los puntos mostrados.
+- **Gráfica de velocidad (D019, D025):** la línea une las mediciones sucesivas con la misma estrategia y versión mayor conocidas, aunque haya auditorías sin medición entre ellas; se corta con versión distinta o desconocida. El aviso bajo la gráfica se calcula sobre los puntos mostrados.
 
 ### Oportunidades
 

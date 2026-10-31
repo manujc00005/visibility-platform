@@ -119,7 +119,6 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
   const breakReasons = [
     breaks.differentVersion ? t.history.breakVersion : null,
     breaks.unknownVersion ? t.history.breakUnknown : null,
-    breaks.gap ? t.history.breakGap : null,
   ].filter((r) => r !== null);
 
   const notices: Notice[] = [];

@@ -576,7 +576,6 @@ export const es = {
       breaks: (reasons: string) => `La línea solo une mediciones comparables. Se interrumpe por ${reasons}.`,
       breakVersion: "versiones distintas de la prueba de Google",
       breakUnknown: "mediciones cuya versión de la prueba no consta",
-      breakGap: "auditorías que no midieron la velocidad",
       and: " y ",
       none: "Ninguna auditoría ha medido todavía la velocidad.",
     },
