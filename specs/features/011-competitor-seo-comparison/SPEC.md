@@ -2,7 +2,7 @@
 
 ## Status
 
-Draft
+Ready (2026-10-31). Plan, tareas y decisiones en esta carpeta.
 
 ## Problem
 
@@ -109,7 +109,7 @@ En «Visibilidad en Google» aparece la sección «Comparativa con competidores�
 - AC-006 Dos capturas simultáneas de una empresa dejan una sola fila `running`; la segunda recibe el aviso. Una captura colgada se cierra y permite otra.
 - AC-007 Tras una comparativa, `audits`, `audit_findings` y la evolución de rendimiento de la empresa no cambian.
 - AC-008 Inspeccionando `sites` de una captura con fixtures, no hay HTML, títulos, descripciones ni textos de la web. Prueba que busca en la fila guardada los textos del fixture.
-- AC-009 Un fallo posterior muestra el aviso y conserva la última comparativa `completed`. Un competidor archivado no se muestra, uno nuevo sale pendiente, y uno con dominio cambiado también.
+- AC-009 Un fallo posterior muestra el aviso y conserva la última comparativa `completed`. Una captura en curso se indica. Un competidor archivado no se muestra, uno nuevo sale pendiente, y uno con dominio cambiado también. Una fila con `sites` ilegible da aviso sin romper la página.
 - AC-010 Cada estado de FR-012 se ve en DOM con su texto en `es` y `en`, sin ceros ni guiones sin explicación, y la marca de `scope` de CrUX aparece cuando difiere entre filas.
 - AC-011 La tabla no muestra ganadores ni puntuación combinada, y marca la fila de la empresa. Las celdas siguen legibles sin depender del color. Fecha, estrategia móvil, periodo de CrUX, frase de contexto y las tres fuentes aparecen en DOM en `es` y `en`.
 - AC-012 Migración aditiva en la base de pruebas: rechaza una forma inválida con su restricción nombrada, permite una sola fila `running` y borra en cascada con la empresa.
@@ -130,7 +130,7 @@ En «Visibilidad en Google» aparece la sección «Comparativa con competidores�
 
 - Los dominios de `geo_competitors` son los confirmados por el operador y no necesitan otra verificación.
 - Es uso privado del operador, como las specs 003 a 010.
-- El endpoint y los campos exactos de Open PageRank se fijan al planificar, con su documentación actual en keywordseverywhere.com y una llamada real. Se conocen `open_page_rank`, `rank`, `referring_domains` y hasta 100 dominios por petición.
+- El contrato de Open PageRank queda fijado en D003 con su documentación actual. La forma real de un dominio no encontrado se confirma con una llamada real en T009.
 - La clave gratuita, ligada a una IP desde el 2026-11-01, basta para el operador. No basta en un despliegue con IP cambiante.
 - La cuota de PageSpeed no consta en su documentación; se asume suficiente para 6 ejecuciones por captura y un 429 queda cubierto por FR-005.
 - Google puede retirar los datos de CrUX de PageSpeed, sin fecha. No afecta porque se usa la API de CrUX.
