@@ -13,7 +13,6 @@ import { nameKey, normalizeText } from "@/modules/geo/detection";
  * competitors it wants to see. `proposeProfile` only drafts it from what the home page says,
  * with fixed rules and visible reasons; the operator confirms it before anything uses it.
  */
-const MAX_PROPOSED_OFFERINGS = 6;
 const HEADING_MIN = 3;
 const HEADING_MAX = 60;
 
@@ -22,7 +21,7 @@ const LOCAL_TYPES = new Set([
   "LocalBusiness", "Dentist", "Store", "Restaurant", "Physician", "MedicalClinic", "MedicalBusiness", "Hospital", "Hotel", "BeautySalon", "HairSalon",
   "AutoRepair", "AutoDealer", "RealEstateAgent", "LegalService", "Attorney", "Notary", "Bakery", "CafeOrCoffeeShop", "BarOrPub", "ExerciseGym", "Pharmacy",
 ]);
-const B2B_TERMS = ["pymes", "empresas", "negocios", "startups", "equipos", "profesionales", "b2b"];
+const B2B_TERMS = ["pymes", "empresas", "negocios", "tu negocio", "tu empresa", "startups", "equipos", "profesionales", "b2b"];
 const B2C_TERMS = ["particulares", "familias", "pacientes", "consumidores", "tienda online"];
 
 function buildSchema(locale: Locale) {
@@ -124,10 +123,10 @@ function offeringsFrom(headings: { level: number; text: string }[]): string[] {
   for (const { level, text } of headings) {
     const value = text.trim();
     const key = nameKey(value);
-    if ((level !== 2 && level !== 3) || value.length < HEADING_MIN || value.length > HEADING_MAX || /[.?!]/.test(value) || !key || seen.has(key)) continue;
+    if ((level !== 2 && level !== 3) || value.length < HEADING_MIN || value.length > HEADING_MAX || /[.?!→>|]/.test(value) || !key || seen.has(key)) continue;
     seen.add(key);
     offerings.push(value);
-    if (offerings.length === MAX_PROPOSED_OFFERINGS) break;
+    if (offerings.length === PROFILE_LIMITS.offerings) break;
   }
   return offerings;
 }

@@ -10,7 +10,8 @@ import type { PageHead } from "@/modules/geo/competitors/extract";
  * links, sitemaps or inner pages are ever requested, and no HTML is kept.
  */
 export const PAGE_HEAD_LIMITS = {
-  maxBytes: 256 * 1024,
+  /** Real home pages with inline styles pass 400 KB; a smaller limit leaves them unverified (012 D009). */
+  maxBytes: 1024 * 1024,
   /** Per candidate, cumulative over DNS, redirects and body (SPEC). */
   perCandidateMs: 5_000,
   maxTitle: 120,

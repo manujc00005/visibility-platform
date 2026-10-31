@@ -113,3 +113,17 @@
 **Reasoning:** cada punto cambiaba el comportamiento observable o rompía un requisito.
 
 **Consequences:** detalle en `ANALYSIS.md` y en los FR afectados.
+
+### D009 - Lectura de portadas de candidatos hasta 1 MiB
+
+**Date:** 2026-10-31
+
+**Status:** Accepted
+
+**Context:** En la prueba real, cyberclick.es (404 KB descomprimidos) quedó «Web sin comprobar»: el fetcher falla al superar el límite de 256 KiB de la 001, sin devolver lo leído, aunque su `<head>` ocupa 37 KB.
+
+**Decision:** subir `PAGE_HEAD_LIMITS.maxBytes` a 1 MiB. Sustituye ese límite de la 001. Tiempo, peticiones y concurrencia no cambian. El presupuesto total sigue siendo el límite por 25 intentos.
+
+**Reasoning:** cambiar una constante basta para los casos reales, sin añadir truncado al fetcher compartido.
+
+**Consequences:** una portada de más de 1 MiB sigue quedando sin comprobar, con aviso. El tope teórico por extracción sube a 25 MiB.

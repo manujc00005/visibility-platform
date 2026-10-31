@@ -54,8 +54,8 @@ El operador confirma un perfil de negocio propuesto desde la portada de su web. 
 - FR-003 Propuesta: acción explícita que usa el dominio guardado en el servidor, lee solo la portada propia con el fetcher seguro y no escribe en base de datos. Cargar la página no usa red.
 - FR-004 Reglas de propuesta, deterministas y sin LLM:
   - Resumen: meta description; si falta, primer H1; si falta, vacío.
-  - Oferta: hasta 6 encabezados H2/H3 de 3 a 60 caracteres que no sean frases (sin `.`, `?`, `!`), sin duplicados. Si no hay, los servicios de la ficha.
-  - Cliente: términos completos en título, descripción y encabezados. `b2b`: pymes, empresas, negocios, startups, equipos, profesionales, B2B. `b2c`: particulares, familias, pacientes, consumidores, tienda online. Ambos grupos o ninguno dan `both`, con el motivo a la vista.
+  - Oferta: hasta 10 encabezados H2/H3 de 3 a 60 caracteres que no sean frases ni eslóganes (sin `.`, `?`, `!`, `→`, `>`, `|`), sin duplicados. Si no hay, los servicios de la ficha.
+  - Cliente: términos completos en título, descripción y encabezados. `b2b`: pymes, empresas, negocios, tu negocio, tu empresa, startups, equipos, profesionales, B2B. `b2c`: particulares, familias, pacientes, consumidores, tienda online. Ambos grupos o ninguno dan `both`, con el motivo a la vista.
   - Cliente objetivo: los términos encontrados; si no hay, vacío y el operador debe escribirlo.
   - Zona: tipo JSON-LD de una lista fija en `profile.ts` (`LocalBusiness`, `Dentist`, `Store`, `Restaurant` y similares) o ciudad en la ficha dan `local`; dos o más `hreflang` de idiomas distintos dan `international`; si no, `national`. Zona atendida: ciudad de la ficha o primera localidad del JSON-LD.
   - Tipos: `direct` e `indirect`.

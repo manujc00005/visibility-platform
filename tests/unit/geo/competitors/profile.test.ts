@@ -50,7 +50,7 @@ describe("proposeProfile (AC-003)", () => {
   });
 
   it("proposes offers from H2/H3 that are not sentences, else the record", () => {
-    const page = html("", "<h1>Uno</h1><h2>Marketing de resultados</h2><h3>Automatización</h3><h2>¿Hablamos?</h2><h2>Tu negocio tiene potencial.</h2><h2>Automatización</h2><h4>Nivel cuatro</h4><h2>x</h2>");
+    const page = html("", "<h1>Uno</h1><h2>Marketing de resultados</h2><h3>Automatización</h3><h2>¿Hablamos?</h2><h2>Tu negocio tiene potencial.</h2><h2>Potencial → Valor</h2><h2>Automatización</h2><h4>Nivel cuatro</h4><h2>x</h2>");
     expect(propose(page).draft.offerings).toEqual(["Marketing de resultados", "Automatización"]);
     const record = propose(html(""), { services: ["Implantes"] });
     expect(record.draft.offerings).toEqual(["Implantes"]);
@@ -59,6 +59,7 @@ describe("proposeProfile (AC-003)", () => {
 
   it.each([
     ["CRM para pymes y empresas", "b2b", "pymes, empresas"],
+    ["Tu negocio crece", "b2b", "tu negocio"],
     ["Atención a pacientes y familias", "b2c", "familias, pacientes"],
     ["Para empresas y particulares", "both", "empresas, particulares"],
   ])("detects the customer in «%s»", (text, customerType, target) => {
