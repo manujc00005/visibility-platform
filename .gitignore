@@ -50,3 +50,6 @@ next-env.d.ts
 !.env.example
 .claude/
 .neon
+
+# Google service account keys (Search Console). Never commit: the repository is public.
+olessium-7fe1021cff78.json
