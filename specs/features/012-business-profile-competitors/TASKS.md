@@ -26,8 +26,8 @@
 ## Phase 4: Review
 
 - [x] T015 - Revisiones de spec, QA, base de datos, seguridad y frontend, con hallazgos corregidos. Covers: todos. Verify: sin críticos ni importantes abiertos.
-- [ ] T016 - Cierre documental. Covers: todos. Verify: `/spec-close` ejecutado y estado sincronizado.
-- [ ] T017 - Respuesta real de ChatGPT para Olessium. Covers: AC-018. Verify: el operador confirma los competidores en la aplicación y la comparativa los mide. Depende del operador.
+- [x] T016 - Cierre documental. Covers: todos. Verify: `/spec-close` ejecutado y estado sincronizado.
+- [x] T017 - Respuesta real de ChatGPT para Olessium. Covers: AC-018. Verify: el operador confirma los competidores en la aplicación y la comparativa los mide. Depende del operador.
 
 ## Evidence
 
@@ -39,3 +39,5 @@ Fecha: 2026-10-31, en `dev`.
 - T013: «Competidor Ejemplo» está `archived`. La página SEO de Olessium pide competidores reales y enlaza a detectarlos.
 - T014: lint sin errores, typecheck y build en verde. Suite completa: 1.419 de 1.420, y la prueba restante se corrigió y se repitió en verde.
 - T015: revisiones de seguridad, calidad y base de datos. 15 hallazgos corregidos; uno aceptado (D010).
+- T017 (2026-11-01): el operador pegó la respuesta real de ChatGPT a las 09:26. Salieron 5 candidatos y confirmó Adqueria, Stepwise, Telkora y SAPI como directos y Clientify como indirecto. La comparativa de las 09:29 los midió: rendimiento 98 de Olessium frente a 69, 100, 100 y 44; Clientify falló en Lighthouse y sí dio datos reales y autoridad 5,87. Stepwise y Telkora no aparecen en el grafo de dominios.
+- T014, repetición (2026-11-01): suite completa 1.420 de 1.420.
