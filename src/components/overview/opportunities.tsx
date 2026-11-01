@@ -120,8 +120,10 @@ export function Opportunities({
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="flex size-6 items-center justify-center rounded-full bg-brand-soft text-xs font-semibold text-brand tabular-nums">{i + 1}</span>
                       <StatusPill tone={PRIORITY_TONE[o.priority]}>{m.overview.priority[o.priority]}</StatusPill>
+                      {o.covers > 1 ? <span className="text-xs text-muted-foreground">{t.covers(o.covers)}</span> : null}
                     </div>
-                    <h3 id={`opportunity-${o.kind}`} className="text-base font-semibold tracking-tight">
+                    {/* Focusable by script only: the lead's link moves focus here, not just the scroll. */}
+                    <h3 id={`opportunity-${o.kind}`} tabIndex={-1} className="text-base font-semibold tracking-tight outline-none">
                       {o.title}
                     </h3>
                     <dl className="grid grid-cols-1 gap-3 text-sm md:grid-cols-3">

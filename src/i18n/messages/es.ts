@@ -327,6 +327,8 @@ export const es = {
         notMeasured: "No medida",
         labNote: "Puntuación de Google en un móvil simulado, no la experiencia de todos tus visitantes.",
         topIssue: "Principal problema:",
+        /** Under a good verdict the slowest point is not a problem, only the biggest margin left. */
+        topIssueGood: "Lo que más podría mejorar:",
         fieldSource: (source: string) => `Fuente de este dato: ${source}`,
         source: (when: string) => `PageSpeed Insights · ${when}`,
         noResultShort: "sin resultado",
@@ -397,6 +399,7 @@ export const es = {
       action: "Qué recomendamos",
       evidence: "Evidencia",
       detail: "Ver el detalle",
+      covers: (n: number) => `Agrupa ${n} problemas detectados`,
       originalNotice: "La evidencia se muestra tal como se registró, en español.",
       fallbackNotice: "Algunos problemas o recomendaciones no tienen traducción y se muestran en su español original.",
     },

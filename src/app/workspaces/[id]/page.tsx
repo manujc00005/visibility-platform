@@ -103,7 +103,7 @@ function PerformanceCard({ workspaceId, s, locale, t }: { workspaceId: string; s
       <ChangeLine change={s.change} note={s.comparisonNote} />
       {s.topIssue ? (
         <p className="text-sm">
-          <span className="text-muted-foreground">{c.topIssue} </span>
+          <span className="text-muted-foreground">{s.state === "ok" && s.tone === "good" ? c.topIssueGood : c.topIssue} </span>
           <span lang={s.topIssueOriginal ? DEFAULT_LOCALE : undefined}>{s.topIssue}</span>
         </p>
       ) : null}
@@ -152,11 +152,18 @@ function SeoCard({
           <span className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
             <span>
               {s.counts.critical}
-              <span className="ml-1.5 text-sm font-normal text-muted-foreground">{c.critical(s.counts.critical)}</span>
+              {/* A real space, so assistive tech reads "2 críticos", not "2críticos". */}
+              <span className="ml-1 text-sm font-normal text-muted-foreground">
+                {" "}
+                {c.critical(s.counts.critical)}
+              </span>
             </span>
             <span>
               {s.counts.warning}
-              <span className="ml-1.5 text-sm font-normal text-muted-foreground">{c.warning(s.counts.warning)}</span>
+              <span className="ml-1 text-sm font-normal text-muted-foreground">
+                {" "}
+                {c.warning(s.counts.warning)}
+              </span>
             </span>
           </span>
         ) : (
