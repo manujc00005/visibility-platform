@@ -65,6 +65,14 @@ export interface GeoRunConfig {
   prompts: { id: string; text: string; intent: PromptIntent }[];
 }
 
+/**
+ * Whether a measurement counts (feature 013): `real` is the client's data; `demo` was invented to
+ * show the application; `test` is an internal check. Only `real` runs feed the overview, the
+ * comparison between runs and the report. Not part of the config, so not part of the methodology key.
+ */
+export const GEO_RUN_ORIGINS = ["real", "demo", "test"] as const;
+export type GeoRunOrigin = (typeof GEO_RUN_ORIGINS)[number];
+
 export const geoRuns = pgTable(
   "geo_runs",
   {
@@ -72,6 +80,7 @@ export const geoRuns = pgTable(
     workspaceId: uuid("workspace_id").notNull().references(() => workspaces.id, { onDelete: "cascade" }),
     provider: text("provider", { enum: ["manual", "dataforseo_chatgpt"] }).notNull(),
     status: text("status", { enum: ["collecting", "completed"] }).notNull().default("collecting"),
+    origin: text("origin", { enum: GEO_RUN_ORIGINS }).$type<GeoRunOrigin>().notNull().default("real"),
     config: jsonb("config").$type<GeoRunConfig>().notNull(),
     /** SHA-256 of the canonical config: equal key = comparable measurements. */
     methodologyKey: text("methodology_key").notNull(),
@@ -81,6 +90,7 @@ export const geoRuns = pgTable(
   (t) => [
     check("geo_runs_provider_valid", sql`${t.provider} in ('manual', 'dataforseo_chatgpt')`),
     check("geo_runs_status_valid", sql`${t.status} in ('collecting', 'completed')`),
+    check("geo_runs_origin_valid", sql`${t.origin} in ('real', 'demo', 'test')`),
     index("geo_runs_workspace_created_idx").on(t.workspaceId, t.createdAt.desc()),
   ],
 );

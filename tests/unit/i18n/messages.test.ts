@@ -150,6 +150,7 @@ const FUNCTION_CALLS: Record<string, unknown[][]> = {
   "chart.zoomed": [[70]],
   "chart.noise": [[10]],
   "geo.labels.fraction": [[3, 8, 38]],
+  "geo.labels.fractionSmall": [[1, 1], [1, 2]],
   "geo.success.competitorAdded": [["Clínica Sonrisa"]],
   "geo.success.refreshed": [[3, 0], [3, 2]],
   "geo.success.candidates": [[1], [4]],
@@ -190,6 +191,7 @@ const FUNCTION_CALLS: Record<string, unknown[][]> = {
     [{ domain: "olessium.com", when: "25 oct 2026, 22:01", provider: "manual", status: "Completada", location: "Spain", language: "es", repetitions: 3, methodology: "geo-2026-10-25.1" }],
   ],
   "geo.run.comparison.yourBrand": [["Olessium"]],
+  "geo.run.comparison.sample": [[1, 1], [3, 2]],
   "geo.run.comparison.branded": [["1 de 1 (100 %)"]],
   "geo.run.answers.competitors": [["Clínica Sonrisa, K2 Dental"]],
 };

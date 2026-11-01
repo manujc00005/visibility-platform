@@ -24,6 +24,7 @@ import {
   geoObservations,
   geoPrompts,
   geoRuns,
+  GEO_RUN_ORIGINS,
   type GeoCompetitor,
   type GeoObservation,
   type GeoPrompt,
@@ -286,10 +287,15 @@ export async function createGeoRun(
   deps: GeoDeps,
 ): Promise<Result<GeoRun, CreateRunError>> {
   const parsed = z
-    .object({ provider: z.enum(["manual", "dataforseo_chatgpt"]), repetitions: z.coerce.number().int().min(1).max(3).default(1) })
+    .object({
+      provider: z.enum(["manual", "dataforseo_chatgpt"]),
+      repetitions: z.coerce.number().int().min(1).max(3).default(1),
+      /** Feature 013: whether the run counts. Frozen in its own column, outside the methodology key (D001). */
+      origin: z.enum(GEO_RUN_ORIGINS).default("real"),
+    })
     .safeParse(raw);
   if (!parsed.success) return { ok: false, error: "validation", fieldErrors: fieldErrorsOf(parsed.error) };
-  const { provider } = parsed.data;
+  const { provider, origin } = parsed.data;
   const repetitions = provider === "manual" ? 1 : parsed.data.repetitions;
   if (provider === "dataforseo_chatgpt" && !deps.dataforseo) return { ok: false, error: "provider_unavailable" };
 
@@ -330,7 +336,7 @@ export async function createGeoRun(
   let run: GeoRun;
   try {
     run = await db.transaction(async (tx) => {
-      const [created] = await tx.insert(geoRuns).values({ id: runId, workspaceId: workspace.id, provider, config, methodologyKey: methodologyKey(config) }).returning();
+      const [created] = await tx.insert(geoRuns).values({ id: runId, workspaceId: workspace.id, provider, origin, config, methodologyKey: methodologyKey(config) }).returning();
       await tx.insert(geoObservations).values(observations);
       if (provider === "dataforseo_chatgpt") {
         await reserveSpend(tx, deps.budgetCapMicros, {
@@ -352,7 +358,7 @@ export async function createGeoRun(
   }
 
   if (provider === "dataforseo_chatgpt") await submitToDataForSeo(db, run, observations, deps.dataforseo!, deps.now);
-  logger.info({ workspaceId, runId, provider, observations: observations.length }, "geo run created");
+  logger.info({ workspaceId, runId, provider, origin, observations: observations.length }, "geo run created");
   return { ok: true, value: run };
 }
 

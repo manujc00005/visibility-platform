@@ -1,17 +1,36 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import { StatusPill } from "@/components/audits/status-ui";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ManualObservationForm, RefreshRunButton } from "@/components/geo/geo-forms";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  ManualObservationForm,
+  RefreshRunButton,
+} from "@/components/geo/geo-forms";
 import { PageHeader } from "@/components/overview/page-header";
 import { getDb } from "@/db/client";
 import { DEFAULT_LOCALE } from "@/i18n/locale";
 import { getMessages } from "@/i18n/messages";
 import { getLocale } from "@/i18n/server";
+import type { Tone } from "@/modules/audits/status";
 import { fraction, geoLabels } from "@/modules/geo/presentation";
 import { getGeoRun } from "@/modules/geo/service";
+import { runResultState, type RunResult } from "@/modules/overview";
 import { displayDate, displayDomain } from "@/modules/workspaces/presentation";
 import { getWorkspace } from "@/modules/workspaces/service";
 import { recordObservationAction, refreshRunAction } from "../../actions";
@@ -21,7 +40,17 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 export const instant = false;
 
-export default async function GeoRunPage({ params }: PageProps<"/workspaces/[id]/geo/runs/[runId]">) {
+/** Same tones as the «Presencia en IA» page for the same states (feature 013, D005). */
+const STATE_TONE: Record<RunResult["state"], Tone> = {
+  ok: "neutral",
+  partial: "fair",
+  analyzing: "neutral",
+  error: "bad",
+};
+
+export default async function GeoRunPage({
+  params,
+}: PageProps<"/workspaces/[id]/geo/runs/[runId]">) {
   await connection();
   const { id, runId } = await params;
   const locale = await getLocale();
@@ -35,10 +64,15 @@ export default async function GeoRunPage({ params }: PageProps<"/workspaces/[id]
   const L = geoLabels(locale);
   const { run, observations, metrics } = view;
   const config = run.config;
+  const result = runResultState({ status: run.status, metrics }, locale);
   const promptText = new Map(config.prompts.map((p) => [p.id, p]));
-  const competitorName = new Map(config.panel.competitors.map((c) => [c.id, c.name]));
+  const competitorName = new Map(
+    config.panel.competitors.map((c) => [c.id, c.name]),
+  );
   // Captured answers, sources and provider messages are stored content: one notice per view outside Spanish.
-  const showNotice = locale !== DEFAULT_LOCALE && observations.some((o) => o.responseText || o.sources?.length || o.error);
+  const showNotice =
+    locale !== DEFAULT_LOCALE &&
+    observations.some((o) => o.responseText || o.sources?.length || o.error);
 
   return (
     <div className="flex flex-col gap-6">
@@ -62,25 +96,51 @@ export default async function GeoRunPage({ params }: PageProps<"/workspaces/[id]
         })}
       />
 
-      {run.provider === "dataforseo_chatgpt" && run.status === "collecting" ? (
-        <RefreshRunButton action={refreshRunAction.bind(null, workspace.id, run.id)} labels={m.geo.forms} />
+      {run.origin !== "real" ? (
+        <p
+          role="note"
+          className="rounded-md border border-fair-line bg-fair-soft p-3 text-sm text-fair"
+        >
+          {t.nonReal[run.origin]}
+        </p>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {run.provider === "dataforseo_chatgpt" && run.status === "collecting" ? (
+        <RefreshRunButton
+          action={refreshRunAction.bind(null, workspace.id, run.id)}
+          labels={m.geo.forms}
+        />
+      ) : null}
+
+      <div className="flex flex-wrap items-center gap-3">
+        <StatusPill tone={STATE_TONE[result.state]}>
+          {m.geo.page.status[result.state]}
+        </StatusPill>
+        {result.reason ? (
+          <p className="text-sm text-muted-foreground">{result.reason}</p>
+        ) : null}
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {(
           [
+            ["coverage", metrics.promptCoverage],
             ["mentions", metrics.brandPresence],
             ["cites", metrics.citationRate],
-            ["coverage", metrics.promptCoverage],
+            ["answers", metrics.answers],
             ["capture", metrics.capture],
           ] as const
         ).map(([key, value]) => (
           <Card key={key} size="sm">
             <CardHeader>
               <CardDescription>{t.metrics[key].title}</CardDescription>
-              <CardTitle className="text-lg">{fraction(value, locale)}</CardTitle>
+              <CardTitle className="text-lg">
+                {fraction(value, locale)}
+              </CardTitle>
             </CardHeader>
-            <CardContent className="text-xs text-muted-foreground">{t.metrics[key].hint}</CardContent>
+            <CardContent className="text-xs text-muted-foreground">
+              {t.metrics[key].hint}
+            </CardContent>
           </Card>
         ))}
       </div>
@@ -92,28 +152,47 @@ export default async function GeoRunPage({ params }: PageProps<"/workspaces/[id]
         </CardHeader>
         <CardContent>
           {metrics.shareOfVoice ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t.comparison.brand}</TableHead>
-                  <TableHead>{t.comparison.mentions}</TableHead>
-                  <TableHead>{t.comparison.share}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {metrics.shareOfVoice.entries.map((e) => (
-                  <TableRow key={e.id}>
-                    <TableCell>{e.id === "brand" ? t.comparison.yourBrand(config.panel.brand.name) : e.name}</TableCell>
-                    <TableCell>{e.k}</TableCell>
-                    <TableCell>{Math.round((e.k / metrics.shareOfVoice!.total) * 100)} %</TableCell>
+            <>
+              <p className="mb-3 text-sm text-muted-foreground">
+                {t.comparison.sample(
+                  metrics.shareOfVoice.total,
+                  metrics.brandPresence.n,
+                )}
+              </p>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t.comparison.brand}</TableHead>
+                    <TableHead>{t.comparison.mentions}</TableHead>
+                    <TableHead>{t.comparison.share}</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {metrics.shareOfVoice.entries.map((e) => (
+                    <TableRow key={e.id}>
+                      <TableCell>
+                        {e.id === "brand"
+                          ? t.comparison.yourBrand(config.panel.brand.name)
+                          : e.name}
+                      </TableCell>
+                      <TableCell>{e.k}</TableCell>
+                      <TableCell>
+                        {Math.round((e.k / metrics.shareOfVoice!.total) * 100)}{" "}
+                        %
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </>
           ) : (
             <p className="text-sm text-muted-foreground">{t.comparison.none}</p>
           )}
-          {metrics.branded.n > 0 ? <p className="mt-3 text-sm text-muted-foreground">{t.comparison.branded(fraction(metrics.branded, locale))}</p> : null}
+          {metrics.branded.n > 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              {t.comparison.branded(fraction(metrics.branded, locale))}
+            </p>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -122,13 +201,18 @@ export default async function GeoRunPage({ params }: PageProps<"/workspaces/[id]
           {t.answers.title}
         </h2>
         {showNotice ? (
-          <p role="note" className="rounded-md border border-border/80 bg-muted/60 p-2.5 text-xs text-muted-foreground">
+          <p
+            role="note"
+            className="rounded-md border border-border/80 bg-muted/60 p-2.5 text-xs text-muted-foreground"
+          >
             {t.answers.originalNotice}
           </p>
         ) : null}
         {observations.map((o) => {
           const prompt = promptText.get(o.promptId);
-          const competitorsMentioned = Object.entries(o.mentions?.competitors ?? {})
+          const competitorsMentioned = Object.entries(
+            o.mentions?.competitors ?? {},
+          )
             .filter(([, hit]) => hit)
             .map(([cid]) => competitorName.get(cid) ?? cid);
           return (
@@ -136,9 +220,21 @@ export default async function GeoRunPage({ params }: PageProps<"/workspaces/[id]
               <CardHeader>
                 <CardTitle className="flex flex-wrap items-center gap-2 text-sm">
                   <span lang="es">{prompt?.text}</span>
-                  {prompt ? <Badge variant="outline">{L.intent[prompt.intent]}</Badge> : null}
-                  {config.repetitions > 1 ? <Badge variant="secondary">#{o.repetition}</Badge> : null}
-                  <Badge variant={o.status === "completed" ? "secondary" : o.status === "failed" || o.status === "uncertain" ? "destructive" : "outline"}>
+                  {prompt ? (
+                    <Badge variant="outline">{L.intent[prompt.intent]}</Badge>
+                  ) : null}
+                  {config.repetitions > 1 ? (
+                    <Badge variant="secondary">#{o.repetition}</Badge>
+                  ) : null}
+                  <Badge
+                    variant={
+                      o.status === "completed"
+                        ? "secondary"
+                        : o.status === "failed" || o.status === "uncertain"
+                          ? "destructive"
+                          : "outline"
+                    }
+                  >
                     {L.observationStatus[o.status]}
                   </Badge>
                 </CardTitle>
@@ -149,8 +245,17 @@ export default async function GeoRunPage({ params }: PageProps<"/workspaces/[id]
                     <p>
                       {o.answerPresent ? (
                         <>
-                          {t.answers.brand} <strong>{o.mentions?.brand ? t.answers.mentioned : t.answers.notMentioned}</strong>
-                          {competitorsMentioned.length ? t.answers.competitors(competitorsMentioned.join(", ")) : ""}
+                          {t.answers.brand}{" "}
+                          <strong>
+                            {o.mentions?.brand
+                              ? t.answers.mentioned
+                              : t.answers.notMentioned}
+                          </strong>
+                          {competitorsMentioned.length
+                            ? t.answers.competitors(
+                                competitorsMentioned.join(", "),
+                              )
+                            : ""}
                           {o.ownCited ? t.answers.citesYou : ""}
                         </>
                       ) : (
@@ -159,24 +264,48 @@ export default async function GeoRunPage({ params }: PageProps<"/workspaces/[id]
                     </p>
                     {o.responseText ? (
                       <details>
-                        <summary className="cursor-pointer text-muted-foreground">{t.answers.viewAnswer}</summary>
-                        <p className="mt-2 whitespace-pre-wrap break-words rounded bg-muted p-2 text-xs">{o.responseText}</p>
+                        <summary className="cursor-pointer text-muted-foreground">
+                          {t.answers.viewAnswer}
+                        </summary>
+                        <p className="mt-2 whitespace-pre-wrap break-words rounded bg-muted p-2 text-xs">
+                          {o.responseText}
+                        </p>
                       </details>
                     ) : null}
                     {o.sources?.length ? (
                       <ul className="flex flex-col gap-0.5">
                         {o.sources.map((s, i) => (
                           <li key={i} className="font-mono text-xs break-all">
-                            [{t.answers.sourceKind[s.kind === "own" ? "own" : s.kind === "competitor" ? "competitor" : "other"]}] {s.url}
+                            [
+                            {
+                              t.answers.sourceKind[
+                                s.kind === "own"
+                                  ? "own"
+                                  : s.kind === "competitor"
+                                    ? "competitor"
+                                    : "other"
+                              ]
+                            }
+                            ] {s.url}
                           </li>
                         ))}
                       </ul>
                     ) : o.answerPresent ? (
-                      <p className="text-xs text-muted-foreground">{t.answers.noSources}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {t.answers.noSources}
+                      </p>
                     ) : null}
                   </>
                 ) : o.status === "pending" && run.provider === "manual" ? (
-                  <ManualObservationForm action={recordObservationAction.bind(null, workspace.id, run.id, o.id)} labels={m.geo.forms} />
+                  <ManualObservationForm
+                    action={recordObservationAction.bind(
+                      null,
+                      workspace.id,
+                      run.id,
+                      o.id,
+                    )}
+                    labels={m.geo.forms}
+                  />
                 ) : o.error ? (
                   <p className="text-xs text-muted-foreground" lang="es">
                     {o.error}

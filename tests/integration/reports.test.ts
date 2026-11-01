@@ -119,9 +119,9 @@ describe("report queries", () => {
 });
 
 describe("AI visibility in reports (license gate, M01)", () => {
-  async function completedManualRun(workspaceId: string) {
+  async function completedManualRun(workspaceId: string, origin: "real" | "demo" | "test" = "real") {
     await addPrompt(db, workspaceId, { text: "¿Qué clínica dental me recomiendas en Valladolid?", intent: "discovery" });
-    const run = await createGeoRun(db, workspaceId, { provider: "manual" }, { dataforseo: null, budgetCapMicros: null });
+    const run = await createGeoRun(db, workspaceId, { provider: "manual", origin }, { dataforseo: null, budgetCapMicros: null });
     if (!run.ok) throw new Error(run.error);
     const [obs] = (await getGeoRun(db, workspaceId, run.value.id))!.observations;
     await recordManualObservation(db, workspaceId, run.value.id, obs!.id, { answer: "Clínica García es buena opción." });
@@ -162,6 +162,19 @@ describe("AI visibility in reports (license gate, M01)", () => {
     if (!allowed.ok) throw new Error("report");
     expect(allowed.report.geoRunId).toBe(paidRunId);
     expect((await db.select().from(geoRuns)).length).toBe(1);
+  });
+
+  it("never prints a demo or test measurement, and picks the real one when both exist (feature 013, AC-004)", async () => {
+    const { workspace, audit } = await completedAudit();
+    await completedManualRun(workspace.id, "test");
+    const blocked = await createReport(db, workspace.id, audit.id, { renderPdf: fakeRender });
+    if (!blocked.ok) throw new Error("report");
+    expect(blocked.report.geoRunId).toBeNull();
+    expect((await getReport(db, workspace.id, audit.id, blocked.report.id))!.html).not.toContain("Visibilidad en asistentes de IA");
+    const realRunId = await completedManualRun(workspace.id, "real");
+    const allowed = await createReport(db, workspace.id, audit.id, { renderPdf: fakeRender });
+    if (!allowed.ok) throw new Error("report");
+    expect(allowed.report.geoRunId).toBe(realRunId);
   });
 
   it("omits the section when there is no completed measurement", async () => {

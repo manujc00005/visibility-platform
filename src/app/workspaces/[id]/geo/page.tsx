@@ -97,6 +97,7 @@ export default async function GeoPage({ params }: PageProps<"/workspaces/[id]/ge
     runs.map(({ run, metrics }) => ({
       id: run.id,
       status: run.status,
+      origin: run.origin,
       provider: run.provider,
       methodologyKey: run.methodologyKey,
       createdAt: run.createdAt,
@@ -142,6 +143,7 @@ export default async function GeoPage({ params }: PageProps<"/workspaces/[id]/ge
         s.state === "not_configured" ? (
           <Empty title={t.empty.noQuestionsTitle} action={setupLink(t.empty.configureQuestions)}>
             {t.empty.noQuestionsBody}
+            {s.nonRealOnly && s.reason ? ` ${s.reason}` : ""}
           </Empty>
         ) : s.state === "analyzing" && s.runId ? (
           <Empty
@@ -167,6 +169,7 @@ export default async function GeoPage({ params }: PageProps<"/workspaces/[id]/ge
           </Empty>
         ) : (
           <Empty title={t.empty.noRunsTitle} action={setupLink(t.empty.firstRun)}>
+            {s.nonRealOnly && s.reason ? `${s.reason} ` : ""}
             {t.empty.noRunsBody(prompts.length)}
           </Empty>
         )
@@ -305,6 +308,7 @@ export default async function GeoPage({ params }: PageProps<"/workspaces/[id]/ge
                       <span className="font-medium">{displayDate(run.createdAt, locale)}</span>
                       <span className="text-xs text-muted-foreground">
                         {L.provider[run.provider]} · {L.runStatus[run.status]}
+                        {run.origin !== "real" ? ` · ${L.origin[run.origin]}` : ""}
                         {changed ? t.history.changed : ""}
                       </span>
                     </span>

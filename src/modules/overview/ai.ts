@@ -2,6 +2,7 @@ import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
 import { getMessages } from "@/i18n/messages";
 import type { Fraction, GeoMetrics } from "@/modules/geo/metrics";
 import { geoLabels, PROVIDER_LABELS } from "@/modules/geo/presentation";
+import type { GeoRunOrigin } from "@/modules/geo/schema";
 import { staleInfo, type BlockState, type Change, type Stale } from "@/modules/overview/types";
 
 /**
@@ -11,12 +12,14 @@ import { staleInfo, type BlockState, type Change, type Stale } from "@/modules/o
  * - citations are ANSWERS (`citationRate`).
  * `completed` means collection ended, not success: a run with no completed observation is
  * a failed attempt, not a result. Comparison only with the completed run immediately
- * before, under the rules of D012. Texts come from the catalog of `locale`, Spanish by
- * default (D007).
+ * before, under the rules of D012. Only `real` runs count (feature 013, D002): demo and
+ * test measurements are dropped before anything else, as if they did not exist. Texts come
+ * from the catalog of `locale`, Spanish by default (D007).
  */
 export interface RunLike {
   id: string;
   status: "collecting" | "completed";
+  origin: GeoRunOrigin;
   provider: keyof typeof PROVIDER_LABELS;
   methodologyKey: string;
   createdAt: Date;
@@ -59,6 +62,8 @@ export interface AiSummary {
   activePrompts: number;
   reason: string | null;
   stale: Stale | null;
+  /** Every stored run is a demo or a test: `reason` says so (feature 013). */
+  nonRealOnly: boolean;
 }
 
 function nonBranded(m: GeoMetrics) {
@@ -87,6 +92,31 @@ function captureComplete(m: GeoMetrics): boolean {
  */
 export function isCompleteResult(m: GeoMetrics): boolean {
   return captureComplete(m) && m.answers.k === m.answers.n && m.promptCoverage.n > 0;
+}
+
+export interface RunResult {
+  state: "ok" | "partial" | "analyzing" | "error";
+  /** Why the result is partial, or what happened when there is none; null when complete or collecting. */
+  reason: string | null;
+}
+
+/**
+ * State and explanation of one run, the only computation of both (feature 013, D005): the
+ * overview uses it for its result run and the run detail shows the same words.
+ */
+export function runResultState(run: Pick<RunLike, "status" | "metrics">, locale: Locale = DEFAULT_LOCALE): RunResult {
+  const t = getMessages(locale).overview.ai;
+  if (run.status === "collecting") return { state: "analyzing", reason: t.runCollecting };
+  const m = run.metrics;
+  if (m.capture.k === 0) return { state: "error", reason: t.runFailed };
+  const unanswered = nonBranded(m).filter((p) => p.answered === 0).length;
+  const complete = isCompleteResult(m);
+  let reason: string | null = null;
+  if (m.promptCoverage.n === 0) reason = t.noValid;
+  else if (!captureComplete(m)) reason = t.partialCapture;
+  else if (unanswered > 0) reason = t.partialUnanswered(unanswered);
+  else if (!complete) reason = t.partialEmpty(m.answers.n - m.answers.k);
+  return { state: complete ? "ok" : "partial", reason };
 }
 
 /** Comparison between a result and the completed run immediately before it. */
@@ -119,7 +149,9 @@ function attemptOf(run: RunLike, locale: Locale): AiAttempt {
 /** Runs in any order. `activePrompts`: questions active today (does not change past denominators). */
 export function summarizeAi(runs: RunLike[], activePrompts: number, now: Date, locale: Locale = DEFAULT_LOCALE): AiSummary {
   const t = getMessages(locale).overview.ai;
-  const sorted = [...runs].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  const real = runs.filter((r) => r.origin === "real");
+  const nonRealOnly = real.length === 0 && runs.length > 0;
+  const sorted = real.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
   const resultIndex = sorted.findIndex(usable);
   const result = resultIndex >= 0 ? sorted[resultIndex]! : null;
   const newerAttempts = result ? sorted.slice(0, resultIndex) : sorted;
@@ -144,11 +176,13 @@ export function summarizeAi(runs: RunLike[], activePrompts: number, now: Date, l
     activePrompts,
     reason: null,
     stale: null,
+    nonRealOnly,
   };
 
   if (!result) {
     if (attempt?.status === "running") return { ...base, state: "analyzing", runId: attempt.runId, reason: t.firstRunning };
     if (attempt?.status === "failed") return { ...base, state: "error", runId: attempt.runId, reason: t.firstFailed };
+    if (nonRealOnly) return { ...base, state: activePrompts === 0 ? "not_configured" : "no_data", reason: t.onlyNonReal };
     if (activePrompts === 0) return { ...base, state: "not_configured", reason: t.notConfigured };
     return { ...base, reason: t.firstRun };
   }
@@ -158,20 +192,15 @@ export function summarizeAi(runs: RunLike[], activePrompts: number, now: Date, l
   const evaluated = questions.filter((p) => p.answered > 0);
   const unanswered = questions.filter((p) => p.answered === 0).map((p) => p.text);
   const brandedPrompts = m.perPrompt.filter((p) => p.intent === "branded");
-  const complete = isCompleteResult(m);
   const previous = sorted.slice(resultIndex + 1).find((r) => r.status === "completed") ?? null;
   const comparison = previous ? compareRuns(result, previous, locale) : { change: null, note: null };
   const measuredAt = result.completedAt ?? result.createdAt;
-
-  let reason: string | null = null;
-  if (m.promptCoverage.n === 0) reason = t.noValid;
-  else if (!captureComplete(m)) reason = t.partialCapture;
-  else if (unanswered.length > 0) reason = t.partialUnanswered(unanswered.length);
-  else if (!complete) reason = t.partialEmpty(m.answers.n - m.answers.k);
+  // A usable result is completed with captures, so this is "ok" or "partial" (D005).
+  const { state, reason } = runResultState(result, locale);
 
   return {
     ...base,
-    state: complete ? "ok" : "partial",
+    state,
     coverage: m.promptCoverage,
     citing: m.citationRate,
     capture: m.capture,

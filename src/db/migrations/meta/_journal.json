@@ -120,6 +120,13 @@
       "when": 1793484236747,
       "tag": "0016_offering_length",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1793540397081,
+      "tag": "0017_geo_run_origin",
+      "breakpoints": true
     }
   ]
 }

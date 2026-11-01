@@ -260,6 +260,7 @@ export default async function WorkspacePage({ params }: PageProps<"/workspaces/[
     runs.map(({ run, metrics }) => ({
       id: run.id,
       status: run.status,
+      origin: run.origin,
       provider: run.provider,
       methodologyKey: run.methodologyKey,
       createdAt: run.createdAt,

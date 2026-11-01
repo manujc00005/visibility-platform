@@ -153,6 +153,19 @@ export function RunForm({ action, paid, labels }: { action: Action; paid: { avai
               ))}
             </select>
           </div>
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <Label htmlFor="origin">{t.origin}</Label>
+              <select id="origin" name="origin" defaultValue={v.origin ?? "real"} className="h-8 rounded-lg border border-input bg-transparent px-2.5">
+                {Object.entries(t.originOptions).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="text-xs text-muted-foreground">{t.originHint}</p>
+          </div>
         </div>
       )}
     </GeoForm>

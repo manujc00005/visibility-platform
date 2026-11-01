@@ -70,6 +70,7 @@ export function run(
     at: Date;
     key?: string;
     status?: RunLike["status"];
+    origin?: RunLike["origin"];
     questions: { id: string; intent?: PromptIntent; outcomes: ("yes" | "no" | "none" | "failed")[] }[];
     cited?: number;
   },
@@ -95,6 +96,7 @@ export function run(
   return {
     id: `r${n}`,
     status: options.status ?? "completed",
+    origin: options.origin ?? "real",
     provider: "manual",
     methodologyKey: options.key ?? "k1",
     createdAt: options.at,

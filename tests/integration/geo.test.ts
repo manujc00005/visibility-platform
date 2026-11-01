@@ -280,6 +280,19 @@ describe("isolation and history", () => {
     expect(await listGeoRuns(db, b)).toEqual([]);
   });
 
+  it("stores the origin apart from the methodology and rejects unknown values (feature 013, AC-001, AC-002)", async () => {
+    const id = await setup();
+    const real = await createGeoRun(db, id, { provider: "manual" }, { dataforseo: null, budgetCapMicros: null });
+    const demo = await createGeoRun(db, id, { provider: "manual", origin: "demo" }, { dataforseo: null, budgetCapMicros: null });
+    if (!real.ok || !demo.ok) throw new Error("setup");
+    expect(real.value.origin).toBe("real");
+    expect(demo.value.origin).toBe("demo");
+    expect(demo.value.methodologyKey).toBe(real.value.methodologyKey);
+    expect(await createGeoRun(db, id, { provider: "manual", origin: "fake" }, { dataforseo: null, budgetCapMicros: null })).toMatchObject({ ok: false, error: "validation" });
+    expect(await listGeoRuns(db, id)).toHaveLength(2);
+    await expect(db.execute(sql`update geo_runs set origin = 'fake' where id = ${demo.value.id}`)).rejects.toMatchObject({ cause: { constraint: "geo_runs_origin_valid" } });
+  });
+
   it("gives equal methodology keys only to equal configurations", async () => {
     const id = await setup();
     const one = await createGeoRun(db, id, { provider: "manual" }, { dataforseo: null, budgetCapMicros: null });

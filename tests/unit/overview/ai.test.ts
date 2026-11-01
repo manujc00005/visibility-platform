@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { summarizeAi } from "@/modules/overview/ai";
+import { runResultState, summarizeAi } from "@/modules/overview/ai";
 import { daysAgo, NOW, run } from "./fixtures";
 
 const q = (id: string, outcome: "yes" | "no" | "none" | "failed", intent?: "branded") => ({ id, intent, outcomes: [outcome] });
@@ -172,5 +172,58 @@ describe("summarizeAi", () => {
       const s = summarizeAi([run({ at: daysAgo(2), key: "A", questions: [q("b", "yes", "branded")] }), run({ at: daysAgo(1), key: "A", questions: [q("b", "yes", "branded")] })], 1, NOW);
       expect(s.change).toBeNull();
     });
+  });
+});
+
+describe("origin of the measurement (feature 013)", () => {
+  it("ignores demo and test runs and says so when nothing real remains (AC-003)", () => {
+    const demo = run({ at: daysAgo(1), origin: "demo", questions: [q("p1", "yes"), q("p2", "no")] });
+    const s = summarizeAi([demo], 2, NOW);
+    expect(s.state).toBe("no_data");
+    expect(s.coverage).toBeNull();
+    expect(s.runId).toBeNull();
+    expect(s.attempt).toBeNull();
+    expect(s.nonRealOnly).toBe(true);
+    expect(s.reason).toBe("Solo hay mediciones de demostración o de prueba: no cuentan como resultado.");
+    // Without questions the block is not configured, with the same explanation.
+    const test = run({ at: daysAgo(1), origin: "test", questions: [q("p1", "yes")] });
+    expect(summarizeAi([test], 0, NOW)).toMatchObject({ state: "not_configured", nonRealOnly: true, reason: s.reason });
+    expect(summarizeAi([], 0, NOW).nonRealOnly).toBe(false);
+  });
+
+  it("keeps the real result when a newer demo exists, without an attempt (AC-003)", () => {
+    const real = run({ at: daysAgo(10), questions: [q("p1", "yes"), q("p2", "no")] });
+    const demo = run({ at: daysAgo(0), origin: "demo", status: "collecting", questions: [q("p1", "none")] });
+    const s = summarizeAi([demo, real], 2, NOW);
+    expect(s.runId).toBe(real.id);
+    expect(s.coverage).toEqual({ k: 1, n: 2 });
+    expect(s.attempt).toBeNull();
+    expect(s.measuredAt).toEqual(real.createdAt);
+    expect(s.nonRealOnly).toBe(false);
+  });
+
+  it("compares real runs skipping a demo in between (AC-003)", () => {
+    const first = run({ at: daysAgo(3), key: "A", questions: [q("p1", "no"), q("p2", "no")] });
+    const demo = run({ at: daysAgo(2), origin: "demo", key: "A", questions: [q("p1", "yes"), q("p2", "yes")] });
+    const latest = run({ at: daysAgo(1), key: "A", questions: [q("p1", "yes"), q("p2", "no")] });
+    const s = summarizeAi([first, demo, latest], 2, NOW);
+    expect(s.change).toEqual({ direction: "better", text: "Antes: 0 de 2" });
+  });
+});
+
+describe("runResultState (feature 013, D005)", () => {
+  it("gives the detail page the same state and words as the overview (AC-006)", () => {
+    const partial = run({ at: daysAgo(1), questions: [q("p1", "yes"), q("p2", "no"), q("p3", "none")] });
+    const detail = runResultState(partial);
+    expect(detail).toEqual({ state: "partial", reason: "Resultado parcial: 1 pregunta no obtuvo respuesta válida." });
+    const overview = summarizeAi([partial], 3, NOW);
+    expect([overview.state, overview.reason]).toEqual([detail.state, detail.reason]);
+
+    const complete = run({ at: daysAgo(1), questions: [q("p1", "yes"), q("p2", "no")] });
+    expect(runResultState(complete)).toEqual({ state: "ok", reason: null });
+    expect(runResultState(run({ at: daysAgo(0), status: "collecting", questions: [q("p1", "none")] }))).toEqual({ state: "analyzing", reason: "Todavía se están recogiendo respuestas." });
+    expect(runResultState(run({ at: daysAgo(0), questions: [q("p1", "failed")] }))).toEqual({ state: "error", reason: "Esta medición no recogió ninguna respuesta." });
+    expect(runResultState(complete, "en")).toEqual({ state: "ok", reason: null });
+    expect(runResultState(partial, "en").reason).toBe("Partial result: 1 question got no valid answer.");
   });
 });

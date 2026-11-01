@@ -63,6 +63,10 @@ describe("GEO labels and formats", () => {
     expect(fraction({ k: 3, n: 8 })).toBe("3 de 8 (38 %)");
     expect(fraction({ k: 3, n: 8 }, "en")).toBe("3 of 8 (38%)");
     expect(fraction({ k: 0, n: 0 }, "en")).toBe("No data");
+    // Feature 013 (D004): no percentage below three observations, so one answer never reads as "100 %".
+    expect(fraction({ k: 1, n: 1 })).toBe("1 de 1");
+    expect(fraction({ k: 1, n: 2 }, "en")).toBe("1 of 2");
+    expect(fraction({ k: 2, n: 3 })).toBe("2 de 3 (67 %)");
     expect(formatMicros(1_200, "en")).toBe("0.0012 USD");
     expect(formatMicros(5_000_000)).toBe("5,00 USD");
   });

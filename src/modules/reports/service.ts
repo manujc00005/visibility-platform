@@ -67,8 +67,9 @@ export async function createReport(
     services: workspace.services,
   };
   const reportable = deps.geoReportableProviders ?? ["manual"];
+  // Demo and test measurements never reach a client document (feature 013, D002).
   const geoView = (await listGeoRuns(db, workspace.id)).find(
-    (v) => v.run.status === "completed" && v.metrics.answers.k > 0 && reportable.includes(v.run.provider),
+    (v) => v.run.origin === "real" && v.run.status === "completed" && v.metrics.answers.k > 0 && reportable.includes(v.run.provider),
   );
   const geo: ReportGeo | null = geoView
     ? {

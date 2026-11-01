@@ -10,7 +10,7 @@ export {
   type SeoArea,
   type FindingsByAudit,
 } from "@/modules/overview/seo";
-export { summarizeAi, compareRuns, isCompleteResult, type AiSummary, type RunLike, type AiAttempt } from "@/modules/overview/ai";
+export { summarizeAi, compareRuns, isCompleteResult, runResultState, type AiSummary, type RunLike, type AiAttempt, type RunResult } from "@/modules/overview/ai";
 export { buildOpportunities, MAX_OPPORTUNITIES, overviewOriginalText, type Opportunity, type OpportunityList, type Priority } from "@/modules/overview/opportunities";
 export {
   isStale,

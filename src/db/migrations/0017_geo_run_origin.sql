@@ -1,0 +1,2 @@
+ALTER TABLE "geo_runs" ADD COLUMN "origin" text DEFAULT 'real' NOT NULL;--> statement-breakpoint
+ALTER TABLE "geo_runs" ADD CONSTRAINT "geo_runs_origin_valid" CHECK ("geo_runs"."origin" in ('real', 'demo', 'test'));
