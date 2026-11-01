@@ -31,10 +31,10 @@ export interface Notice {
 const NOTICE_ICON: Record<Notice["kind"], LucideIcon> = { running: RefreshCw, failed: TriangleAlert, stale: Clock, info: CircleAlert };
 
 /** Extra context about the result: an attempt in progress or failed, old data, missing setup. */
-export function NoticeList({ notices }: { notices: Notice[] }) {
+export function NoticeList({ notices, id }: { notices: Notice[]; id?: string }) {
   if (notices.length === 0) return null;
   return (
-    <ul className="flex flex-col gap-1">
+    <ul id={id} className="flex flex-col gap-1">
       {notices.map((n) => {
         const Icon = NOTICE_ICON[n.kind];
         return (
@@ -84,7 +84,8 @@ export function OverviewCard({
     <Link
       href={href}
       aria-labelledby={`${id}-title`}
-      aria-describedby={`${id}-summary`}
+      // Verdict first, then the figure, the notices and where the data comes from: all of it is text a sighted owner reads.
+      aria-describedby={[`${id}-status`, `${id}-summary`, notices.length > 0 ? `${id}-notices` : null, `${id}-source`].filter(Boolean).join(" ")}
       className="group relative flex h-full flex-col gap-4 overflow-hidden rounded-2xl border border-border/80 bg-card p-6 text-card-foreground shadow-card transition-[border-color,box-shadow,translate] duration-200 before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:bg-linear-to-r before:from-brand before:via-brand/40 before:to-transparent before:opacity-0 before:transition-opacity hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-card-hover hover:before:opacity-100 focus-visible:ring-2 focus-visible:ring-foreground/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none motion-reduce:transition-none motion-reduce:hover:translate-y-0"
     >
       <div className="flex items-start justify-between gap-3">
@@ -96,16 +97,20 @@ export function OverviewCard({
             {title}
           </h2>
         </div>
-        <StatusPill tone={status.tone}>{status.label}</StatusPill>
+        <span id={`${id}-status`} className="contents">
+          <StatusPill tone={status.tone}>{status.label}</StatusPill>
+        </span>
       </div>
       <p className="text-sm text-muted-foreground">{description}</p>
       <div id={`${id}-summary`} className="flex flex-col gap-2">
         <div className="text-4xl leading-tight font-semibold tracking-tight tabular-nums">{headline}</div>
         {children}
       </div>
-      <NoticeList notices={notices} />
+      <NoticeList notices={notices} id={`${id}-notices`} />
       <div className="-mx-6 mt-auto -mb-6 flex items-center justify-between gap-3 border-t border-border/70 bg-muted/50 px-6 py-3.5 text-xs text-muted-foreground">
-        <span className="min-w-0">{source}</span>
+        <span id={`${id}-source`} className="min-w-0">
+          {source}
+        </span>
         <span className="inline-flex shrink-0 items-center gap-0.5 font-medium text-brand">
           {cta}
           <ChevronRight aria-hidden="true" className="size-4 transition-transform group-hover:translate-x-0.5" />

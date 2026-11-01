@@ -59,6 +59,21 @@ describe("buildOpportunities (AC-006)", () => {
     expect(list.items[0]!.href).toBe(`/seo#finding-${findings[0]!.id}`);
   });
 
+  it("says how many findings each opportunity stands for, so the card counts and the list agree", () => {
+    const findings = [
+      finding({ severity: "critical", category: "metadata", ruleId: "title_missing" }),
+      finding({ severity: "warning", category: "metadata", ruleId: "description_missing" }),
+      finding({ severity: "warning", category: "crawling", ruleId: "sitemap_missing" }),
+    ];
+    const a = audit({ at: daysAgo(1), facts: facts({ performance: perf(40) }) });
+    const list = build([a], findings);
+    expect(list.items.map((o) => [o.kind, o.covers])).toEqual([
+      ["metadata", 2],
+      ["speed", 1],
+      ["sitemap", 1],
+    ]);
+  });
+
   it("ignores optional SEO improvements and access warnings", () => {
     const list = build(
       [audit({ at: daysAgo(1), facts: facts({ performance: perf(95) }) })],

@@ -154,7 +154,7 @@ function PerformanceCard({
       <ChangeLine change={s.change} note={s.comparisonNote} />
       {s.topIssue ? (
         <p className="text-sm">
-          <span className="text-muted-foreground">{c.topIssue} </span>
+          <span className="text-muted-foreground">{s.state === "ok" && s.tone === "good" ? c.topIssueGood : c.topIssue} </span>
           <span lang={s.topIssueOriginal ? DEFAULT_LOCALE : undefined}>
             {s.topIssue}
           </span>
@@ -199,13 +199,16 @@ function SeoCard({
           <span className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
             <span>
               {r.headline.clicks}
-              <span className="ml-1.5 text-sm font-normal text-muted-foreground">
+              {/* A real space, so assistive tech reads "3 clics", not "3clics". */}
+              <span className="ml-1 text-sm font-normal text-muted-foreground">
+                {" "}
                 {r.headline.clicksUnit}
               </span>
             </span>
             <span>
               {r.headline.impressions}
-              <span className="ml-1.5 text-sm font-normal text-muted-foreground">
+              <span className="ml-1 text-sm font-normal text-muted-foreground">
+                {" "}
                 {r.headline.impressionsUnit}
               </span>
             </span>

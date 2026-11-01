@@ -53,6 +53,7 @@ const FUNCTION_CALLS: Record<string, unknown[][]> = {
   "overview.cards.ai.source": [["Captura asistida · 27 oct 2026, 13:34"]],
   "overview.stale": [[1], [31]],
   "overview.lead.more": [[1], [2]],
+  "overview.opportunities.covers": [[2], [5]],
   "overview.performance.change": [["+10"], ["-12"]],
   "overview.performance.period": [["27 sept 2026", "24 oct 2026"]],
   "overview.performance.field": [["de esta página", "2,1 s", "bueno"]],

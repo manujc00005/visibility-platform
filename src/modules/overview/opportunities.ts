@@ -37,6 +37,8 @@ export interface Opportunity {
    * are written here in the interface language; `evidence.length` means none is stored.
    */
   storedEvidenceFrom: number;
+  /** How many findings of this kind the opportunity stands for; the card shows only one of them. */
+  covers: number;
 }
 
 export interface OpportunityList {
@@ -51,7 +53,7 @@ export const MAX_OPPORTUNITIES = 3;
 const PRIORITY_RANK: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 
 type OpportunityTexts = Messages["overview"]["opportunity"];
-type Candidate = Omit<Opportunity, "sourceLabel" | "measuredAt" | "href" | "problem" | "action" | "evidence" | "original" | "storedEvidenceFrom">;
+type Candidate = Omit<Opportunity, "sourceLabel" | "measuredAt" | "href" | "problem" | "action" | "evidence" | "original" | "storedEvidenceFrom" | "covers">;
 
 function candidateFor(f: FindingLike, title: string, t: OpportunityTexts): Candidate | null {
   if (f.category === "performance") return null;
@@ -96,6 +98,7 @@ function speedOpportunity(perf: PerformanceSummary, findings: FindingLike[], con
     original: text?.fallback ?? false,
     // The score line is written in the interface language; the finding's lines are stored.
     storedEvidenceFrom: 1,
+    covers: 1,
   };
 }
 
@@ -115,6 +118,7 @@ function aiOpportunity(ai: AiSummary, t: OpportunityTexts): Opportunity | null {
     original: false,
     // Written here: the frame is in the interface language and quotes the market question.
     storedEvidenceFrom: MAX_OPPORTUNITIES,
+    covers: 1,
   };
 }
 
@@ -152,6 +156,7 @@ export function buildOpportunities(
           href: `/seo#finding-${f.id}`,
           original: text.fallback,
           storedEvidenceFrom: 0,
+          covers: 1,
         });
       }
     }
@@ -161,9 +166,12 @@ export function buildOpportunities(
   const aiItem = aiOpportunity(ai, t);
   if (aiItem) candidates.push(aiItem);
 
+  const perKind = new Map<string, number>();
+  for (const c of candidates) perKind.set(c.kind, (perKind.get(c.kind) ?? 0) + 1);
   const seen = new Set<string>();
   const items = candidates
     .filter((c) => (seen.has(c.kind) ? false : (seen.add(c.kind), true)))
+    .map((c) => ({ ...c, covers: perKind.get(c.kind) ?? 1 }))
     .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority])
     .slice(0, MAX_OPPORTUNITIES);
 
