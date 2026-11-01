@@ -79,24 +79,25 @@ export async function saveGoal(
   );
 }
 
-/** Idempotent: removing a goal that does not exist is not an error. */
+/** Under the company lock like the upsert (D001); removing a goal that does not exist is not an error. */
 export async function removeGoal(
   db: Database,
   workspaceId: string,
 ): Promise<boolean> {
   if (!UUID.test(workspaceId)) return false;
-  const rows = await db
-    .delete(workspaceGoals)
-    .where(eq(workspaceGoals.workspaceId, workspaceId))
-    .returning({ id: workspaceGoals.workspaceId });
-  return rows.length === 1;
+  return db.transaction(async (tx) => {
+    if (!(await lockWorkspace(tx, workspaceId))) return false;
+    const rows = await tx
+      .delete(workspaceGoals)
+      .where(eq(workspaceGoals.workspaceId, workspaceId))
+      .returning({ id: workspaceGoals.workspaceId });
+    return rows.length === 1;
+  });
 }
 
 export interface GoalEvidence {
-  /** When the capture that saw the event was taken. */
+  /** When the capture that saw the event was taken: the last reception observed. */
   observedAt: Date;
-  /** Last day of that capture's period (YYYY-MM-DD), or null for a capture without one. */
-  periodEnd: string | null;
 }
 
 /**
@@ -110,10 +111,7 @@ export async function goalEvidence(
 ): Promise<GoalEvidence | null> {
   if (!UUID.test(workspaceId)) return null;
   const [row] = await db
-    .select({
-      observedAt: analyticsSnapshots.createdAt,
-      periodEnd: analyticsSnapshots.currentEnd,
-    })
+    .select({ observedAt: analyticsSnapshots.createdAt })
     .from(analyticsSnapshots)
     .where(
       and(
@@ -125,5 +123,5 @@ export async function goalEvidence(
     )
     .orderBy(desc(analyticsSnapshots.createdAt))
     .limit(1);
-  return row ? { observedAt: row.observedAt, periodEnd: row.periodEnd } : null;
+  return row ? { observedAt: row.observedAt } : null;
 }

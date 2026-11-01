@@ -67,9 +67,15 @@ describe("summarizeGoal", () => {
     expect(summarizeGoal({ goal, analytics: { latest: more, latestCompleted: more }, evidence: null }).notes).toEqual([]);
   });
 
+  it("neither verifies nor counts from a capture without key events (before feature 008)", () => {
+    const old = capture({ keyEvents: null });
+    const v = summarizeGoal({ goal, analytics: { latest: old, latestCompleted: old }, evidence: null });
+    expect(v).toMatchObject({ state: "pending", count: null, notes: [] });
+  });
+
   it("is verified with evidence: the latest capture's organic count, zero included, and the last reception", () => {
     const c = capture();
-    const v = summarizeGoal({ goal, analytics: { latest: c, latestCompleted: c }, evidence: { observedAt: AT, periodEnd: "2026-10-28" } });
+    const v = summarizeGoal({ goal, analytics: { latest: c, latestCompleted: c }, evidence: { observedAt: AT } });
     expect(v.state).toBe("verified");
     expect(v.status).toEqual({ tone: "good", label: "Medido" });
     expect(v.count).toBe(2);
@@ -79,25 +85,33 @@ describe("summarizeGoal", () => {
     expect(v.observedAt).toEqual(AT);
 
     const zeroNow = capture({ id: "a2", keyEvents: { ...c.keyEvents!, organic: 0, organicByEvent: [] } });
-    const z = summarizeGoal({ goal, analytics: { latest: zeroNow, latestCompleted: zeroNow }, evidence: { observedAt: new Date("2026-10-02T10:00:00Z"), periodEnd: "2026-09-30" } });
+    const z = summarizeGoal({ goal, analytics: { latest: zeroNow, latestCompleted: zeroNow }, evidence: { observedAt: new Date("2026-10-02T10:00:00Z") } });
     expect(z.state).toBe("verified");
     expect(z.count).toBe(0);
     expect(z.text).toMatch(/^Solicitud de presupuesto: 0 desde buscadores/);
     expect(z.notes[0]).toBe("Última recepción observada: 2 oct 2026, 12:00.");
 
     const noKeyEvents = capture({ id: "a3", keyEvents: null });
-    const n = summarizeGoal({ goal, analytics: { latest: noKeyEvents, latestCompleted: noKeyEvents }, evidence: { observedAt: AT, periodEnd: "2026-10-28" } });
+    const n = summarizeGoal({ goal, analytics: { latest: noKeyEvents, latestCompleted: noKeyEvents }, evidence: { observedAt: AT } });
     expect(n.count).toBeNull();
     expect(n.text).toBe("Solicitud de presupuesto: medido desde buscadores en una captura anterior; la última captura no trae eventos clave.");
+  });
+
+  it("keeps a verified goal verified when GA4 stops listing the event as key, and says so", () => {
+    const c = capture({ keyEvents: { ...capture().keyEvents!, configured: ["purchase"], organicByEvent: [] } });
+    const v = summarizeGoal({ goal, analytics: { latest: c, latestCompleted: c }, evidence: { observedAt: AT } });
+    expect(v.state).toBe("verified");
+    expect(v.count).toBe(0);
+    expect(v.notes).toEqual(["Última recepción observada: 31 oct 2026, 22:31.", "El evento no está marcado como evento clave en Google Analytics."]);
   });
 
   it("never calls them customers, sales or leads, in either language", () => {
     const c = capture();
     const cases = [
       summarizeGoal({ goal, analytics: none, evidence: null }),
-      summarizeGoal({ goal, analytics: { latest: c, latestCompleted: c }, evidence: { observedAt: AT, periodEnd: "2026-10-28" } }),
+      summarizeGoal({ goal, analytics: { latest: c, latestCompleted: c }, evidence: { observedAt: AT } }),
       summarizeGoal({ goal, analytics: none, evidence: null }, "en"),
-      summarizeGoal({ goal, analytics: { latest: c, latestCompleted: c }, evidence: { observedAt: AT, periodEnd: "2026-10-28" } }, "en"),
+      summarizeGoal({ goal, analytics: { latest: c, latestCompleted: c }, evidence: { observedAt: AT } }, "en"),
     ];
     for (const v of cases) expect([v.text, ...v.notes].join(" ")).not.toMatch(forbidden);
     expect(cases[3]!.text).toBe("Solicitud de presupuesto: 2 from search engines in the last 28 days (Google Analytics, from 1 Oct 2026 to 28 Oct 2026).");

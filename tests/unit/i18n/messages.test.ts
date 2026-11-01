@@ -39,7 +39,6 @@ const FUNCTION_CALLS: Record<string, unknown[][]> = {
   "goals.line.verifiedNoCapture": [["Solicitud"]],
   "goals.line.observed": [["31 oct 2026, 22:31"]],
   "goals.line.pending": [["Solicitud"]],
-  "goals.line.event": [["generate_lead"]],
   "goals.current": [["Solicitud", "Solicitud de presupuesto", "generate_lead"]],
   "overview.cards.seo.clicks": [[1], [2]],
   "overview.cards.seo.impressions": [[1], [2]],

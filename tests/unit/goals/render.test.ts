@@ -50,6 +50,7 @@ describe("GoalLine", () => {
 
 describe("GoalForm", () => {
   const t = getMessages("es").goals;
+
   it("offers the configured events as options and the stored one first, with a removal form only when a goal exists", () => {
     const html = renderToStaticMarkup(createElement(GoalForm, { goal, currentText: t.current("Solicitud", "Solicitud de presupuesto", "generate_lead"), configuredEvents: ["purchase", "generate_lead"], save: noop, remove: noop, labels: t.form, kinds: t.kinds }));
     expect(html).toContain(t.current("Solicitud", "Solicitud de presupuesto", "generate_lead"));
@@ -58,12 +59,17 @@ describe("GoalForm", () => {
     expect(html).toContain(t.form.eventHint);
     expect(html).toContain(t.form.remove);
     expect(html.split("<form").length - 1).toBe(2);
+    expect(html).toContain('<input type="hidden" name="intent" value="remove"');
     expect(html).toContain('<option value="request" selected="">Solicitud</option>');
+    // The hint is announced with the control (review DOM-005).
+    expect(html).toContain('aria-describedby="goal-event-hint"');
+    expect(html).toContain('id="goal-event-hint"');
   });
 
   it("types the event when GA4 returned none, keeps an event GA4 no longer lists, and has no removal without a goal", () => {
     const empty = renderToStaticMarkup(createElement(GoalForm, { goal: null, currentText: null, configuredEvents: [], save: noop, remove: noop, labels: t.form, kinds: t.kinds }));
     expect(empty).toContain('name="eventName"');
+    expect(empty).toContain('aria-describedby="goal-event-hint"');
     expect(empty).toContain(t.form.eventFreeHint);
     expect(empty).not.toContain("<option value=\"generate_lead\"");
     expect(empty).not.toContain(t.form.remove);

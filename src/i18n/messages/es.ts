@@ -74,7 +74,6 @@ export const es = {
       pending: (label: string) => `${label}: pendiente de comprobar la medición. Google Analytics no ha registrado todavía ninguna recepción desde buscadores de este evento.`,
       notConfigured: "El evento no está marcado como evento clave en Google Analytics.",
       connect: "Conecta Google Analytics para comprobarlo.",
-      event: (event: string) => `Evento de Google Analytics: ${event}`,
     },
     /** Serializable fragment: the client form receives it by props. */
     form: {
@@ -100,7 +99,7 @@ export const es = {
       eventRequired: "Indica el evento de Google Analytics.",
       eventMax: "El evento admite como máximo 200 caracteres.",
     },
-    errors: { not_found: "La empresa ya no existe.", validation: "Revisa los datos.", saveFailed: "No se pudo guardar." },
+    errors: { not_found: "La empresa ya no existe.", validation: "Revisa los datos." },
     current: (kind: string, label: string, event: string) => `Objetivo actual: ${label} (${kind.toLowerCase()}), medido por el evento ${event}.`,
   },
   /** Per-company panel of data sources (feature 015): labels only; states come from each source. */

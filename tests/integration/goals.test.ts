@@ -75,6 +75,7 @@ describe("saving the goal (AC-001, AC-002)", () => {
 
   it("answers not_found for an unknown company and cascades with the company", async () => {
     expect(await saveGoal(db, "00000000-0000-4000-8000-000000000000", input)).toMatchObject({ ok: false, error: "not_found" });
+    expect(await removeGoal(db, "00000000-0000-4000-8000-000000000000")).toBe(false);
     expect(await getGoal(db, "nope")).toBeNull();
     const id = await workspace();
     await saveGoal(db, id, input);
@@ -106,9 +107,9 @@ describe("goal evidence (AC-003)", () => {
     await capture(id, { keyEvents: keyEvents([{ event: "purchase", keyEvents: 3 }]), createdAt: new Date("2026-10-25T10:00:00Z") });
     await capture(id, { keyEvents: null, createdAt: new Date("2026-10-26T10:00:00Z") });
     await capture(id, { status: "failed", createdAt: new Date("2026-10-27T10:00:00Z") });
-    expect(await goalEvidence(db, id, "generate_lead")).toEqual({ observedAt: later.createdAt, periodEnd: "2026-10-28" });
+    expect(await goalEvidence(db, id, "generate_lead")).toEqual({ observedAt: later.createdAt });
     expect(seen.createdAt.getTime()).toBeLessThan(later.createdAt.getTime());
-    expect(await goalEvidence(db, id, "purchase")).toMatchObject({ periodEnd: "2026-10-28" });
+    expect(await goalEvidence(db, id, "purchase")).not.toBeNull();
     expect(await goalEvidence(db, id, "sign_up")).toBeNull();
     // Exact match: GA4 event names are case sensitive.
     expect(await goalEvidence(db, id, "Generate_Lead")).toBeNull();

@@ -51,10 +51,13 @@ export function GoalForm({
   kinds: Messages["goals"]["kinds"];
 }) {
   const t = labels;
-  const [state, saveAction, saving] = useActionState(save, initial);
-  const [removeState, removeAction, removing] = useActionState(remove, initial);
+  // One state for both forms: the removal is the same action with `intent=remove`, so the
+  // feedback is always the last thing done and the save form remounts after a removal too.
+  const run = (state: GoalFormState, formData: FormData) =>
+    formData.get("intent") === "remove" ? remove(state) : save(state, formData);
+  const [state, action, pending] = useActionState(run, initial);
   const v = state.ok ? {} : state.values;
-  const feedback = removeState.attempt > state.attempt ? removeState : state;
+  const feedback = state;
   const chosenEvent = v.eventName ?? goal?.eventName ?? "";
   // A stored event GA4 no longer lists stays selectable, so the form never silently changes it.
   const options =
@@ -74,7 +77,7 @@ export function GoalForm({
       {currentText ? <p className="text-sm">{currentText}</p> : null}
       <form
         key={state.attempt}
-        action={saveAction}
+        action={action}
         className="grid max-w-3xl gap-3 sm:grid-cols-3"
       >
         <div className="flex flex-col gap-1.5">
@@ -109,6 +112,7 @@ export function GoalForm({
             <select
               id="goal-event"
               name="eventName"
+              aria-describedby="goal-event-hint"
               defaultValue={chosenEvent || options[0]}
               className={SELECT_CLASS}
             >
@@ -122,18 +126,19 @@ export function GoalForm({
             <Input
               id="goal-event"
               name="eventName"
+              aria-describedby="goal-event-hint"
               defaultValue={chosenEvent}
               maxLength={GOAL_LIMITS.event}
               required
             />
           )}
-          <p className="text-xs text-muted-foreground">
+          <p id="goal-event-hint" className="text-xs text-muted-foreground">
             {options.length > 0 ? t.eventHint : t.eventFreeHint}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 sm:col-span-3">
-          <Button type="submit" disabled={saving || removing}>
-            {saving ? t.saving : t.submit}
+          <Button type="submit" disabled={pending}>
+            {pending ? t.saving : t.submit}
           </Button>
           {feedback.message ? (
             <div
@@ -153,9 +158,10 @@ export function GoalForm({
         </div>
       </form>
       {goal ? (
-        <form action={removeAction}>
-          <Button type="submit" variant="outline" disabled={saving || removing}>
-            {removing ? t.removing : t.remove}
+        <form action={action}>
+          <input type="hidden" name="intent" value="remove" />
+          <Button type="submit" variant="outline" disabled={pending}>
+            {pending ? t.removing : t.remove}
           </Button>
         </form>
       ) : null}

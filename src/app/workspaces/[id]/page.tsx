@@ -393,19 +393,23 @@ export default async function WorkspacePage({
   const t = m.overview;
 
   // Stored data only: nothing on this page calls PageSpeed, CrUX, Search Console, a website or an AI provider.
-  const [audits, runs, prompts, gscStored, analyticsStored, goal] =
+  const [audits, runs, prompts, gscStored, analyticsStored, [goal, evidence]] =
     await Promise.all([
       listAudits(db, workspace.id),
       listGeoRuns(db, workspace.id),
       listPrompts(db, workspace.id),
       latestSearchConsole(db, workspace.id),
       latestAnalytics(db, workspace.id),
-      getGoal(db, workspace.id),
+      // Verified from the stored GA4 captures, never from a stored flag (feature 016, D002); the
+      // evidence only depends on the goal, so it overlaps with the other reads.
+      getGoal(db, workspace.id).then(
+        async (g) =>
+          [
+            g,
+            g ? await goalEvidence(db, workspace.id, g.eventName) : null,
+          ] as const,
+      ),
     ]);
-  // Verified from the stored GA4 captures, never from a stored flag (feature 016, D002).
-  const evidence = goal
-    ? await goalEvidence(db, workspace.id, goal.eventName)
-    : null;
   const goalView = summarizeGoal(
     { goal, analytics: analyticsStored, evidence },
     locale,
