@@ -61,7 +61,7 @@ export const en = {
       edit: "Edit",
       verified: (label: string, n: number, start: string, end: string) =>
         `${label}: ${n} from search engines in the last 28 days (Google Analytics, from ${start} to ${end}).`,
-      verifiedNoCapture: (label: string) => `${label}: measured from search engines in an earlier capture; the latest capture carries no key events.`,
+      verifiedNoCapture: (label: string) => `${label}: measured from search engines in an earlier read; the latest read carries no key events.`,
       observed: (when: string) => `Last reception observed: ${when}.`,
       pending: (label: string) => `${label}: measurement still to be verified. Google Analytics has not recorded any reception of this event from search engines yet.`,
       notConfigured: "The event is not marked as a key event in Google Analytics.",
@@ -265,7 +265,7 @@ export const en = {
       legend: { good: "Green: good", fair: "Amber: fair", bad: "Red: poor", info: "Blue: could improve (optional)", neutral: "Grey: not checked" },
       report: {
         title: "Report for the client",
-        description: "PDF with an executive summary, results, problems, recommendations, evidence and limitations.",
+        description: "PDF with an executive summary, search results, technical results, problems, recommendations, evidence and limitations.",
         template: (version: string) => `template ${version}`,
         view: "View",
         download: "Download PDF",

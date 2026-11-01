@@ -1,5 +1,7 @@
+import { eq } from "drizzle-orm";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { audits, geoRuns, providerSpend, reports, searchConsoleSnapshots, workspaces } from "@/db/schema";
+import { analyticsSnapshots, audits, geoRuns, providerSpend, reports, searchConsoleSnapshots, workspaces } from "@/db/schema";
+import { getMessages } from "@/i18n/messages";
 import { saveGoal } from "@/modules/goals/service";
 import { emptyResult } from "@/modules/audits/pagespeed";
 import type { DataForSeoClient } from "@/modules/geo/dataforseo";
@@ -147,17 +149,80 @@ describe("results in search engines in the report (feature 021)", () => {
     expect(doc).toContain("<strong>12 clics</strong>");
     expect(doc).toContain("<strong>400 impresiones</strong>");
     expect(doc).toContain("Antes: 8 clics (+50 %)");
+    expect(doc).toContain("<dt>CTR</dt><dd>3,0 %");
+    expect(doc).toContain("<dt>Posición media</dt><dd>9,4");
     expect(doc).toContain("Solicitud de presupuesto: pendiente de comprobar la medición.");
-    expect(doc).toContain("Conecta Google Analytics para comprobarlo.");
+    // Steps for the operator stay out of the client document (D002).
+    expect(doc).not.toContain("Conecta Google Analytics");
+    expect(doc).toContain("sc-domain:clinicagarcia.es");
+  });
+
+  it("prints the figures at zero with their change when only the previous period had impressions (feature 021)", async () => {
+    const { workspace, audit } = await completedAudit();
+    await capture(workspace.id);
+    await db.update(searchConsoleSnapshots).set({ totals: { clicks: 0, impressions: 0, ctr: 0, position: 0 } }).where(eq(searchConsoleSnapshots.workspaceId, workspace.id));
+    const doc = await htmlOf(workspace.id, audit.id);
+    expect(doc).toContain("<dt>Clics</dt><dd>0");
+    expect(doc).toContain("Antes: 8 clics");
+    expect(doc).toContain("comparado con los 28 días anteriores");
+  });
+
+  it("explains a capture with no impressions in either period without figures (feature 021)", async () => {
+    const { workspace, audit } = await completedAudit();
+    await capture(workspace.id);
+    const none = { clicks: 0, impressions: 0, ctr: 0, position: 0 };
+    await db.update(searchConsoleSnapshots).set({ totals: none, previousTotals: none }).where(eq(searchConsoleSnapshots.workspaceId, workspace.id));
+    const doc = await htmlOf(workspace.id, audit.id);
+    expect(doc).toContain("no registra impresiones de esta web en este periodo ni en los 28 días anteriores");
+    expect(doc).not.toContain('class="figures"');
+  });
+
+  it("prints a verified goal with its evidence and leaves out the note for the operator (AC-003)", async () => {
+    const { workspace, audit } = await completedAudit();
+    await db.insert(analyticsSnapshots).values({
+      workspaceId: workspace.id,
+      status: "completed",
+      property: "properties/123",
+      propertyName: "Web",
+      currentStart: "2026-10-01",
+      currentEnd: "2026-10-28",
+      previousStart: "2026-09-03",
+      previousEnd: "2026-09-30",
+      totals: { users: 1, sessions: 1, views: 1 },
+      previousTotals: { users: 0, sessions: 0, views: 0 },
+      quality: { otherRow: false, thresholded: false, sampled: false },
+      keyEvents: { version: 1, configured: ["purchase"], configuredMore: false, total: 5, previousTotal: 0, organic: 2, previousOrganic: 0, organicByEvent: [{ event: "generate_lead", keyEvents: 2 }] },
+    });
+    await saveGoal(db, workspace.id, { kind: "request", label: "Solicitud de presupuesto", eventName: "generate_lead" });
+    const doc = await htmlOf(workspace.id, audit.id);
+    expect(doc).toContain("Solicitud de presupuesto: 2 desde buscadores");
+    expect(doc).toContain("Última recepción observada");
+    expect(doc).toContain("No equivale a clientes ni a ventas");
+    expect(doc).not.toContain(getMessages("es").goals.line.notConfigured);
+  });
+
+  it("keeps the good capture after a later failure without mentioning it, and never reads another company (feature 021)", async () => {
+    const { workspace, audit } = await completedAudit();
+    await capture(workspace.id);
+    await db.insert(searchConsoleSnapshots).values({ workspaceId: workspace.id, status: "failed", errorKind: "no_access", errorMessage: "Sin acceso", accessibleProperties: 2 });
+    const doc = await htmlOf(workspace.id, audit.id);
+    expect(doc).toContain("<strong>12 clics</strong>");
+    expect(doc).not.toContain("Sin acceso");
+    expect(doc).not.toContain("Usuarios y permisos");
+
+    const other = await createWorkspace(db, { name: "Otra", website: "https://otra-empresa.es/", sector: "Agencia", country: "ES", city: "", services: "CRM" });
+    if (!other.ok) throw new Error("workspace");
+    await capture(other.workspace.id);
+    await saveGoal(db, other.workspace.id, { kind: "request", label: "Objetivo de otra empresa", eventName: "generate_lead" });
+    const again = await htmlOf(workspace.id, audit.id);
+    expect(again).not.toContain("Objetivo de otra empresa");
   });
 
   it("never shows a failed read or the service account to the client (AC-002)", async () => {
     const { workspace, audit } = await completedAudit();
     await db.insert(searchConsoleSnapshots).values({ workspaceId: workspace.id, status: "failed", errorKind: "no_access", errorMessage: "Sin acceso", accessibleProperties: 2 });
-    const report = await createReport(db, workspace.id, audit.id, { renderPdf: fakeRender, searchConsoleConfig: { state: "ready", clientEmail: "lector@proyecto.iam.gserviceaccount.com" } });
-    if (!report.ok) throw new Error("report");
-    const doc = (await getReport(db, workspace.id, audit.id, report.report.id))!.html;
-    expect(doc).not.toContain("lector@proyecto");
+    const doc = await htmlOf(workspace.id, audit.id);
+    expect(doc).not.toContain("iam.gserviceaccount.com");
     expect(doc).not.toContain("Usuarios y permisos");
     expect(doc).toContain("pendiente de medir");
   });

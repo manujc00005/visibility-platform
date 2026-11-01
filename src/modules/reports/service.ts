@@ -14,7 +14,6 @@ import type { Severity } from "@/modules/audits/rules";
 import { buildReportHtml, TEMPLATE_VERSION, type ReportGeo, type ReportInput, type ReportSearch } from "@/modules/reports/build-report";
 import type { RenderedPdf } from "@/modules/reports/render-pdf";
 import { reports, type Report, type ReportSummary } from "@/modules/reports/schema";
-import type { SearchConsoleConfig } from "@/modules/search-console/deps";
 import { latestSearchConsole } from "@/modules/search-console/service";
 import { displayDay, summarizeSearchConsole } from "@/modules/search-console/summary";
 import { displayCountry, displayDomain } from "@/modules/workspaces/presentation";
@@ -28,8 +27,6 @@ export interface ReportDeps {
    * is the operator's own observation; DataForSEO only after written confirmation.
    */
   geoReportableProviders?: GeoRun["provider"][];
-  /** Only tells "not set up" from "no data yet"; the report treats both as not measured (021, D002). */
-  searchConsoleConfig?: SearchConsoleConfig;
 }
 
 export type CreateReportResult =
@@ -51,23 +48,28 @@ const summaryColumns = {
 };
 
 /** The report's view of Search Console and the goal, from the overview's own summaries (021, D001). The report is in Spanish. */
-async function reportSearch(db: Database, workspaceId: string, domain: string, config: SearchConsoleConfig): Promise<ReportSearch> {
+async function reportSearch(db: Database, workspaceId: string, domain: string): Promise<ReportSearch> {
   const [stored, analytics, goal] = await Promise.all([latestSearchConsole(db, workspaceId), latestAnalytics(db, workspaceId), getGoal(db, workspaceId)]);
   const evidence = goal ? await goalEvidence(db, workspaceId, goal.eventName) : null;
   const view = summarizeGoal({ goal, analytics, evidence }, "es");
-  const gsc = summarizeSearchConsole(stored, config, domain, "es");
-  const t = getMessages("es").searchConsole;
+  // No credential on purpose: the summary then cannot build a text with the service account (D002).
+  const gsc = summarizeSearchConsole(stored, { state: "not_configured" }, domain, "es");
+  const m = getMessages("es");
+  const t = m.searchConsole;
+  // Steps for the operator stay out of a client document (D002).
+  const operatorNotes: string[] = [m.goals.line.connect, m.goals.line.notConfigured];
   const unit = (value: number, name: (n: number) => string, text: string) => `${text} ${name(Math.round(value))}`;
   return {
     state: gsc.state === "ok" && gsc.metrics ? "measured" : gsc.state === "empty" ? "no_impressions" : "not_measured",
     period: gsc.period ? { start: displayDay(gsc.period.start), end: displayDay(gsc.period.end) } : null,
     capturedAt: gsc.capturedAt,
+    property: gsc.property,
     figures: gsc.metrics
       ? (["clicks", "impressions", "ctr", "position"] as const).map((key) => ({ label: t.metrics[key].label, value: gsc.metrics![key].value, change: gsc.metrics![key].change?.text ?? null }))
       : [],
     clicks: gsc.metrics && gsc.totals ? unit(gsc.totals.clicks, t.units.clicks, gsc.metrics.clicks.value) : null,
     impressions: gsc.metrics && gsc.totals ? unit(gsc.totals.impressions, t.units.impressions, gsc.metrics.impressions.value) : null,
-    goal: view.state === "none" ? null : { text: view.text, notes: view.notes },
+    goal: view.state === "none" ? null : { text: view.text, notes: view.notes.filter((note) => !operatorNotes.includes(note)) },
   };
 }
 
@@ -133,7 +135,7 @@ export async function createReport(
       fetchLog: audit.fetchLog,
     },
     generatedAt: (deps.now ?? (() => new Date()))(),
-    search: await reportSearch(db, workspace.id, workspace.domain, deps.searchConsoleConfig ?? { state: "not_configured" }),
+    search: await reportSearch(db, workspace.id, workspace.domain),
     geo,
   });
 

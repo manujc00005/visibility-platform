@@ -94,7 +94,7 @@ describe("summarizeGoal", () => {
     const noKeyEvents = capture({ id: "a3", keyEvents: null });
     const n = summarizeGoal({ goal, analytics: { latest: noKeyEvents, latestCompleted: noKeyEvents }, evidence: { observedAt: AT } });
     expect(n.count).toBeNull();
-    expect(n.text).toBe("Solicitud de presupuesto: medido desde buscadores en una captura anterior; la última captura no trae eventos clave.");
+    expect(n.text).toBe("Solicitud de presupuesto: medido desde buscadores en una lectura anterior; la última lectura no trae eventos clave.");
   });
 
   it("keeps a verified goal verified when GA4 stops listing the event as key, and says so", () => {

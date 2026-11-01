@@ -9,7 +9,7 @@ export const REPORT_STYLES = new SafeHtml(`
 ${REPORT_FONT_FACES}
 @page { size: A4; margin: 18mm 16mm 20mm; }
 * { box-sizing: border-box; }
-html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; text-rendering: geometricPrecision; }
 body { margin: 0; color: #1f2328; font: 10.5pt/1.5 "Geist", -apple-system, "Segoe UI", "DejaVu Sans", Helvetica, Arial, sans-serif; background: #fff; }
 @media screen { body { max-width: 820px; margin: 32px auto; padding: 0 24px; } }
 h1 { font-size: 24pt; margin: 4px 0 2px; line-height: 1.2; }

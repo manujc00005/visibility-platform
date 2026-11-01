@@ -10,7 +10,7 @@ El informe reutiliza los resúmenes de Search Console y del objetivo, adapta sus
 
 ## Impacted areas
 
-`src/modules/reports/{build-report,service,render-pdf,report-styles}.ts`, nuevo `report-fonts.ts`, `src/app/workspaces/[id]/audits/[auditId]/actions.ts`, pruebas de informes, roadmap (D-15, §8).
+`src/modules/reports/{build-report,service,render-pdf,report-styles}.ts`, nuevo `report-fonts.ts`, la ruta de la vista previa (`font-src data:`), pruebas de informes, roadmap (D-15, §8).
 
 ## Context budget
 

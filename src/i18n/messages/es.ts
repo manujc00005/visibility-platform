@@ -69,7 +69,7 @@ export const es = {
       edit: "Editar",
       verified: (label: string, n: number, start: string, end: string) =>
         `${label}: ${n} desde buscadores en los últimos 28 días (Google Analytics, del ${start} al ${end}).`,
-      verifiedNoCapture: (label: string) => `${label}: medido desde buscadores en una captura anterior; la última captura no trae eventos clave.`,
+      verifiedNoCapture: (label: string) => `${label}: medido desde buscadores en una lectura anterior; la última lectura no trae eventos clave.`,
       observed: (when: string) => `Última recepción observada: ${when}.`,
       pending: (label: string) => `${label}: pendiente de comprobar la medición. Google Analytics no ha registrado todavía ninguna recepción desde buscadores de este evento.`,
       notConfigured: "El evento no está marcado como evento clave en Google Analytics.",
@@ -267,7 +267,7 @@ export const es = {
       legend: { good: "Verde: bien", fair: "Ámbar: regular", bad: "Rojo: mal", info: "Azul: mejorable (opcional)", neutral: "Gris: no comprobado" },
       report: {
         title: "Informe para el cliente",
-        description: "PDF con resumen ejecutivo, resultados, problemas, recomendaciones, evidencias y limitaciones.",
+        description: "PDF con resumen ejecutivo, resultados en buscadores, resultados técnicos, problemas, recomendaciones, evidencias y limitaciones.",
         template: (version: string) => `plantilla ${version}`,
         view: "Ver",
         download: "Descargar PDF",

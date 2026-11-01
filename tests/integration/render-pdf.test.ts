@@ -28,9 +28,21 @@ describe("renderPdf", () => {
     );
     expect(blockedRequests).toEqual([]);
     const raw = pdf.toString("latin1");
-    expect(raw).toMatch(/\/FontName\s*\/[A-Z]{6}\+Geist/);
+    expect(raw).toMatch(/\/FontName\s*\/[A-Z]{6}\+Geist(?!Mono)/);
     expect(raw).toMatch(/\/FontName\s*\/[A-Z]{6}\+GeistMono/);
-  });
+  }, 60_000);
+
+  it("prints the footer in the report font: no system font reaches the PDF (feature 021)", async () => {
+    const { pdf, blockedRequests } = await renderPdf(
+      `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>t</title><style>${REPORT_STYLES.toString()}</style></head><body><p>Diagnóstico de visibilidad</p></body></html>`,
+    );
+    expect(blockedRequests).toEqual([]);
+    // Without it, Chromium on Linux rounds the letter advances and the text comes out unevenly spaced.
+    expect(REPORT_STYLES.toString()).toContain("text-rendering: geometricPrecision");
+    const fonts = [...pdf.toString("latin1").matchAll(/\/FontName\s*\/[A-Z]{6}\+([^\s/>]+)/g)].map((match) => match[1]);
+    expect(fonts.length).toBeGreaterThan(0);
+    expect(fonts.filter((name) => !name.startsWith("Geist"))).toEqual([]);
+  }, 60_000);
 
   it("produces a valid PDF from a self-contained document without any request", async () => {
     const { pdf, blockedRequests } = await renderPdf(

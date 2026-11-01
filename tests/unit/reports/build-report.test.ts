@@ -7,7 +7,7 @@ import { evaluateAudit, type AuditFacts } from "@/modules/audits/rules";
 import { buildReportHtml, TEMPLATE_VERSION, type ReportInput, type ReportSearch } from "@/modules/reports/build-report";
 
 const URL_ = "https://www.clinicagarcia.es/";
-const NOT_MEASURED: ReportSearch = { state: "not_measured", period: null, capturedAt: null, figures: [], clicks: null, impressions: null, goal: null };
+const NOT_MEASURED: ReportSearch = { state: "not_measured", period: null, capturedAt: null, property: null, figures: [], clicks: null, impressions: null, goal: null };
 const HOSTILE = `<script>alert(1)</script><img src="http://127.0.0.1:9/x" onerror="alert(2)">`;
 
 const PAGE_HTML = `<!doctype html><html><head><title>${HOSTILE}</title></head><body><h2>${HOSTILE}</h2></body></html>`;
@@ -199,11 +199,11 @@ describe("buildReportHtml", () => {
         repetitions: 1,
         brandName: `García ${HOSTILE}`,
         metrics: {
-          capture: { k: 2, n: 2 },
+          capture: { k: 2, n: 3 },
           answers: { k: 2, n: 2 },
           brandPresence: { k: 1, n: 1 },
           citationRate: { k: 0, n: 1 },
-          promptCoverage: { k: 1, n: 1 },
+          promptCoverage: { k: 0, n: 0 },
           branded: { k: 1, n: 1 },
           shareOfVoice: { total: 2, entries: [{ id: "brand", name: "Tu marca", k: 1 }, { id: "c1", name: "Vitaldent", k: 1 }] },
           perPrompt: [{ promptId: "p1", text: "¿Qué clínica me recomiendas?", intent: "discovery", scheduled: 1, captured: 1, answered: 1, brandMentions: 1, ownCitations: 0, competitorMentions: {} }],
@@ -216,6 +216,8 @@ describe("buildReportHtml", () => {
     expect(withGeo).toContain("<td>1 de 1</td>");
     expect(withGeo).toContain("<td>0 de 1</td>");
     expect(withGeo).not.toContain("(100 %)");
+    expect(withGeo).toContain("<td>2 de 3 (67 %)</td>");
+    expect(withGeo).toContain("<td>sin datos</td>");
     expect(withGeo).toContain("no equivalen a búsquedas reales");
     expect(withGeo).not.toMatch(/<script/i);
   });
@@ -226,9 +228,12 @@ describe("results in search engines (feature 021)", () => {
     state: "measured",
     period: { start: "27 sept 2026", end: "24 oct 2026" },
     capturedAt: new Date("2026-10-27T10:00:00Z"),
+    property: "sc-domain:clinicagarcia.es",
     figures: [
       { label: "Clics", value: "12", change: "Antes: 8 clics (+50 %)" },
       { label: "Impresiones", value: "400", change: null },
+      { label: "CTR", value: "3 %", change: "Antes: 2 %" },
+      { label: "Posición media", value: "9,4", change: "Antes: 12,1" },
     ],
     clicks: "12 clics",
     impressions: "400 impresiones",
@@ -244,21 +249,39 @@ describe("results in search engines (feature 021)", () => {
     expect(doc).toContain("Google registró <strong>12 clics</strong> y <strong>400 impresiones</strong>");
     expect(doc).toContain("<dt>Clics</dt><dd>12<span class=\"change\">Antes: 8 clics (+50 %)</span></dd>");
     expect(doc).toContain("<dt>Impresiones</dt><dd>400</dd>");
-    expect(doc).toContain("Fuente: Google Search Console, del 27 sept 2026 al 24 oct 2026");
+    expect(doc).toContain("<dt>CTR</dt><dd>3 %<span class=\"change\">Antes: 2 %</span></dd>");
+    expect(doc).toContain("<dt>Posición media</dt><dd>9,4<span class=\"change\">Antes: 12,1</span></dd>");
+    expect(doc).toContain("comparado con los 28 días anteriores. Consultado el 27 de octubre de 2026.");
+    expect(doc).toContain('Fuente: Google Search Console, propiedad <span class="mono">sc-domain:clinicagarcia.es</span>, del 27 sept 2026 al 24 oct 2026');
     expect(doc).toContain(LIMIT_GOOGLE);
     expect(doc).not.toContain(LIMIT_PRIVATE);
+    // The report shows totals, and totals do include the searches Google hides from the query list.
+    expect(doc).not.toContain("omite");
+  });
+
+  it("does not claim a comparison it cannot show (feature 021)", () => {
+    const doc = render({ ...measured, figures: measured.figures.map((figure) => ({ ...figure, change: null })) });
+    expect(doc).not.toContain("comparado con los 28 días anteriores");
+    expect(doc).toContain("Sin datos del periodo anterior. Consultado el 27 de octubre de 2026.");
   });
 
   it("explains no impressions and not measured without figures (AC-001, AC-004)", () => {
     const empty = render(zero);
     expect(empty).toContain("no registra impresiones de esta web en este periodo");
     expect(empty).not.toContain('class="figures"');
-    expect(empty).toContain(LIMIT_GOOGLE);
-    const none = render({ ...measured, state: "not_measured", period: null, capturedAt: null, figures: [], clicks: null, impressions: null });
+    expect(empty).toContain("que no registre impresiones no mide la demanda de sus servicios");
+    expect(empty).not.toContain(LIMIT_GOOGLE);
+    expect(empty).not.toContain("la posición es una media");
+    expect(empty).not.toContain("Sin datos del periodo anterior");
+    const none = render({ ...measured, state: "not_measured", period: null, capturedAt: null, property: null, figures: [], clicks: null, impressions: null });
     expect(none).toContain("pendiente de medir");
     expect(none).toContain("Lo que sigue describe la salud técnica de la portada, no su posición.");
     expect(none).not.toContain("Fuente: Google Search Console");
     expect(none).toContain(LIMIT_PRIVATE);
+    // A goal measured through Analytics with no Search Console must not read as «no Analytics data».
+    const goalOnly = render({ ...measured, state: "not_measured", period: null, capturedAt: null, property: null, figures: [], clicks: null, impressions: null, goal: { text: "Solicitud: 2 desde buscadores.", notes: [] } });
+    expect(goalOnly).not.toContain(LIMIT_PRIVATE);
+    expect(goalOnly).toContain("No incluye datos de Google Search Console");
   });
 
   it("adds the goal with its notes and its limit only when there is one, as text (AC-003)", () => {
@@ -268,5 +291,6 @@ describe("results in search engines (feature 021)", () => {
     expect(withGoal).toContain("No equivale a clientes ni a ventas");
     expect(withGoal).not.toContain("<script>");
     expect(render(measured)).not.toContain("Objetivo comercial");
+    expect(render(measured)).not.toContain("objetivo comercial");
   });
 });

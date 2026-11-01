@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready (2026-11-01). Primera spec de la fase C del cierre del MVP con la decisión de pyme primero (`docs/visibility-mvp/19-cierre-mvp-fases.md`), tarea 16 del plan de Codex; resuelve D-15.
+Done (2026-11-01). Primera spec de la fase C del cierre del MVP con la decisión de pyme primero (`docs/visibility-mvp/19-cierre-mvp-fases.md`), tarea 16 del plan de Codex; resuelve D-15.
 
 ## Problem
 
@@ -34,23 +34,23 @@ El informe responde, con las mismas cifras que el resumen, si a la empresa la en
 
 ## Desired behavior
 
-1. Portada y pie dicen «Diagnóstico de visibilidad».
+1. Portada, pie y nombre del archivo dicen «Diagnóstico de visibilidad».
 2. El resumen ejecutivo añade una frase sobre Google: con impresiones, clics e impresiones del periodo; sin impresiones, que Search Console no registra ninguna; sin captura, que el posicionamiento está pendiente de medir.
 3. Nuevo apartado «Resultados en buscadores», tras el resumen, con clics, impresiones, CTR y posición media, su comparación con los 28 días anteriores, el periodo y la fecha de la captura. Sin impresiones, una frase. Sin captura, una frase neutra, nunca un fallo técnico ni el email de la cuenta de servicio.
-4. Si hay objetivo comercial, el apartado lo muestra con la misma frase y notas que el resumen. Sin objetivo no dice nada.
+4. Si hay objetivo comercial, el apartado lo muestra con la misma frase que el resumen y la última recepción observada. Las notas dirigidas al operador («Conecta Google Analytics», evento no marcado) no van al cliente. Sin objetivo no dice nada.
 5. Las fracciones de IA usan `fraction` de la 013.
-6. Limitaciones según el contenido: con datos de Search Console explica que Google omite búsquedas y que la posición es una media; sin ellos conserva la frase actual; con objetivo explica que son eventos clave desde buscadores, no clientes ni ventas.
+6. Limitaciones según el contenido: con cifras explica qué cuentan y que la posición es una media; sin impresiones, que eso no mide la demanda; sin ellos conserva la frase actual, sin nombrar Analytics si el informe trae un objetivo; con objetivo explica que son eventos clave desde buscadores, no clientes ni ventas.
 7. El PDF lleva sus fuentes dentro: Geist para texto y Geist Mono para URLs, embebidas en el HTML sin red. Los caracteres fuera del subconjunto usan una alternativa de la misma línea.
 
 ## Functional requirements
 
 - FR-001 `ReportInput.search: ReportSearch` con `state` (`measured` | `no_impressions` | `not_measured`), `period`, `capturedAt`, cifras formateadas y cambios, y `goal: { text, notes } | null`.
 - FR-002 `createReport` calcula `search` con `summarizeSearchConsole` y `summarizeGoal` en `es`, con `latestSearchConsole`, `latestAnalytics`, `getGoal` y `goalEvidence`: las cifras no se recalculan.
-- FR-003 `ReportDeps.searchConsoleConfig` opcional; la acción pasa la configuración real.
+- FR-003 El informe llama a `summarizeSearchConsole` sin credencial, a propósito: así ningún texto con el email de la cuenta de servicio puede formarse en esta ruta (D002).
 - FR-004 Ningún texto de fallo (`lastFailure`, `reason` con email) llega al informe.
 - FR-005 Numeración de apartados correlativa con y sin IA.
 - FR-006 `TEMPLATE_VERSION` nueva. Los informes guardados no cambian.
-- FR-007 `src/modules/reports/report-fonts.ts` con Geist y Geist Mono en base64 (SIL OFL 1.1) y `@font-face` en `REPORT_STYLES`. El render sigue sin peticiones de red (`blockedRequests` vacío).
+- FR-007 `src/modules/reports/report-fonts.ts` con Geist y Geist Mono en base64 (SIL OFL 1.1) y `@font-face` en `REPORT_STYLES` y en el pie. El render sigue sin peticiones de red (`blockedRequests` vacío) y la vista previa admite `font-src data:`.
 - FR-008 D-15 se cierra con un PDF generado en un contenedor Linux y revisado.
 
 ## Non-functional requirements
@@ -61,7 +61,7 @@ El informe responde, con las mismas cifras que el resumen, si a la empresa la en
 
 ## API / Interface changes
 
-- `ReportInput.search`, `ReportDeps.searchConsoleConfig`.
+- `ReportInput.search`. La fuente del apartado nombra la propiedad leída.
 
 ## Data model changes
 
@@ -72,19 +72,19 @@ Ninguno: el HTML y el PDF se guardan como hasta ahora.
 - Captura con impresiones solo en el periodo anterior: cifras a cero con su cambio.
 - Fallo posterior a una captura buena: se usa la captura, sin mencionar el fallo.
 - Captura antigua: se ve por su periodo y fecha.
-- Objetivo pendiente sin GA4: frase y nota de conectar, igual que el resumen.
+- Objetivo pendiente sin GA4: la frase del resumen, sin la nota de conectar.
 - Empresa sin auditoría: no hay informe (sin cambios).
 - Nombre de objetivo hostil: escapado.
 
 ## Acceptance criteria
 
-- AC-001 Con impresiones, el apartado y el resumen ejecutivo muestran las cifras y cambios de `summarizeSearchConsole`; sin impresiones y sin captura, sus frases, sin ceros ni fallos.
+- AC-001 Con impresiones, el apartado y el resumen ejecutivo muestran las cifras y cambios de `summarizeSearchConsole`; sin impresiones en ningún periodo y sin captura, sus frases, sin ceros ni fallos; con impresiones solo en el periodo anterior, cifras a cero con su cambio.
 - AC-002 Un fallo con email de la cuenta de servicio no aparece en el informe.
-- AC-003 Con objetivo, la frase y las notas coinciden con `summarizeGoal`; sin objetivo, no hay rastro.
+- AC-003 Con objetivo, la frase coincide con `summarizeGoal`, sin notas para el operador; sin objetivo, no hay rastro.
 - AC-004 Limitaciones según contenido en los tres casos; sin datos conserva la frase anterior.
 - AC-005 `fraction` en IA: «1 de 1» sin porcentaje; «2 de 3 (67 %)»; «sin datos» con denominador cero.
 - AC-006 Numeración correlativa con y sin IA; determinista; sin scripts ni recursos externos más allá de las fuentes en `data:`.
-- AC-007 PDF real con `blockedRequests` vacío y fuentes embebidas.
+- AC-007 PDF real con `blockedRequests` vacío y fuentes embebidas, también en el pie.
 - AC-008 Generados en `dev`: Olessium y la clínica, revisados visualmente; cifras iguales a las del resumen; ninguna medición de prueba.
 - AC-009 PDF generado en Linux, revisado (D-15).
 - AC-010 Lint, typecheck, unitarias, integración y build en verde.

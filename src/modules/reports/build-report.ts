@@ -12,7 +12,7 @@ import { REPORT_STYLES } from "@/modules/reports/report-styles";
  * Every value from the audited website goes through the escaping `html` template.
  * Deterministic: the same input always produces the same document.
  */
-export const TEMPLATE_VERSION = "2026-11-01.1";
+export const TEMPLATE_VERSION = "2026-11-01.2";
 
 export interface ReportFinding {
   ruleId: string;
@@ -62,6 +62,8 @@ export interface ReportSearch {
   /** Formatted first and last day of the period. */
   period: { start: string; end: string } | null;
   capturedAt: Date | null;
+  /** The Search Console property read: lets a stale capture be noticed when reviewing. */
+  property: string | null;
   figures: ReportFigure[];
   /** Headline numbers for the executive summary, formatted with their units. */
   clicks: string | null;
@@ -223,9 +225,11 @@ function searchSection(search: ReportSearch, number: number): SafeHtml {
       : search.state === "no_impressions"
         ? html`<p>Search Console no registra impresiones de esta web en este periodo ni en los 28 días anteriores. Si la propiedad es reciente, Google tarda unos días en acumular datos.</p>`
         : html`<p>Todavía no hay datos de Search Console para esta web, así que no podemos decir cuántas veces aparece en Google ni cuántas personas entran desde sus resultados. Lo que sigue describe la salud técnica de la portada, no su posición.</p>`;
+  // Without impressions before there is nothing to compare against: the line does not claim it.
+  const compared = search.figures.some((figure) => figure.change !== null);
   const source =
     search.period && search.capturedAt
-      ? html`<p class="muted">Fuente: Google Search Console, del ${search.period.start} al ${search.period.end}, comparado con los 28 días anteriores. Consultado el ${dateOnly.format(search.capturedAt)}.</p>`
+      ? html`<p class="muted">Fuente: Google Search Console, propiedad <span class="mono">${search.property}</span>, del ${search.period.start} al ${search.period.end}${compared ? ", comparado con los 28 días anteriores" : null}.${search.state === "measured" && !compared ? " Sin datos del periodo anterior." : null} Consultado el ${dateOnly.format(search.capturedAt)}.</p>`
       : null;
   const goal = search.goal
     ? html`<p><strong>Objetivo comercial.</strong> ${search.goal.text}</p>${search.goal.notes.map((note) => html`<p class="muted">${note}</p>`)}`
@@ -324,14 +328,24 @@ const SPEED_LIMITATIONS = [
   "Las recomendaciones son orientativas y no garantizan una posición concreta en buscadores.",
 ];
 
+function searchLimitation(search: ReportSearch): string {
+  if (search.state === "measured") {
+    return "Las cifras de Google son las que registra Search Console para el periodo indicado: cuentan apariciones y clics en sus resultados, no clientes, y la posición es una media, no un puesto fijo.";
+  }
+  if (search.state === "no_impressions") {
+    return "Search Console solo registra las veces que esta web aparece en los resultados de Google: que no registre impresiones no mide la demanda de sus servicios.";
+  }
+  return search.goal
+    ? "No incluye datos de Google Search Console: no mide clics ni posiciones reales en Google."
+    : "No incluye datos privados del propietario (Google Search Console, Analytics): no mide visitas, clics ni posiciones reales en Google.";
+}
+
 /** What each limit says depends on what this report contains (feature 021). */
 function limitationsOf(input: ReportInput): string[] {
   const { search, geo } = input;
   return [
     ...COMMON_LIMITATIONS,
-    search.state === "not_measured"
-      ? "No incluye datos privados del propietario (Google Search Console, Analytics): no mide visitas, clics ni posiciones reales en Google."
-      : "Las cifras de Google son las que registra Search Console para el periodo indicado: omite las búsquedas poco frecuentes por privacidad, y la posición es una media, no un puesto fijo.",
+    searchLimitation(search),
     ...(search.goal ? ["El objetivo comercial cuenta eventos clave de Google Analytics llegados desde buscadores. No equivale a clientes ni a ventas, y un cambio no demuestra su causa."] : []),
     ...SPEED_LIMITATIONS,
     ...(geo ? ["La visibilidad en IA es una muestra de respuestas de ChatGPT en una fecha y ubicación concretas; las respuestas cambian entre consultas y usuarios, y no equivalen a búsquedas reales."] : []),

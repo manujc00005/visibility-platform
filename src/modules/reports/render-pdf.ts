@@ -1,4 +1,5 @@
 import { chromium } from "playwright-core";
+import { REPORT_FONT_FACES } from "@/modules/reports/report-fonts";
 
 /**
  * Prints a self-contained HTML document to PDF with headless Chromium, isolated (B08b):
@@ -14,7 +15,9 @@ export interface RenderedPdf {
 }
 
 // Static and trusted: Chromium substitutes pageNumber/totalPages. No report data here.
-const FOOTER = `<div style="width:100%;font:8px -apple-system,Helvetica,Arial,sans-serif;color:#59636e;padding:0 16mm;display:flex;justify-content:space-between">
+// The footer is a document of its own, so it declares the fonts again. Chromium does not wait for it
+// to load them: it draws Geist because the page has already loaded that same font (feature 021).
+const FOOTER = `<style>${REPORT_FONT_FACES}</style><div style="width:100%;text-rendering:geometricPrecision;font:8px Geist,-apple-system,Helvetica,Arial,sans-serif;color:#59636e;padding:0 16mm;display:flex;justify-content:space-between">
 <span>Diagnóstico de visibilidad</span><span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>`;
 
 export async function renderPdf(documentHtml: string, options: { timeoutMs?: number } = {}): Promise<RenderedPdf> {
