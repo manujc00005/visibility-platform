@@ -115,7 +115,7 @@ export async function CompetitorsPanel({
     <section
       id="competitors"
       aria-labelledby="competitors-heading"
-      className="flex scroll-mt-20 flex-col gap-3"
+      className="flex scroll-mt-6 flex-col gap-3"
     >
       <div className="flex flex-col gap-1">
         <h2

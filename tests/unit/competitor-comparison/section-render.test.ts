@@ -48,11 +48,36 @@ const summary = (rows: ComparisonRow[], over: Partial<ComparisonSummary> = {}): 
 });
 /** The main table only: the full one repeats every row under «Ver todas las métricas». */
 const main = (html: string) => html.slice(0, html.indexOf("<details"));
-const render = (s: ComparisonSummary, locale: Locale = "es") => renderToStaticMarkup(createElement(ComparisonSection, { s, action: noop, manageHref: "/workspaces/x/geo/setup", locale }));
+const render = (s: ComparisonSummary, locale: Locale = "es") => renderToStaticMarkup(createElement(ComparisonSection, { s, action: noop, manageHref: "/workspaces/x/edit#competitors", locale }));
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 const locales = ["es", "en"] as const;
 
 describe("comparison section", () => {
+  /** Cells a row really occupies: colspans count, and the row header adds one. */
+  const widths = (part: string) =>
+    [...part.matchAll(/<tr role="row"[^>]*>(.*?)<\/tr>/g)]
+      .map((m) => m[1]!)
+      .filter((row) => row.includes('role="rowheader"'))
+      .map((row) => [...row.matchAll(/<td role="cell"([^>]*)>/g)].reduce((sum, cell) => sum + Number(cell[1]!.match(/aria-colspan="(\d+)"/)?.[1] ?? 1), 0));
+
+  it("fills every column of both tables whatever source is missing (feature 017)", () => {
+    const absent = [{}, { lighthouse: { status: "quota_exceeded" } }, { field: { status: "no_data" } }, { criticalCount: null, warningCount: null }, { authority: { status: "not_configured", requestedDomain: "rival.es" } }];
+    for (const a of absent) {
+      for (const b of absent) {
+        const html = render(summary([measured(site({ ...a, ...b } as Parameters<typeof site>[0]))]));
+        expect(widths(main(html))).toEqual([5]);
+        expect(widths(html.slice(html.indexOf("<details")))).toEqual([11]);
+      }
+    }
+    // A source missing across two main columns gives one reason, not two.
+    const html = render(summary([measured(site({ lighthouse: { status: "quota_exceeded" } } as Parameters<typeof site>[0]))]));
+    expect(main(html)).toContain('aria-colspan="2"');
+  });
+
+  it("links to Configuración to manage competitors (FR-008)", () => {
+    expect(render(summary([measured(site())]))).toContain('href="/workspaces/x/edit#competitors"');
+  });
+
   it.each(locales)("shows five columns first and all eleven one click below, with the row notes once (feature 017, %s)", (locale) => {
     const t = getMessages(locale).competitorComparison;
     const html = render(summary([measured(site())]), locale);
@@ -267,7 +292,7 @@ describe("comparison section", () => {
     expect(blocked("not_configured")).toContain(t.needs.not_configured);
     expect(blocked("not_configured")).not.toContain("<button");
     expect(blocked("no_competitors")).toContain(t.needs.no_competitors);
-    expect(blocked("no_competitors")).toContain('href="/workspaces/x/geo/setup"');
+    expect(blocked("no_competitors")).toContain('href="/workspaces/x/edit#competitors"');
     expect(blocked("no_competitors")).not.toContain("<button");
   });
 

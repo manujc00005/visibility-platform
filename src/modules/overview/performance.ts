@@ -1,5 +1,5 @@
 import { findingText, type FindingContext } from "@/i18n/findings";
-import { formatDate, formatMs } from "@/i18n/format";
+import { formatDate } from "@/i18n/format";
 import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
 import { getMessages } from "@/i18n/messages";
 import { sameMethodology, SCORE_NOISE, speedMethodology } from "@/modules/audits/evolution";
@@ -30,8 +30,6 @@ export interface PerformanceSummary {
   topIssue: string | null;
   /** True when `topIssue` is the stored Spanish text because it could not be translated. */
   topIssueOriginal: boolean;
-  /** Real visitors (Chrome UX Report), with their own source, scope and period (D020). */
-  field: { available: boolean; text: string; source: string | null };
   attempt: Attempt | null;
   stale: Stale | null;
   auditId: string | null;
@@ -75,24 +73,6 @@ export function fieldPeriod(period: { firstDate: string; lastDate: string } | nu
   return getMessages(locale).overview.performance.period(formatDate(from, locale, PERIOD_DATE), formatDate(to, locale, PERIOD_DATE));
 }
 
-function fieldLine(audit: AuditInput | null, locale: Locale): PerformanceSummary["field"] {
-  const t = getMessages(locale).overview.performance;
-  const field = audit?.facts?.fieldData;
-  const none = { available: false, text: t.fieldNone, source: null };
-  if (!field) return none;
-  if (field.status === "no_data") return { available: false, text: t.fieldNoData, source: null };
-  const lcp = field.status === "ok" ? field.metrics?.lcpMs : null;
-  if (typeof lcp !== "number") return none;
-  const rating = auditLabels(locale).rating[rateMetric("lcp", lcp)].toLowerCase();
-  // runCrux only falls back to the origin when the page itself has no record.
-  const scope = field.scope ? t.scope[field.scope] : t.scope.unknown;
-  return {
-    available: true,
-    text: t.field(scope, formatMs(lcp, locale), rating),
-    source: t.fieldSource(fieldPeriod(field.collectionPeriod, locale) ?? t.periodUnknown),
-  };
-}
-
 /** `findings`: findings of the latest completed audit (any order is fine; they come sorted). */
 export function summarizePerformance(audits: AuditInput[], findings: FindingLike[], now: Date, locale: Locale = DEFAULT_LOCALE): PerformanceSummary {
   const t = getMessages(locale).overview.performance;
@@ -108,7 +88,6 @@ export function summarizePerformance(audits: AuditInput[], findings: FindingLike
     reason: null,
     topIssue: null,
     topIssueOriginal: false,
-    field: fieldLine(result, locale),
     attempt: result ? auditAttempt(pending, locale) : null,
     stale: staleInfo(result?.startedAt ?? null, now, locale),
     auditId: result?.id ?? null,

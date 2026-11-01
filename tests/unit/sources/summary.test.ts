@@ -68,7 +68,6 @@ const performance = (over: Partial<PerformanceSummary> = {}): PerformanceSummary
   reason: "Ejecuta la primera auditoría para medir la velocidad de la web.",
   topIssue: null,
   topIssueOriginal: false,
-  field: { available: false, text: "", source: null },
   attempt: null,
   stale: null,
   auditId: null,

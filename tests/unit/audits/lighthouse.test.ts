@@ -53,7 +53,7 @@ describe("lighthouseView", () => {
     expect(lighthouseView(measured(), "seo", "es").originalTexts).toBe(false);
     // Nothing to flag when nothing failed.
     expect(lighthouseView(measured(), "accessibility", "en").originalTexts).toBe(false);
-    expect(lighthouseView(measured({ categories: undefined }), "seo", "en").reason).toBe("The latest audit predates this check. Run a new audit to measure it.");
+    expect(lighthouseView(measured({ categories: undefined }), "seo", "en").reason).toBe("The latest audit predates this check. Press “Analyse home page” to measure it.");
   });
 
   it("names contrast and heading order in our own words, in both languages", () => {

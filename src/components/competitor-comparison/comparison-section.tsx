@@ -69,12 +69,20 @@ function Absent({
   );
 }
 
+type Column = (typeof COLUMNS)[number];
+
+/**
+ * The cells of one site, in the order of `columns`. Each source gives a value per column or one
+ * reason across the columns of it that are shown (D008), so headers and cells cannot drift apart.
+ */
 function Cells({
   site,
+  columns,
   t,
   locale,
 }: {
   site: SiteResult;
+  columns: readonly Column[];
   t: Texts;
   locale: Locale;
 }) {
@@ -85,71 +93,103 @@ function Cells({
     });
   const shown = (metric: Metric, format: (value: number) => string) =>
     metric.status === "ok" ? format(metric.value) : t.notMeasured;
-  const c = t.columns;
   const { lighthouse, field, authority } = site;
+  const sources: {
+    columns: Column[];
+    values: Partial<Record<Column, string>> | null;
+    source: string;
+    reason: string;
+  }[] = [
+    {
+      columns: ["performance", "seo", "accessibility", "bestPractices"],
+      values:
+        lighthouse.status === "ok"
+          ? {
+              performance: shown(lighthouse.performance, number),
+              seo: shown(lighthouse.seo, number),
+              accessibility: shown(lighthouse.accessibility, number),
+              bestPractices: shown(lighthouse.bestPractices, number),
+            }
+          : null,
+      source: t.sources.lighthouse,
+      reason:
+        lighthouse.status === "ok"
+          ? ""
+          : lighthouse.status === "skipped"
+            ? t.access[site.access]
+            : t.lighthouseStatus[lighthouse.status],
+    },
+    {
+      columns: ["lcp", "inp", "cls"],
+      values:
+        field.status === "ok"
+          ? {
+              lcp: shown(field.lcpMs, (v) => formatMs(v, locale)),
+              inp: shown(field.inpMs, (v) => formatMs(v, locale)),
+              cls: shown(field.cls, (v) => number(v, 2)),
+            }
+          : null,
+      source: t.sources.field,
+      reason:
+        field.status === "ok"
+          ? ""
+          : field.status === "skipped"
+            ? t.access[site.access]
+            : t.fieldStatus[field.status],
+    },
+    {
+      columns: ["critical", "warnings"],
+      values:
+        site.criticalCount !== null && site.warningCount !== null
+          ? {
+              critical: number(site.criticalCount),
+              warnings: number(site.warningCount),
+            }
+          : null,
+      source: t.sources.audit,
+      reason: t.access[site.access],
+    },
+    {
+      columns: ["authority", "referringDomains"],
+      values:
+        authority.status === "ok"
+          ? {
+              authority: number(authority.score, 2),
+              referringDomains:
+                authority.referringDomains === null
+                  ? t.unavailable
+                  : number(authority.referringDomains),
+            }
+          : null,
+      source: t.sources.authority,
+      reason:
+        authority.status === "ok" ? "" : t.authorityStatus[authority.status],
+    },
+  ];
   return (
     <>
-      {lighthouse.status === "ok" ? (
-        <>
-          <Value label={c.performance}>
-            {shown(lighthouse.performance, number)}
+      {sources.map((source) => {
+        const visible = columns.filter((column) =>
+          source.columns.includes(column),
+        );
+        if (visible.length === 0) return null;
+        if (!source.values) {
+          return (
+            <Absent
+              key={source.source}
+              source={source.source}
+              span={visible.length}
+            >
+              {source.reason}
+            </Absent>
+          );
+        }
+        return visible.map((column) => (
+          <Value key={column} label={t.columns[column]}>
+            {source.values![column]}
           </Value>
-          <Value label={c.seo}>{shown(lighthouse.seo, number)}</Value>
-          <Value label={c.accessibility}>
-            {shown(lighthouse.accessibility, number)}
-          </Value>
-          <Value label={c.bestPractices}>
-            {shown(lighthouse.bestPractices, number)}
-          </Value>
-        </>
-      ) : (
-        <Absent source={t.sources.lighthouse} span={4}>
-          {lighthouse.status === "skipped"
-            ? t.access[site.access]
-            : t.lighthouseStatus[lighthouse.status]}
-        </Absent>
-      )}
-      {field.status === "ok" ? (
-        <>
-          <Value label={c.lcp}>
-            {shown(field.lcpMs, (v) => formatMs(v, locale))}
-          </Value>
-          <Value label={c.inp}>
-            {shown(field.inpMs, (v) => formatMs(v, locale))}
-          </Value>
-          <Value label={c.cls}>{shown(field.cls, (v) => number(v, 2))}</Value>
-        </>
-      ) : (
-        <Absent source={t.sources.field} span={3}>
-          {field.status === "skipped"
-            ? t.access[site.access]
-            : t.fieldStatus[field.status]}
-        </Absent>
-      )}
-      {site.criticalCount !== null && site.warningCount !== null ? (
-        <>
-          <Value label={c.critical}>{number(site.criticalCount)}</Value>
-          <Value label={c.warnings}>{number(site.warningCount)}</Value>
-        </>
-      ) : (
-        <Absent source={t.sources.audit} span={2}>
-          {t.access[site.access]}
-        </Absent>
-      )}
-      {authority.status === "ok" ? (
-        <>
-          <Value label={c.authority}>{number(authority.score, 2)}</Value>
-          <Value label={c.referringDomains}>
-            {authority.referringDomains === null
-              ? t.unavailable
-              : number(authority.referringDomains)}
-          </Value>
-        </>
-      ) : (
-        <Absent source={t.sources.authority} span={2}>
-          {t.authorityStatus[authority.status]}
-        </Absent>
-      )}
+        ));
+      })}
     </>
   );
 }
@@ -193,85 +233,22 @@ function detailsOf(site: SiteResult, t: Texts, locale: Locale): string[] {
   return lines;
 }
 
-/** The main table: a missing source explains itself across the contiguous columns it covers. */
-function KeyCells({
-  site,
-  t,
-  locale,
-}: {
-  site: SiteResult;
-  t: Texts;
-  locale: Locale;
-}) {
-  const number = (value: number, digits = 0) =>
-    formatNumber(value, locale, {
-      minimumFractionDigits: digits,
-      maximumFractionDigits: digits,
-    });
-  const shown = (metric: Metric, format: (value: number) => string) =>
-    metric.status === "ok" ? format(metric.value) : t.notMeasured;
-  const c = t.columns;
-  const { lighthouse, field, authority } = site;
-  return (
-    <>
-      {lighthouse.status === "ok" ? (
-        <>
-          <Value label={c.performance}>
-            {shown(lighthouse.performance, number)}
-          </Value>
-          <Value label={c.seo}>{shown(lighthouse.seo, number)}</Value>
-        </>
-      ) : (
-        <Absent source={t.sources.lighthouse} span={2}>
-          {lighthouse.status === "skipped"
-            ? t.access[site.access]
-            : t.lighthouseStatus[lighthouse.status]}
-        </Absent>
-      )}
-      {field.status === "ok" ? (
-        <Value label={c.lcp}>
-          {shown(field.lcpMs, (v) => formatMs(v, locale))}
-        </Value>
-      ) : (
-        <Absent source={t.sources.field} span={1}>
-          {field.status === "skipped"
-            ? t.access[site.access]
-            : t.fieldStatus[field.status]}
-        </Absent>
-      )}
-      {site.criticalCount !== null ? (
-        <Value label={c.critical}>{number(site.criticalCount)}</Value>
-      ) : (
-        <Absent source={t.sources.audit} span={1}>
-          {t.access[site.access]}
-        </Absent>
-      )}
-      {authority.status === "ok" ? (
-        <Value label={c.authority}>{number(authority.score, 2)}</Value>
-      ) : (
-        <Absent source={t.sources.authority} span={1}>
-          {t.authorityStatus[authority.status]}
-        </Absent>
-      )}
-    </>
-  );
-}
-
 function Row({
   row,
+  columns,
+  notes,
   t,
   locale,
-  all = false,
 }: {
   row: ComparisonRow;
+  columns: readonly Column[];
+  /** The per-row notes go once, in the main table. */
+  notes: boolean;
   t: Texts;
   locale: Locale;
-  all?: boolean;
 }) {
-  // The per-row notes go once, in the main table.
   const details =
-    row.state === "measured" && !all ? detailsOf(row.site, t, locale) : [];
-  const columns = all ? COLUMNS : KEY_COLUMNS;
+    row.state === "measured" && notes ? detailsOf(row.site, t, locale) : [];
   return (
     <>
       <tr
@@ -302,11 +279,7 @@ function Row({
           ) : null}
         </th>
         {row.state === "measured" ? (
-          all ? (
-            <Cells site={row.site} t={t} locale={locale} />
-          ) : (
-            <KeyCells site={row.site} t={t} locale={locale} />
-          )
+          <Cells site={row.site} columns={columns} t={t} locale={locale} />
         ) : (
           <td
             role="cell"
@@ -344,14 +317,14 @@ function ComparisonTable({
   rows,
   t,
   locale,
-  all = false,
+  notes = false,
 }: {
   label: string;
-  columns: readonly (typeof COLUMNS)[number][];
+  columns: readonly Column[];
   rows: ComparisonRow[];
   t: Texts;
   locale: Locale;
-  all?: boolean;
+  notes?: boolean;
 }) {
   return (
     <table
@@ -386,7 +359,13 @@ function ComparisonTable({
       <tbody role="rowgroup" className="block lg:table-row-group">
         {rows.map((row) => (
           <Fragment key={row.key}>
-            <Row row={row} t={t} locale={locale} all={all} />
+            <Row
+              row={row}
+              columns={columns}
+              notes={notes}
+              t={t}
+              locale={locale}
+            />
           </Fragment>
         ))}
       </tbody>
@@ -452,6 +431,7 @@ export function ComparisonSection({ s, action, manageHref, locale }: Props) {
             rows={s.rows}
             t={t}
             locale={locale}
+            notes
           />
           <details>
             <summary className="cursor-pointer text-sm font-medium">
@@ -464,7 +444,6 @@ export function ComparisonSection({ s, action, manageHref, locale }: Props) {
                 rows={s.rows}
                 t={t}
                 locale={locale}
-                all
               />
             </div>
           </details>

@@ -488,18 +488,12 @@ export const es = {
       change: (diff: string) => `${diff} puntos frente a la medición anterior`,
       noChange: "Sin cambio apreciable frente a la medición anterior",
       period: (from: string, to: string) => `del ${from} al ${to}`,
-      scope: { url: "de esta página", origin: "de todo el sitio (la portada no tiene datos propios)", unknown: "(alcance no indicado)" },
-      fieldNone: "No hay datos de visitantes reales en esta medición.",
-      fieldNoData: "Chrome UX Report no tiene datos suficientes de esta web.",
-      field: (scope: string, lcp: string, rating: string) => `Visitantes reales ${scope}: el contenido principal aparece en ${lcp} (${rating}).`,
-      fieldSource: (period: string) => `Chrome UX Report · ${period}`,
-      periodUnknown: "periodo no indicado",
       notMeasuredVerdict: "No medida",
       analyzing: "Analizando",
       analyzingReason: "Estamos midiendo la web. Tarda menos de un minuto.",
       error: "Error",
-      errorReason: "La auditoría no terminó. Vuelve a ejecutarla.",
-      firstAudit: "Ejecuta la primera auditoría para medir la velocidad de la web.",
+      errorReason: "La auditoría no terminó. Pulsa «Analizar portada» de nuevo.",
+      firstAudit: "Pulsa «Analizar portada» para medir la velocidad de la web.",
     },
     seo: {
       areas: {
@@ -516,8 +510,8 @@ export const es = {
       partialDetail: "Resultado parcial: la portada no se pudo leer, así que solo se comprobaron el acceso, robots.txt y el sitemap.",
       partialTitle: "Resultado parcial",
       analyzingReason: "Estamos analizando la web. Tarda menos de un minuto.",
-      errorReason: "La auditoría no terminó. Vuelve a ejecutarla.",
-      firstAudit: "Ejecuta la primera auditoría para comprobar si Google puede leer y entender la web.",
+      errorReason: "La auditoría no terminó. Pulsa «Analizar portada» de nuevo.",
+      firstAudit: "Pulsa «Analizar portada» para comprobar si Google puede leer y entender la web.",
       notLoaded: "No se pudieron leer los resultados de la última auditoría. Recarga la página.",
       noComparison: "Sin comparación: la auditoría anterior comprobó cosas distintas.",
     },
@@ -607,7 +601,7 @@ export const es = {
     labNote:
       "La puntuación es una prueba de laboratorio: Google carga tu portada en un móvil simulado con conexión lenta. Sirve para detectar problemas, pero no es la experiencia de todos tus visitantes. Entre dos pruebas idénticas puede variar varios puntos; solo consideramos cambio una diferencia de 10 puntos o más.",
     noMeasurementsTitle: "Todavía no hay mediciones de velocidad",
-    noMeasurementsBody: "Ejecuta una auditoría: leemos tu portada y pedimos a Google que mida su velocidad en móvil. Tarda menos de un minuto.",
+    noMeasurementsBody: "Pulsa «Analizar portada»: leemos tu portada y pedimos a Google que mida su velocidad en móvil. Tarda menos de un minuto.",
     metrics: {
       lcp: { label: "Contenido principal (LCP)", meaning: "Tiempo hasta que se ve lo más importante de la página, como la foto o el titular principal.", good: "2,5 s o menos" },
       fcp: { label: "Primer contenido (FCP)", meaning: "Tiempo hasta que aparece algo en pantalla.", good: "1,8 s o menos" },
@@ -677,7 +671,7 @@ export const es = {
     ranking: {
       title: "Posicionamiento en Google",
       description:
-        "Cuántas veces apareces en Google, cuántas personas entran en tu web y con qué búsquedas, según Search Console, la herramienta gratuita de Google para propietarios de webs.",
+        "Cuántas veces apareces en Google y cuántas personas entran en tu web, según Search Console, la herramienta gratuita de Google para propietarios de webs.",
     },
     health: {
       title: "Salud técnica de tu portada",
@@ -1030,7 +1024,6 @@ export const es = {
   },
   competitorComparison: {
     section: {
-      title: "Comparativa con competidores",
       description: "Tu web y las de tus competidores, medidas en la misma ejecución: rendimiento, salud técnica y autoridad. No muestra qué búsquedas posicionan ni su tráfico.",
     },
     button: { run: "Comparar (consume PageSpeed)", rerun: "Volver a comparar (consume PageSpeed)", pending: "Comparando… puede tardar unos minutos" },
@@ -1140,7 +1133,7 @@ export const es = {
     states: { no_audit: "Sin auditoría", not_measured: "No medido", unavailable: "Sin resultado" },
     reasons: {
       noAudit: "Todavía no hay auditorías.",
-      notMeasured: "La última auditoría es anterior a esta comprobación. Ejecuta una auditoría nueva para medirla.",
+      notMeasured: "La última auditoría es anterior a esta comprobación. Pulsa «Analizar portada» para medirla.",
       unscored: "Google Lighthouse no pudo puntuar esta categoría en la última auditoría.",
       unavailable: {
         not_configured: "PageSpeed Insights no está configurado, así que no se midió.",
@@ -1421,7 +1414,7 @@ export const es = {
         collectingBody: "Cuando estén las respuestas verás aquí en cuántas preguntas apareces.",
         viewRunning: "Ver la medición en curso",
         failedTitle: "La medición no pudo recoger ninguna respuesta",
-        failedBody: "No hay resultado que mostrar. Revisa la medición y vuelve a lanzarla desde la configuración.",
+        failedBody: "No hay resultado que mostrar. Revisa la medición y vuelve a lanzarla desde «Configurar medición».",
         viewRun: "Ver la medición",
         noRunsTitle: "Todavía no hay mediciones",
         noRunsBody: (n: number) => `Tienes ${n} ${n === 1 ? "pregunta preparada" : "preguntas preparadas"}. Lanza una medición para saber si ChatGPT te menciona.`,
@@ -1432,7 +1425,7 @@ export const es = {
       citing: "Respuestas que citan tu web como fuente",
       collected: "Respuestas recogidas",
       branded: "Preguntas sobre tu marca (aparte)",
-      brandedValue: (value: string) => `Te nombra en ${value}`,
+      brandedValue: (questions: number, value: string) => `${questions} ${questions === 1 ? "pregunta" : "preguntas"}: te nombra en ${value}`,
       sample: "Es una muestra: las preguntas que hemos hecho a ChatGPT en un momento concreto. No es tu cuota de todas las búsquedas en IA, y las respuestas cambian entre consultas.",
       source: (provider: string, when: string, n: number) => `Medición en ChatGPT · ${provider} · ${when} · ${n} ${n === 1 ? "pregunta" : "preguntas"} en esta medición`,
       visibility: {
@@ -1448,7 +1441,8 @@ export const es = {
       },
       comparison: {
         title: "Comparación de menciones",
-        noCompetitors: "Esta medición no tenía competidores confirmados. Puedes añadirlos en la configuración para las próximas mediciones.",
+        noCompetitors: "Esta medición no tenía competidores confirmados.",
+        addCompetitors: "Añadirlos en Configuración para las próximas mediciones",
         description: "Respuestas que nombran a cada marca, en preguntas que no nombran la tuya. Son los competidores confirmados cuando se hizo la medición.",
         yourBrand: (name: string) => `${name} (tu marca)`,
         answers: (n: number) => `${n} ${n === 1 ? "respuesta" : "respuestas"}`,
@@ -1474,11 +1468,12 @@ export const es = {
     setup: {
       metaTitle: "Configurar la medición en IA",
       title: "Configurar la medición en IA",
-      description: (domain: string) => `Qué preguntas hacemos a ChatGPT, cómo reconocemos a ${domain} y con qué competidores te comparamos. Los resultados están en Presencia en IA.`,
+      description: (domain: string) => `Qué preguntas hacemos a ChatGPT y cómo reconocemos a ${domain}. Los resultados están en Presencia en IA.`,
       context: { aliases: (list: string) => `alias: ${list}`, services: (list: string) => `servicios: ${list}` },
       brand: { title: "Marca", description: (name: string, domain: string) => `Se detecta «${name}», su dominio ${domain} y estos otros nombres.` },
       competitors: {
         movedBefore: "Se gestionan en ", movedLink: "Configuración", movedAfter: ": la comparativa y la medición en IA usan la misma lista.",
+        current: "Una medición nueva compara con:",
         title: "Competidores confirmados",
         description: (max: number) => `Hasta ${max}. Solo los que confirmes aparecen en la comparación.`,
         remove: "Quitar",

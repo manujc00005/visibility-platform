@@ -163,7 +163,11 @@ export default async function EditWorkspacePage({
         labels={goals.form}
         kinds={goals.kinds}
       />
-      <CompetitorsPanel workspace={workspace} locale={locale} />
+      <CompetitorsPanel
+        key={`competitors-${locale}`}
+        workspace={workspace}
+        locale={locale}
+      />
       <SourcesPanel rows={rows} locale={locale} />
     </div>
   );

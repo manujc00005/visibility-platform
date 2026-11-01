@@ -130,6 +130,11 @@ export default async function GeoSetupPage({
             {t.competitors.movedAfter}
           </CardDescription>
         </CardHeader>
+        <CardContent className="text-sm">
+          {competitors.length > 0
+            ? `${t.competitors.current} ${competitors.map((c) => c.name).join(", ")}.`
+            : t.competitors.none}
+        </CardContent>
       </Card>
 
       <Card>

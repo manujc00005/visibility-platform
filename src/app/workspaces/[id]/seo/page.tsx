@@ -106,8 +106,8 @@ function Section({
           id={id}
           className={
             level === 2
-              ? "scroll-mt-20 text-xl font-semibold tracking-tight"
-              : "scroll-mt-20 text-lg font-semibold tracking-tight"
+              ? "scroll-mt-6 text-xl font-semibold tracking-tight"
+              : "scroll-mt-6 text-lg font-semibold tracking-tight"
           }
         >
           {title}

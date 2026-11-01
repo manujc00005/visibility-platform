@@ -242,7 +242,7 @@ export const en = {
     },
     runButton: {
       run: "Analyse home page",
-      running: "Auditing…",
+      running: "Analysing home page…",
       runningHint: "Reading the website and measuring its performance. This can take up to a minute.",
       viewRunning: "View the running audit",
     },
@@ -482,18 +482,12 @@ export const en = {
       change: (diff: string) => `${diff} points compared with the previous measurement`,
       noChange: "No noticeable change compared with the previous measurement",
       period: (from: string, to: string) => `from ${from} to ${to}`,
-      scope: { url: "of this page", origin: "of the whole site (the home page has no data of its own)", unknown: "(scope not stated)" },
-      fieldNone: "There is no real-visitor data in this measurement.",
-      fieldNoData: "Chrome UX Report does not have enough data for this website.",
-      field: (scope: string, lcp: string, rating: string) => `Real visitors ${scope}: the main content appears in ${lcp} (${rating}).`,
-      fieldSource: (period: string) => `Chrome UX Report · ${period}`,
-      periodUnknown: "period not stated",
       notMeasuredVerdict: "Not measured",
       analyzing: "Analysing",
       analyzingReason: "We are measuring the website. It takes less than a minute.",
       error: "Error",
-      errorReason: "The audit did not finish. Run it again.",
-      firstAudit: "Run the first audit to measure the website's speed.",
+      errorReason: "The audit did not finish. Press “Analyse home page” again.",
+      firstAudit: "Press “Analyse home page” to measure the website's speed.",
     },
     seo: {
       areas: {
@@ -510,8 +504,8 @@ export const en = {
       partialDetail: "Partial result: the home page could not be read, so only access, robots.txt and the sitemap were checked.",
       partialTitle: "Partial result",
       analyzingReason: "We are analysing the website. It takes less than a minute.",
-      errorReason: "The audit did not finish. Run it again.",
-      firstAudit: "Run the first audit to check whether Google can read and understand the website.",
+      errorReason: "The audit did not finish. Press “Analyse home page” again.",
+      firstAudit: "Press “Analyse home page” to check whether Google can read and understand the website.",
       notLoaded: "The results of the latest audit could not be read. Reload the page.",
       noComparison: "No comparison: the previous audit checked different things.",
     },
@@ -601,7 +595,7 @@ export const en = {
     labNote:
       "The score is a lab test: Google loads your home page on a simulated mobile device with a slow connection. It is useful to spot problems, but it is not the experience of all your visitors. Two identical tests can differ by several points; we only count a difference of 10 points or more as a change.",
     noMeasurementsTitle: "No speed measurements yet",
-    noMeasurementsBody: "Run an audit: we read your home page and ask Google to measure its mobile speed. It takes less than a minute.",
+    noMeasurementsBody: "Press “Analyse home page”: we read your home page and ask Google to measure its mobile speed. It takes less than a minute.",
     metrics: {
       lcp: { label: "Main content (LCP)", meaning: "Time until the most important part of the page is visible, such as the main photo or headline.", good: "2.5 s or less" },
       fcp: { label: "First content (FCP)", meaning: "Time until something appears on screen.", good: "1.8 s or less" },
@@ -671,7 +665,7 @@ export const en = {
     ranking: {
       title: "Rankings on Google",
       description:
-        "How often you appear on Google, how many people visit your website from it and through which searches, according to Search Console, Google's free tool for website owners.",
+        "How often you appear on Google and how many people visit your website from it, according to Search Console, Google's free tool for website owners.",
     },
     health: {
       title: "Technical health of your home page",
@@ -1021,7 +1015,6 @@ export const en = {
   },
   competitorComparison: {
     section: {
-      title: "Competitor comparison",
       description: "Your website and your competitors', measured in the same run: performance, technical health and authority. It does not show which searches they rank for or their traffic.",
     },
     button: { run: "Compare (uses PageSpeed)", rerun: "Compare again (uses PageSpeed)", pending: "Comparing… this can take a few minutes" },
@@ -1131,7 +1124,7 @@ export const en = {
     states: { no_audit: "No audit", not_measured: "Not measured", unavailable: "No result" },
     reasons: {
       noAudit: "There are no audits yet.",
-      notMeasured: "The latest audit predates this check. Run a new audit to measure it.",
+      notMeasured: "The latest audit predates this check. Press “Analyse home page” to measure it.",
       unscored: "Google Lighthouse could not score this category in the latest audit.",
       unavailable: {
         not_configured: "PageSpeed Insights is not set up, so it was not measured.",
@@ -1421,7 +1414,7 @@ export const en = {
       citing: "Answers citing your website as a source",
       collected: "Answers collected",
       branded: "Questions about your brand (separate)",
-      brandedValue: (value: string) => `Names you in ${value}`,
+      brandedValue: (questions: number, value: string) => `${questions} ${questions === 1 ? "question" : "questions"}: names you in ${value}`,
       sample: "This is a sample: the questions we asked ChatGPT at one point in time. It is not your share of all AI searches, and answers change between queries.",
       source: (provider: string, when: string, n: number) => `ChatGPT measurement · ${provider} · ${when} · ${n} ${n === 1 ? "question" : "questions"} in this measurement`,
       visibility: {
@@ -1437,7 +1430,8 @@ export const en = {
       },
       comparison: {
         title: "Mention comparison",
-        noCompetitors: "This measurement had no confirmed competitors. You can add them in the setup for the next measurements.",
+        noCompetitors: "This measurement had no confirmed competitors.",
+        addCompetitors: "Add them in Settings for the next measurements",
         description: "Answers naming each brand, in questions that do not name yours. These are the competitors confirmed when the measurement was made.",
         yourBrand: (name: string) => `${name} (your brand)`,
         answers: (n: number) => `${n} ${n === 1 ? "answer" : "answers"}`,
@@ -1463,11 +1457,12 @@ export const en = {
     setup: {
       metaTitle: "Set up the AI measurement",
       title: "Set up the AI measurement",
-      description: (domain: string) => `Which questions we ask ChatGPT, how we recognise ${domain} and which competitors we compare you with. The results are under AI presence.`,
+      description: (domain: string) => `Which questions we ask ChatGPT and how we recognise ${domain}. The results are under AI presence.`,
       context: { aliases: (list: string) => `aliases: ${list}`, services: (list: string) => `services: ${list}` },
       brand: { title: "Brand", description: (name: string, domain: string) => `We detect “${name}”, its domain ${domain} and these other names.` },
       competitors: {
         movedBefore: "Managed in ", movedLink: "Settings", movedAfter: ": the comparison and the AI measurement use the same list.",
+        current: "A new measurement compares with:",
         title: "Confirmed competitors",
         description: (max: number) => `Up to ${max}. Only the ones you confirm appear in the comparison.`,
         remove: "Remove",

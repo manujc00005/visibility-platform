@@ -66,10 +66,11 @@ function success(previous: GeoFormState, message: string): GeoFormState {
 
 const geoPath = (workspaceId: string) => `/workspaces/${workspaceId}/geo`;
 
-/** Everything that reads GEO data: the overview card, the results and setup pages, and Configuración, where competitors live (feature 017). */
+/** Everything that reads GEO data or competitors: the overview card, the results and setup pages, Configuración and the comparison in /seo (feature 017). */
 function revalidateGeo(workspaceId: string): void {
   revalidatePath(`/workspaces/${workspaceId}`);
   revalidatePath(`/workspaces/${workspaceId}/edit`);
+  revalidatePath(`/workspaces/${workspaceId}/seo`);
   revalidatePath(geoPath(workspaceId));
   revalidatePath(`${geoPath(workspaceId)}/setup`);
 }

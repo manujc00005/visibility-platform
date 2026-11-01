@@ -10,6 +10,7 @@ vi.mock("@/i18n/actions", () => ({ setLocaleAction: "/locale" }));
 
 import { AppHeader, MAIN_CONTENT_ID } from "@/components/layout/app-header";
 import { isActivePath } from "@/components/layout/header-nav";
+import { WorkspaceNav } from "@/components/overview/workspace-nav";
 import { getMessages } from "@/i18n/messages";
 
 function render(locale: Locale, pathname: string): string {
@@ -98,5 +99,17 @@ describe("AppHeader markup", () => {
     const [esActive, enInactive] = tags(es2, "button");
     expect(esActive).toContain('aria-current="true"');
     expect(enInactive).not.toContain("aria-current");
+  });
+});
+
+describe("WorkspaceNav (feature 017)", () => {
+  it("offers Configuración at the end and marks it as the current section on the edit page", () => {
+    const es = renderToStaticMarkup(createElement(WorkspaceNav, { workspaceId: "w1", current: "settings", locale: "es" }));
+    expect(es).toContain('href="/workspaces/w1/edit"');
+    expect(tags(es, "a").filter((t) => t.includes('aria-current="page"'))).toHaveLength(1);
+    expect(tags(es, "a").find((t) => t.includes('aria-current="page"'))).toContain('href="/workspaces/w1/edit"');
+    expect(es.indexOf('href="/workspaces/w1/geo"')).toBeLessThan(es.indexOf('href="/workspaces/w1/edit"'));
+    expect(es).toContain(">Configuración<");
+    expect(renderToStaticMarkup(createElement(WorkspaceNav, { workspaceId: "w1", current: "overview", locale: "en" }))).toContain(">Settings<");
   });
 });

@@ -44,13 +44,11 @@ describe("summarizePerformance in English", () => {
     const s = summarizePerformance([a1, a2], [], NOW, "en");
     expect(s.verdict).toBe("Needs improvement");
     expect(s.change).toEqual({ direction: "better", text: "+10 points compared with the previous measurement" });
-    expect(s.field.text).toBe("Real visitors of this page: the main content appears in 2.1 s (good).");
-    expect(s.field.source).toBe("Chrome UX Report · from 27 Sept 2026 to 24 Oct 2026");
     expect(fieldPeriod({ firstDate: "2026-09-27", lastDate: "2026-10-24" })).toBe("del 27 sept 2026 al 24 oct 2026");
   });
 
   it("explains missing measurements and the first-audit prompt", () => {
-    expect(summarizePerformance([], [], NOW, "en").reason).toBe("Run the first audit to measure the website's speed.");
+    expect(summarizePerformance([], [], NOW, "en").reason).toBe("Press “Analyse home page” to measure the website's speed.");
     const s = summarizePerformance([audit({ at: daysAgo(1) })], [], NOW, "en");
     expect(s.verdict).toBe("Not measured");
     expect(s.reason).toBe("The PageSpeed Insights key is missing: speed is not measured.");

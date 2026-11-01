@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type { FieldDataResult } from "@/modules/audits/crux";
 import { summarizePerformance } from "@/modules/overview/performance";
 import { audit, daysAgo, emptyFieldData, emptyResult, facts, finding, NOW, perf } from "./fixtures";
 
@@ -77,52 +76,10 @@ describe("summarizePerformance", () => {
     expect(failed.attempt).toBeNull();
   });
 
-  it("reports the main speed finding and real-visitor data honestly", () => {
+  it("reports the main speed finding", () => {
     const issue = finding({ severity: "warning", category: "performance", title: "El contenido principal tarda 5 s" });
     const s = summarizePerformance([audit({ at: daysAgo(1), facts: facts({ performance: perf(40), fieldData: emptyFieldData("no_data") }) })], [finding({ severity: "critical", category: "metadata" }), issue], NOW);
     expect(s.topIssue).toBe(issue.title);
-    expect(s.field.available).toBe(false);
-    expect(s.field.text).toBe("Chrome UX Report no tiene datos suficientes de esta web.");
     expect(s.tone).toBe("bad");
-  });
-});
-
-describe("real-visitor attribution on the card (D020)", () => {
-  const field = (over: Partial<FieldDataResult>): FieldDataResult => ({
-    status: "ok",
-    formFactor: "PHONE",
-    scope: "url",
-    key: "https://e.es/",
-    collectionPeriod: { firstDate: "2026-09-27", lastDate: "2026-10-24" },
-    metrics: { lcpMs: 2100, inpMs: 150, cls: 0.05, fcpMs: 1200, ttfbMs: 500 },
-    error: null,
-    ...over,
-  });
-  const card = (fieldData?: FieldDataResult) => summarizePerformance([audit({ at: daysAgo(1), facts: facts({ performance: perf(80), fieldData }) })], [], NOW).field;
-
-  it("names Chrome UX Report, the home page scope and the period for URL data", () => {
-    const f = card(field({}));
-    expect(f.available).toBe(true);
-    expect(f.text).toBe("Visitantes reales de esta página: el contenido principal aparece en 2,1 s (bueno).");
-    expect(f.source).toBe("Chrome UX Report · del 27 sept 2026 al 24 oct 2026");
-  });
-
-  it("attributes origin data to the whole site, never to the home page alone", () => {
-    const f = card(field({ scope: "origin", key: "https://e.es" }));
-    expect(f.text).toMatch(/^Visitantes reales de todo el sitio \(la portada no tiene datos propios\):/);
-    expect(f.text).not.toMatch(/esta página/);
-  });
-
-  it("declares missing scope or period instead of inventing them", () => {
-    const f = card(field({ scope: null, collectionPeriod: null }));
-    expect(f.text).toMatch(/^Visitantes reales \(alcance no indicado\):/);
-    expect(f.source).toBe("Chrome UX Report · periodo no indicado");
-  });
-
-  it("states the absence of data without inventing causes", () => {
-    expect(card(emptyFieldData("no_data"))).toEqual({ available: false, text: "Chrome UX Report no tiene datos suficientes de esta web.", source: null });
-    expect(card(emptyFieldData("quota_exceeded"))).toEqual({ available: false, text: "No hay datos de visitantes reales en esta medición.", source: null });
-    expect(card(undefined)).toEqual({ available: false, text: "No hay datos de visitantes reales en esta medición.", source: null });
-    expect(card(field({ metrics: { lcpMs: null, inpMs: null, cls: null, fcpMs: null, ttfbMs: null } })).available).toBe(false);
   });
 });
