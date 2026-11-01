@@ -1,0 +1,150 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-01T12:00:00Z",
+  "title": "Design System: Visibility Platform",
+  "extensions": {
+    "colorMeta": {
+      "iris": { "role": "primary", "displayName": "Iris", "canonical": "oklch(0.5 0.21 290)", "cssVar": "--brand", "tonalRamp": ["oklch(0.18 0.06 290)", "oklch(0.28 0.11 290)", "oklch(0.38 0.16 290)", "oklch(0.5 0.21 290)", "oklch(0.62 0.17 290)", "oklch(0.74 0.11 291)", "oklch(0.86 0.06 292)", "oklch(0.955 0.03 292)"] },
+      "iris-soft": { "role": "primary", "displayName": "Iris Velado", "canonical": "oklch(0.955 0.03 292)", "cssVar": "--brand-soft" },
+      "iris-ink": { "role": "primary", "displayName": "Tinta Iris", "canonical": "oklch(0.33 0.13 285)", "cssVar": "--primary", "tonalRamp": ["oklch(0.15 0.05 285)", "oklch(0.24 0.09 285)", "oklch(0.33 0.13 285)", "oklch(0.45 0.12 285)", "oklch(0.58 0.09 285)", "oklch(0.72 0.06 285)", "oklch(0.85 0.03 286)", "oklch(0.95 0.012 286)"] },
+      "ink": { "role": "neutral", "displayName": "Tinta", "canonical": "oklch(0.19 0.025 285)", "cssVar": "--foreground", "tonalRamp": ["oklch(0.15 0.02 285)", "oklch(0.19 0.025 285)", "oklch(0.3 0.025 285)", "oklch(0.42 0.025 285)", "oklch(0.55 0.02 285)", "oklch(0.7 0.015 286)", "oklch(0.85 0.01 286)", "oklch(0.95 0.006 286)"] },
+      "ink-muted": { "role": "neutral", "displayName": "Tinta Apagada", "canonical": "oklch(0.49 0.025 285)", "cssVar": "--muted-foreground" },
+      "cool-paper": { "role": "neutral", "displayName": "Papel Frío", "canonical": "oklch(0.984 0.004 286)", "cssVar": "--background" },
+      "card-white": { "role": "neutral", "displayName": "Blanco de Tarjeta", "canonical": "oklch(1 0 0)", "cssVar": "--card" },
+      "mist": { "role": "neutral", "displayName": "Niebla", "canonical": "oklch(0.962 0.008 286)", "cssVar": "--muted" },
+      "hairline": { "role": "neutral", "displayName": "Filete", "canonical": "oklch(0.912 0.012 286)", "cssVar": "--border" },
+      "field-line": { "role": "neutral", "displayName": "Línea de Campo", "canonical": "oklch(0.9 0.014 286)", "cssVar": "--input" },
+      "focus-ring": { "role": "neutral", "displayName": "Anillo de Foco", "canonical": "oklch(0.52 0.2 290)", "cssVar": "--ring" },
+      "good": { "role": "status", "displayName": "Bien", "canonical": "oklch(0.448 0.119 151.328)", "cssVar": "--good", "tonalRamp": ["oklch(0.25 0.07 151)", "oklch(0.35 0.1 151)", "oklch(0.448 0.119 151)", "oklch(0.58 0.17 150)", "oklch(0.723 0.219 149.579)", "oklch(0.83 0.12 152)", "oklch(0.92 0.06 154)", "oklch(0.982 0.018 155.826)"] },
+      "fair": { "role": "status", "displayName": "Mejorable", "canonical": "oklch(0.473 0.137 46.201)", "cssVar": "--fair", "tonalRamp": ["oklch(0.27 0.08 46)", "oklch(0.37 0.11 46)", "oklch(0.473 0.137 46.201)", "oklch(0.62 0.17 58)", "oklch(0.769 0.188 70.08)", "oklch(0.86 0.12 82)", "oklch(0.93 0.07 90)", "oklch(0.987 0.022 95.277)"] },
+      "bad": { "role": "status", "displayName": "Mal", "canonical": "oklch(0.505 0.213 27.518)", "cssVar": "--bad", "tonalRamp": ["oklch(0.28 0.11 27)", "oklch(0.39 0.16 27)", "oklch(0.505 0.213 27.518)", "oklch(0.637 0.237 25.331)", "oklch(0.74 0.15 22)", "oklch(0.84 0.08 19)", "oklch(0.92 0.04 18)", "oklch(0.971 0.013 17.38)"] },
+      "info": { "role": "status", "displayName": "Información", "canonical": "oklch(0.488 0.243 264.376)", "cssVar": "--info", "tonalRamp": ["oklch(0.27 0.13 264)", "oklch(0.38 0.19 264)", "oklch(0.488 0.243 264.376)", "oklch(0.623 0.214 259.815)", "oklch(0.74 0.13 257)", "oklch(0.84 0.07 255)", "oklch(0.92 0.035 255)", "oklch(0.97 0.014 254.604)"] },
+      "destructive": { "role": "status", "displayName": "Destructivo", "canonical": "oklch(0.577 0.245 27.325)", "cssVar": "--destructive" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "La cifra principal de cada tarjeta del resumen; una por tarjeta, dígitos tabulares." },
+      "headline": { "displayName": "Headline", "purpose": "El h1 de cada página (1,5 rem en móvil, 1,875 rem desde sm)." },
+      "title": { "displayName": "Title", "purpose": "Títulos de tarjeta y de sección." },
+      "body": { "displayName": "Body", "purpose": "Texto corrido; descripciones limitadas a 42 rem." },
+      "label": { "displayName": "Label", "purpose": "Pastillas de estado, fuentes, avisos y metadatos." },
+      "mono": { "displayName": "Mono", "purpose": "Dominios y valores literales." }
+    },
+    "shadows": [
+      { "name": "card", "value": "0 1px 2px oklch(0.25 0.04 285 / 0.05), 0 10px 30px -18px oklch(0.25 0.06 285 / 0.18)", "purpose": "Tarjetas del resumen y superficies principales en reposo." },
+      { "name": "card-hover", "value": "0 1px 2px oklch(0.25 0.04 285 / 0.06), 0 18px 40px -20px oklch(0.3 0.1 285 / 0.3)", "purpose": "Solo tarjetas que son un enlace, al pasar el ratón." }
+    ],
+    "motion": [
+      { "name": "card-lift", "value": "200ms; translateY(-2px)", "purpose": "Elevación de la tarjeta-enlace en hover; anulada con motion-reduce." },
+      { "name": "color-shift", "value": "150ms", "purpose": "Cambio de color de enlaces y pestañas en hover." },
+      { "name": "press", "value": "translateY(1px)", "purpose": "Botón pulsado." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ],
+    "layout": {
+      "container": "64rem (max-w-5xl), gutters 16px / 24px desde sm",
+      "headerHeight": "3.5rem",
+      "readingWidth": "48rem (max-w-3xl)"
+    },
+    "background": {
+      "pageGlow": "radial-gradient(ellipse 60rem 28rem at 15% -4rem, color-mix(in oklch, var(--brand) 22%, transparent), transparent 70%), radial-gradient(ellipse 50rem 24rem at 90% -6rem, color-mix(in oklch, var(--info-line) 12%, transparent), transparent 70%)"
+    },
+    "darkMode": "Los tokens .dark son los de shadcn por defecto (grises sin tinte) y la app nunca los activa; no son normativos."
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "La acción principal de una zona («Ejecutar auditoría»).",
+      "html": "<button class=\"ds-btn-primary\">Ejecutar auditoría</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border: 1px solid transparent; border-radius: 10px; background: var(--primary, oklch(0.33 0.13 285)); color: var(--primary-foreground, oklch(0.985 0 0)); font: 500 14px/1 Geist, ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: background-color 150ms, transform 150ms; } .ds-btn-primary:hover { background: color-mix(in oklch, var(--primary, oklch(0.33 0.13 285)) 80%, transparent); } .ds-btn-primary:active { transform: translateY(1px); } .ds-btn-primary:focus-visible { outline: none; border-color: var(--ring, oklch(0.52 0.2 290)); box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring, oklch(0.52 0.2 290)) 50%, transparent); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Acción secundaria («Editar»).",
+      "html": "<button class=\"ds-btn-outline\">Editar</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; height: 32px; padding: 0 10px; border: 1px solid var(--border, oklch(0.912 0.012 286)); border-radius: 10px; background: var(--background, oklch(0.984 0.004 286)); color: var(--foreground, oklch(0.19 0.025 285)); font: 500 14px/1 Geist, ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: background-color 150ms; } .ds-btn-outline:hover { background: var(--muted, oklch(0.962 0.008 286)); } .ds-btn-outline:active { transform: translateY(1px); } .ds-btn-outline:focus-visible { outline: none; border-color: var(--ring, oklch(0.52 0.2 290)); box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring, oklch(0.52 0.2 290)) 50%, transparent); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Campo de formulario del operador.",
+      "html": "<input class=\"ds-input\" placeholder=\"clinicagarcia.es\" />",
+      "css": ".ds-input { height: 32px; width: 260px; padding: 4px 10px; border: 1px solid var(--input, oklch(0.9 0.014 286)); border-radius: 10px; background: transparent; color: var(--foreground, oklch(0.19 0.025 285)); font: 400 14px/1.4 Geist, ui-sans-serif, system-ui, sans-serif; transition: border-color 150ms, box-shadow 150ms; } .ds-input::placeholder { color: var(--muted-foreground, oklch(0.49 0.025 285)); } .ds-input:focus-visible { outline: none; border-color: var(--ring, oklch(0.52 0.2 290)); box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring, oklch(0.52 0.2 290)) 50%, transparent); } .ds-input[aria-invalid=true] { border-color: var(--destructive, oklch(0.577 0.245 27.325)); box-shadow: 0 0 0 3px color-mix(in oklch, var(--destructive, oklch(0.577 0.245 27.325)) 20%, transparent); }"
+    },
+    {
+      "name": "Workspace Tabs",
+      "kind": "nav",
+      "refersTo": "nav-tab",
+      "description": "Pestañas de la empresa; la activa lleva barra Iris.",
+      "html": "<nav class=\"ds-tabs\"><a class=\"ds-tab\" aria-current=\"page\" href=\"#\">Resumen</a><a class=\"ds-tab\" href=\"#\">Rendimiento</a><a class=\"ds-tab\" href=\"#\">Google</a><a class=\"ds-tab\" href=\"#\">Presencia en IA</a></nav>",
+      "css": ".ds-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border, oklch(0.912 0.012 286)); } .ds-tab { position: relative; display: inline-flex; align-items: center; height: 40px; padding: 0 12px; border-radius: 8px; color: var(--muted-foreground, oklch(0.49 0.025 285)); font: 500 14px/1 Geist, ui-sans-serif, system-ui, sans-serif; text-decoration: none; transition: color 150ms; } .ds-tab:hover { color: var(--foreground, oklch(0.19 0.025 285)); } .ds-tab:focus-visible { outline: none; box-shadow: 0 0 0 2px color-mix(in oklch, var(--foreground, oklch(0.19 0.025 285)) 60%, transparent); } .ds-tab[aria-current=page] { color: var(--foreground, oklch(0.19 0.025 285)); } .ds-tab[aria-current=page]::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px; border-radius: 9999px; background: var(--brand, oklch(0.5 0.21 290)); }"
+    },
+    {
+      "name": "Status Pills",
+      "kind": "chip",
+      "refersTo": "status-pill-good",
+      "description": "Semáforo: icono + palabra, nunca solo color.",
+      "html": "<div class=\"ds-pills\"><span class=\"ds-pill ds-pill-good\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m9 12 2 2 4-4\"/></svg>Bien</span><span class=\"ds-pill ds-pill-fair\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\"/><path d=\"M12 9v4\"/><path d=\"M12 17h.01\"/></svg>Mejorable</span><span class=\"ds-pill ds-pill-bad\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m15 9-6 6\"/><path d=\"m9 9 6 6\"/></svg>Mal</span><span class=\"ds-pill ds-pill-neutral\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-dasharray=\"3 3\"><circle cx=\"12\" cy=\"12\" r=\"10\"/></svg>Sin datos</span></div>",
+      "css": ".ds-pills { display: flex; flex-wrap: wrap; gap: 8px; } .ds-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid; border-radius: 9999px; font: 500 12px/1.33 Geist, ui-sans-serif, system-ui, sans-serif; white-space: nowrap; } .ds-pill-good { background: var(--good-soft, oklch(0.982 0.018 155.826)); border-color: var(--good-line, oklch(0.723 0.219 149.579)); color: var(--good, oklch(0.448 0.119 151.328)); } .ds-pill-fair { background: var(--fair-soft, oklch(0.987 0.022 95.277)); border-color: var(--fair-line, oklch(0.769 0.188 70.08)); color: var(--fair, oklch(0.473 0.137 46.201)); } .ds-pill-bad { background: var(--bad-soft, oklch(0.971 0.013 17.38)); border-color: var(--bad-line, oklch(0.637 0.237 25.331)); color: var(--bad, oklch(0.505 0.213 27.518)); } .ds-pill-neutral { background: var(--muted, oklch(0.962 0.008 286)); border-color: var(--border, oklch(0.912 0.012 286)); color: var(--muted-foreground, oklch(0.49 0.025 285)); }"
+    },
+    {
+      "name": "Overview Card",
+      "kind": "card",
+      "refersTo": "overview-card",
+      "description": "Tarjeta-enlace del resumen: icono Iris, estado, cifra única, fuente y fecha en el pie.",
+      "html": "<a class=\"ds-ocard\" href=\"#\"><div class=\"ds-ocard-head\"><span class=\"ds-ocard-icon\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m12 14 4-4\"/><path d=\"M3.34 19a10 10 0 1 1 17.32 0\"/></svg></span><h2 class=\"ds-ocard-title\">Rendimiento de tu web</h2><span class=\"ds-ocard-pill\">Mejorable</span></div><p class=\"ds-ocard-desc\">Cómo de rápida y cómoda es tu página para los visitantes.</p><div class=\"ds-ocard-figure\">62<span>/100</span></div><div class=\"ds-ocard-foot\"><span>PageSpeed Insights · 26 oct 2026</span><span class=\"ds-ocard-cta\">Ver informe ›</span></div></a>",
+      "css": ".ds-ocard { position: relative; display: flex; flex-direction: column; gap: 16px; width: 320px; overflow: hidden; padding: 24px; border: 1px solid color-mix(in oklch, var(--border, oklch(0.912 0.012 286)) 80%, transparent); border-radius: 18px; background: var(--card, #fff); color: var(--card-foreground, oklch(0.19 0.025 285)); text-decoration: none; font-family: Geist, ui-sans-serif, system-ui, sans-serif; box-shadow: 0 1px 2px oklch(0.25 0.04 285 / 0.05), 0 10px 30px -18px oklch(0.25 0.06 285 / 0.18); transition: border-color 200ms, box-shadow 200ms, translate 200ms; } .ds-ocard::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 2px; background: linear-gradient(to right, var(--brand, oklch(0.5 0.21 290)), color-mix(in oklch, var(--brand, oklch(0.5 0.21 290)) 40%, transparent), transparent); opacity: 0; transition: opacity 200ms; } .ds-ocard:hover { translate: 0 -2px; border-color: color-mix(in oklch, var(--brand, oklch(0.5 0.21 290)) 30%, transparent); box-shadow: 0 1px 2px oklch(0.25 0.04 285 / 0.06), 0 18px 40px -20px oklch(0.3 0.1 285 / 0.3); } .ds-ocard:hover::before { opacity: 1; } .ds-ocard:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--background, oklch(0.984 0.004 286)), 0 0 0 4px color-mix(in oklch, var(--foreground, oklch(0.19 0.025 285)) 60%, transparent); } .ds-ocard-head { display: flex; align-items: center; gap: 10px; } .ds-ocard-icon { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 12px; background: var(--brand-soft, oklch(0.955 0.03 292)); color: var(--brand, oklch(0.5 0.21 290)); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--brand, oklch(0.5 0.21 290)) 15%, transparent); } .ds-ocard-title { flex: 1; margin: 0; font-size: 14px; font-weight: 600; letter-spacing: -0.025em; } .ds-ocard-pill { padding: 2px 8px; border: 1px solid var(--fair-line, oklch(0.769 0.188 70.08)); border-radius: 9999px; background: var(--fair-soft, oklch(0.987 0.022 95.277)); color: var(--fair, oklch(0.473 0.137 46.201)); font-size: 12px; font-weight: 500; } .ds-ocard-desc { margin: 0; font-size: 14px; color: var(--muted-foreground, oklch(0.49 0.025 285)); } .ds-ocard-figure { font-size: 36px; line-height: 1.25; font-weight: 600; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; } .ds-ocard-figure span { font-size: 16px; font-weight: 400; color: var(--muted-foreground, oklch(0.49 0.025 285)); } .ds-ocard-foot { display: flex; justify-content: space-between; gap: 12px; margin: 0 -24px -24px; padding: 14px 24px; border-top: 1px solid color-mix(in oklch, var(--border, oklch(0.912 0.012 286)) 70%, transparent); background: color-mix(in oklch, var(--muted, oklch(0.962 0.008 286)) 50%, transparent); font-size: 12px; color: var(--muted-foreground, oklch(0.49 0.025 285)); } .ds-ocard-cta { font-weight: 500; color: var(--brand, oklch(0.5 0.21 290)); }"
+    },
+    {
+      "name": "Metric Tile",
+      "kind": "custom",
+      "refersTo": "metric-tile",
+      "description": "Valor medido con acento izquierdo del semáforo, veredicto y referencia de «bueno».",
+      "html": "<div class=\"ds-tile\"><span class=\"ds-tile-label\">LCP · carga del contenido principal</span><span class=\"ds-tile-value\">3,1 s</span><span class=\"ds-tile-pill\">Mejorable</span><span class=\"ds-tile-hint\">Bueno: menos de 2,5 s</span></div>",
+      "css": ".ds-tile { display: flex; flex-direction: column; gap: 6px; width: 220px; padding: 12px; border: 1px solid var(--border, oklch(0.912 0.012 286)); border-left: 4px solid var(--fair-line, oklch(0.769 0.188 70.08)); border-radius: 10px; background: var(--card, #fff); font-family: Geist, ui-sans-serif, system-ui, sans-serif; color: var(--foreground, oklch(0.19 0.025 285)); } .ds-tile-label, .ds-tile-hint { font-size: 12px; color: var(--muted-foreground, oklch(0.49 0.025 285)); } .ds-tile-value { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; } .ds-tile-pill { width: fit-content; padding: 2px 8px; border: 1px solid var(--fair-line, oklch(0.769 0.188 70.08)); border-radius: 9999px; background: var(--fair-soft, oklch(0.987 0.022 95.277)); color: var(--fair, oklch(0.473 0.137 46.201)); font-size: 12px; font-weight: 500; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "El parte del técnico",
+    "overview": "La interfaz se lee como el parte que deja un buen técnico al terminar una revisión: claro, ordenado y honrado. Cada cifra dice de dónde sale y cuándo se midió, cada estado lleva su palabra y su icono, y nada decorativo pretende dar más confianza de la que dan los datos. El propietario de la pyme tiene que poder leerlo sin ayuda; el operador, trabajar con él a diario sin fatiga.\n\nEl sistema es sereno y preciso. Parte de neutros con un leve tinte frío hacia el violeta, sobre los que se apoyan tarjetas blancas con una sombra ambiental muy baja. Hay un solo color de identidad, Iris, que marca dónde estás y qué puedes hacer, nunca si algo va bien o mal. Ese trabajo es exclusivo de un semáforo de cuatro tonos (bien, mejorable, mal, información), que siempre va acompañado de icono y texto. La densidad es media: texto base a 14 px, mucho aire entre bloques y una sola cifra grande por tarjeta.\n\nLa única licencia expresiva es atmosférica: un resplandor Iris muy difuso detrás de la cabecera de la página, que desaparece al desplazarse, y la leve elevación de las tarjetas al pasar el ratón.",
+    "keyCharacteristics": [
+      "Neutros fríos tintados hacia el violeta (matiz 285–286) en lugar de grises puros.",
+      "Un único acento de identidad (Iris) y un semáforo separado, reservado a estados.",
+      "Tarjetas blancas sobre papel frío, con sombra ambiental y elevación solo al pasar el ratón.",
+      "Una sola tipografía (Geist) con jerarquía por peso y tamaño; Geist Mono solo para dominios y datos literales.",
+      "Fuente y fecha visibles en el pie de cada tarjeta."
+    ],
+    "rules": [
+      { "name": "La regla del acento sin juicio", "body": "Iris dice «esto es la marca» o «aquí puedes ir», nunca «esto va bien». Si un elemento comunica calidad o estado, su color sale del semáforo, no de Iris.", "section": "colors" },
+      { "name": "La regla del color con palabra", "body": "Ningún color significa algo por sí solo: todo tono del semáforo va con su icono (círculo con check, triángulo, círculo con aspa, bombilla, círculo discontinuo) y una etiqueta de texto.", "section": "colors" },
+      { "name": "La regla del neutro tintado", "body": "No hay grises puros en el tema claro; todo neutro lleva un tinte frío hacia el matiz 285–286.", "section": "colors" },
+      { "name": "La regla de la cifra única", "body": "Cada tarjeta tiene exactamente una cifra en Display. Si hacen falta dos números grandes, son dos tarjetas o una tabla.", "section": "typography" },
+      { "name": "La regla del cero con denominador", "body": "Una cifra en Display nunca es un cero suelto: el cero solo aparece con su denominador («0 de 4»), y sin medición se escribe el estado («No medida»).", "section": "typography" },
+      { "name": "La regla de la medición incompleta", "body": "Que una medición esté incompleta es un dato sobre la captura, no un veredicto: «Parcial» va en neutro y nunca en ámbar. Solo hereda tono cuando lo que sí se midió ya tiene severidad («Mal (parcial)»).", "section": "colors" },
+      { "name": "La regla de la sombra que responde", "body": "Una sombra más marcada solo aparece como respuesta a una interacción. En reposo, todo está a la misma altura.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do poner fuente y fecha en el pie de cada tarjeta y junto a cada cifra.",
+      "Do acompañar cada tono del semáforo con su icono y una palabra (Bien, Mejorable, Mal…).",
+      "Do usar dígitos tabulares en cualquier cifra que se compare o se alinee.",
+      "Do mantener los neutros tintados hacia el matiz 285–286 al añadir superficies nuevas.",
+      "Do respetar motion-reduce: la elevación y los desplazamientos al pasar el ratón se anulan.",
+      "Do mostrar el foco visible en todo elemento interactivo (halo de 2–3 px)."
+    ],
+    "donts": [
+      "Don't usar Iris ni Tinta Iris para indicar que algo va bien o mal.",
+      "Don't usar bordes de color por métrica en las tarjetas del resumen; el color de estado vive en la pastilla y en el texto.",
+      "Don't mostrar una puntuación compuesta ni un cero sin denominador.",
+      "Don't meter botones ni enlaces dentro de una tarjeta que ya es un enlace.",
+      "Don't usar grises puros en el tema claro.",
+      "Don't dar por bueno el tema oscuro: los tokens .dark son los de shadcn por defecto (grises neutros, sin tinte) y ninguna parte de la app lo activa."
+    ]
+  }
+}
