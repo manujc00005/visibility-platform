@@ -16,7 +16,7 @@ Un estado `empty` en el resumen de Search Console, una función pura que compone
 - `src/components/search-console/search-console-section.tsx`.
 - `src/i18n/messages/{es,en}.ts`.
 - `specs/features/002-dashboard-overview/SPEC.md` (nota de sustitución).
-- Pruebas: `tests/unit/search-console/{summary,section-render}.test.ts`, `tests/unit/overview/{google,i18n-en}.test.ts`, `tests/unit/i18n/messages.test.ts`.
+- Pruebas: `tests/unit/search-console/{summary,section-render}.test.ts`, `tests/unit/overview/google.test.ts` (incluye las ramas en inglés), `tests/unit/i18n/messages.test.ts`.
 - `docs/visibility-mvp/16-implementation-roadmap.md` (D-31, §8).
 
 ## Context budget

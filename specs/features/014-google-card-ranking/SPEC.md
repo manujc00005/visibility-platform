@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready (2026-11-01). Fase A del cierre del MVP (`docs/visibility-mvp/19-cierre-mvp-fases.md`), hallazgo 2 de la auditoría de Codex del 2026-11-01 y recomendación 05 de su plan; cierra D-31 del roadmap.
+Done (2026-11-01). T001–T010 hechas; revisiones de frontend/QA (sin bloqueantes) y de conformidad (Pass con menores, corregidos: D006) sobre `c1511f6`/`4fd5512`; AC-007 verificado en navegador sobre `dev`; suite completa en verde con la base de pruebas libre (D007). Fase A del cierre del MVP (`docs/visibility-mvp/19-cierre-mvp-fases.md`), hallazgo 2 de la auditoría de Codex del 2026-11-01 y recomendación 05 de su plan; cierra D-31 del roadmap.
 
 ## Problem
 
@@ -40,26 +40,26 @@ La tarjeta «Visibilidad en Google» dice primero lo que mide Search Console (cl
 ## Desired behavior
 
 1. **Tarjeta «Visibilidad en Google».** Estado y titular según Search Console:
-   - `ok` (hay impresiones en el periodo): pill «Medido» (neutro); titular «N clics · M impresiones» con el cambio de clics frente a los 28 días anteriores o su nota; línea con el periodo.
+   - `ok` (hay impresiones en el periodo): pill «Medido» (neutro); titular con «N clics» y «M impresiones» como dos cifras, con el cambio de clics frente a los 28 días anteriores o su nota; línea con el periodo.
    - `empty` (sin impresiones en los dos periodos): pill «Sin impresiones» (neutro); titular «Sin impresiones registradas en este periodo»; línea con el periodo.
    - `no_data` (credencial válida, sin captura): pill «Sin datos»; titular «Posicionamiento pendiente de medir»; línea «Todavía no se han traído datos de Search Console».
    - `not_configured` o `invalid_config`: pill «Sin configurar» (neutro); titular «Posicionamiento pendiente de medir»; línea «Falta conectar Google Search Console».
    - `error` sin captura buena: pill «Error» (malo); titular «Sin resultado»; línea «No se pudieron leer los datos de Search Console».
-   - Si existe captura buena y el último intento falló, aviso «El último intento de actualización falló; se muestra la captura anterior».
-   - Antigüedad de la captura: aviso «Posicionamiento: datos de hace N días» (> 30 días).
-2. **Salud técnica, aparte.** Dentro de la misma tarjeta, un bloque secundario titulado «Salud técnica de la portada» con su propio pill (los mismos estados y veredictos que hoy: Bien/Mejorable/Mal, «(parcial)», Sin datos, Analizando, Error), «N críticos · M importantes», el cambio comparable o su nota, y los avisos de intento y antigüedad de la auditoría, prefijados «Salud técnica:». Sin auditoría: «Sin auditoría».
+   - Si existe captura buena y el último intento falló, aviso «Posicionamiento · el último intento de actualización falló; se muestra la captura anterior» (con origen, como el resto de avisos de la tarjeta).
+   - Antigüedad de la captura: aviso «Posicionamiento · datos de hace N días» (> 30 días). Los avisos de la tarjeta usan « · » como separador entre origen y texto, igual que el pie.
+2. **Salud técnica, aparte.** Dentro de la misma tarjeta, un bloque secundario titulado «Tu web, vista por Google» (el nombre que el merge `ccf1e28` dio a la tarjeta técnica; D005) con su propio pill (los mismos estados y veredictos que hoy: Bien/Mejorable/Mal, «(parcial)», Sin datos, Analizando, Error), «N críticos · M importantes», el cambio comparable o su nota, y los avisos de intento y antigüedad de la auditoría, prefijados «Salud técnica ·». Con conteos, el veredicto va solo en el pill; sin ellos, una frase explica por qué («Sin auditoría», «Analizando…», «Sin resultado»).
 3. **Pie de la tarjeta:** «Search Console · {fecha de captura o estado} · Auditoría técnica · {fecha o estado}».
-4. **Vocabulario compartido.** Una tabla `overview.states` con `not_configured` «Sin configurar», `no_data` «Sin datos», `analyzing` «Analizando», `partial` «Parcial», `error` «Error», `ok` «Medido», `empty` «Sin actividad» (pill genérico; la tarjeta de Google usa «Sin impresiones» como caso concreto) y `not_measured` «No medida». Las tres tarjetas toman de ahí todas sus etiquetas de estado; solo quedan específicas: en rendimiento, `not_configured` y `partial` muestran «No medida» (la medición no ocurrió: cuota, error, clave, portada ilegible), y en IA `analyzing` es «Recogiendo respuestas» y `no_data` es «Sin mediciones».
+4. **Vocabulario compartido.** Una tabla `overview.states` con `not_configured` «Sin configurar», `no_data` «Sin datos», `analyzing` «Analizando», `partial` «Parcial», `error` «Error», `ok` «Medido» y `not_measured` «No medida»; el estado vacío de Google usa su propia palabra, «Sin impresiones», porque un pill genérico no tendría consumidor hasta la 017. Las tres tarjetas toman de ahí todas sus etiquetas de estado; solo quedan específicas: en rendimiento, `not_configured` y `partial` muestran «No medida» (la medición no ocurrió: cuota, error, clave, portada ilegible), y en IA `analyzing` es «Recogiendo respuestas» y `no_data` es «Sin mediciones».
 5. **Search Console vacío (D-31).** `summarizeSearchConsole` devuelve `state: "empty"` cuando la captura buena tiene cero impresiones en los dos periodos, con `reason` «Search Console no registra impresiones de esta web en los últimos 56 días. Si la propiedad es reciente, Google tarda unos días en acumular datos.» La sección muestra pill «Sin impresiones», el motivo, el botón «Actualizar datos» y la línea de fuente con el periodo; oculta la rejilla de cifras, la separación con/sin marca, las tablas y la nota de privacidad. Con impresiones solo en el periodo anterior (caída a cero), sigue siendo `ok` con cifras y cambio.
 6. **Spec 002.** Se anota en su SPEC que esta spec sustituye el punto 3 de «Desired behavior» y la parte de la tarjeta Google de AC-014 y AC-016.
 
 ## Functional requirements
 
-- FR-001 `SearchConsoleState` añade `empty`; `summarizeSearchConsole` lo devuelve con `metrics`, `period`, `property`, `capturedAt` y `segments` rellenos como en `ok`, y `reason` `t.reasons.empty`. Condición: `totals.impressions === 0 && previousTotals.impressions === 0`.
+- FR-001 `SearchConsoleState` añade `empty`; `summarizeSearchConsole` lo devuelve con `metrics`, `totals` (cifras crudas, nuevas en el resumen), `period`, `property`, `capturedAt` y `segments` rellenos como en `ok`, y `reason` `t.reasons.empty`. Condición: `totals.impressions === 0 && previousTotals.impressions === 0`.
 - FR-002 Se elimina `cardLine` y `searchConsole.card.*`: la tarjeta compone su texto desde `state`, `metrics` y `period`.
-- FR-003 Función pura `summarizeGoogleCard(gsc, seo, now, locale)` en `src/modules/overview/google.ts` que devuelve: `ranking: { state, status: { tone, label }, headline: { kind: "figures", clicks, impressions } | { kind: "text", text }, change, changeNote, line, period }`, `technical: { status: { tone, label }, headline: { critical, warning } | null, title, verdict, change, comparisonNote, reason }`, `notices` (tipo `Notice`) y `source`. `seo` es la `SeoSummary` actual, sin cambios.
+- FR-003 Función pura `summarizeGoogleCard(gsc, seo, now, locale)` en `src/modules/overview/google.ts` que devuelve: `ranking: { state, status: { tone, label }, headline: { kind: "figures", clicks, clicksUnit, impressions, impressionsUnit } | { kind: "text", text }, change, changeNote, line }`, `technical: { title, status: { tone, label }, counts: { critical, warning } | null, headline (veredicto o por qué no hay), change, comparisonNote, reason }`, `notices` (`CardNotice`) y `source`. `seo` es la `SeoSummary` actual, sin cambios.
 - FR-004 Etiquetas de `ranking.status` según «Desired behavior» 1, tomadas de `overview.states` salvo `empty`, que usa `overview.cards.seo.noImpressionsLabel` («Sin impresiones»).
-- FR-005 El bloque técnico conserva la lógica actual de `SeoCard` para tono y etiqueta (veredicto con `(parcial)`, estados) y los textos de cambio y comparación; sus avisos llevan el prefijo `overview.cards.seo.technicalPrefix`.
+- FR-005 El bloque técnico conserva la lógica actual de `SeoCard` para tono y etiqueta (veredicto con `(parcial)`, estados) y los textos de cambio y comparación; sus avisos llevan el prefijo `overview.cards.seo.technical.prefix` («Salud técnica · …») y su antigüedad `overview.cards.seo.technical.stale`.
 - FR-006 `SeoCard` renderiza `summarizeGoogleCard`: cabecera y pill de posicionamiento, titular, línea, bloque técnico con su pill pequeño y cifras, avisos y pie. Sigue siendo un único enlace a `/seo` sin elementos interactivos dentro.
 - FR-007 `overview.states` según «Desired behavior» 4 en `es` y `en`; `PerformanceCard` y `AiCard` toman sus etiquetas de ahí con las excepciones indicadas; `overview.cards.ai.status` queda reducido a las dos excepciones.
 - FR-008 `SearchConsoleSection`: `STATUS_TONE.empty = "neutral"`, `t.status.empty` «Sin impresiones»; en `empty` oculta rejilla, segmentos, tablas y nota de privacidad, y muestra motivo, botón «Actualizar datos» (si hay credencial), avisos de intento fallido y línea de fuente.
@@ -75,7 +75,7 @@ La tarjeta «Visibilidad en Google» dice primero lo que mide Search Console (cl
 
 ## API / Interface changes
 
-- `SearchConsoleState` += `"empty"`. `SearchConsoleSummary.cardLine` eliminado.
+- `SearchConsoleState` += `"empty"`. `SearchConsoleSummary.cardLine` eliminado; `SearchConsoleSummary.totals: Totals | null` añadido (cifras crudas para las unidades de la tarjeta).
 - Nuevo `summarizeGoogleCard` exportado desde `@/modules/overview`.
 - `Messages.overview.states` amplía claves; `overview.cards.seo` cambia; `searchConsole.status.empty`, `searchConsole.reasons.empty`.
 
@@ -98,10 +98,10 @@ Ninguno.
 - AC-001 `summarizeSearchConsole` con ceros en los dos periodos devuelve `empty`, `reason` de FR-001 y `metrics`/`period` rellenos; con ceros solo en el actual devuelve `ok` con cambio; `cardLine` ya no existe.
 - AC-002 `summarizeGoogleCard` en los seis estados de «Desired behavior» 1 devuelve el pill, el titular y la línea indicados, en `es` y `en`; con impresiones, `change` es el de clics.
 - AC-003 Con portada sin errores y Search Console `empty`, `ranking.status.label` es «Sin impresiones» y `technical.status.label` es «Bien»: el aprobado solo aparece en el bloque técnico. Con Search Console `not_configured`, `ranking.status.label` es «Sin configurar».
-- AC-004 Avisos: captura antigua da «Posicionamiento: datos de hace N días»; auditoría antigua da «Salud técnica: datos de hace N días»; intento de auditoría fallido da «Salud técnica: …»; último intento de Search Console fallido con captura buena da el aviso de FR-003.
-- AC-005 `overview.states` contiene las ocho claves en `es` y `en`; la tarjeta de rendimiento muestra «No medida» en `partial` y `not_configured`, «Sin datos» en `no_data`; la de IA «Medido», «Parcial», «Error», «Sin configurar» desde la tabla y «Recogiendo respuestas», «Sin mediciones» como excepciones; `cards.ai.status` solo tiene esas dos claves.
+- AC-004 Avisos: captura antigua da «Posicionamiento · datos de hace N días»; auditoría antigua da «Salud técnica · datos de hace N días»; intento de auditoría en curso o fallido da «Salud técnica · …»; último intento de Search Console fallido con captura buena da «Posicionamiento · el último intento…».
+- AC-005 `overview.states` contiene las siete claves en `es` y `en`; la tarjeta de rendimiento muestra «No medida» en `partial` y `not_configured`, «Sin datos» en `no_data`; la de IA «Medido», «Parcial», «Error», «Sin configurar» desde la tabla y «Recogiendo respuestas», «Sin mediciones» como excepciones; `cards.ai.status` solo tiene esas dos claves.
 - AC-006 `SearchConsoleSection` en `empty` renderiza «Sin impresiones», el motivo y la fuente, y no renderiza la rejilla de cifras ni la nota de privacidad; en `ok` renderiza todo como antes (prueba de render existente intacta).
-- AC-007 En navegador sobre `dev`, el resumen de Olessium muestra la tarjeta con «Sin impresiones» arriba y «Salud técnica de la portada · Bien · 0 críticos · 0 importantes» debajo; la página «Google» muestra la sección de Search Console vacía explicada; la clínica (sin credencial para su propiedad) muestra el estado que le corresponda sin «Bien» en el pill principal. A 375 px sin desbordamiento.
+- AC-007 En navegador sobre `dev`, el resumen de Olessium muestra la tarjeta con «Sin impresiones» arriba y «Tu web, vista por Google · Bien · 0 críticos · 0 importantes» debajo; la página «Google» muestra la sección de Search Console vacía explicada; la clínica (sin credencial para su propiedad) muestra el estado que le corresponda sin «Bien» en el pill principal. A 375 px sin desbordamiento.
 - AC-008 La spec 002 lleva la nota de sustitución (FR-009).
 - AC-009 Lint, typecheck, unitarias, integración y build en verde.
 
