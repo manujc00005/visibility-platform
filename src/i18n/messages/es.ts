@@ -314,7 +314,7 @@ export const es = {
     sectionLabel: "Estado de tu presencia digital",
     nav: { label: "Secciones de la empresa", overview: "Resumen", performance: "Rendimiento", seo: "Google", geo: "Presencia en IA", geoShort: "IA" },
     /** One state vocabulary for the three cards (feature 014, D004); only the verdicts below carry a tone. */
-    states: { not_configured: "Sin configurar", no_data: "Sin datos", analyzing: "Analizando", partial: "Parcial", error: "Error", ok: "Medido", empty: "Sin actividad", not_measured: "No medida" },
+    states: { not_configured: "Sin configurar", no_data: "Sin datos", analyzing: "Analizando", partial: "Parcial", error: "Error", ok: "Medido", not_measured: "No medida" },
     /** One verdict scale for the three cards: the same word always means the same tone. */
     verdict: { good: "Bien", fair: "Mejorable", bad: "Mal", info: "Con mejoras", neutral: "Parcial" },
     partial: (verdict: string) => `${verdict} (parcial)`,
@@ -347,7 +347,7 @@ export const es = {
         noFetch: "Todavía no se han traído datos de Search Console.",
         notConnected: "Falta conectar Google Search Console.",
         fetchFailed: "No se pudieron leer los datos de Search Console.",
-        lastAttemptFailed: "El último intento de actualización falló; se muestra la captura anterior.",
+        lastAttemptFailed: "Posicionamiento · el último intento de actualización falló; se muestra la captura anterior.",
         staleRanking: (days: number) => `Posicionamiento · datos de hace ${days} ${days === 1 ? "día" : "días"}`,
         /** The technical health of the home page, apart from the figures (D001). */
         technical: {

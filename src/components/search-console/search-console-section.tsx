@@ -197,16 +197,18 @@ export function SearchConsoleSection({
           ) : null}
         </div>
 
-        {s.state === "empty" && s.period ? (
+        {s.state === "empty" ? (
           // Zero impressions in both periods: the reason, the notices and the source; no grid of zeros (D-31).
           <>
             {s.reason ? <p className="max-w-3xl text-sm text-muted-foreground">{s.reason}</p> : null}
             <NoticeList notices={notices} />
-            <p className="text-xs text-muted-foreground">
-              {t.source.prefix}
-              <span className="font-mono break-all">{s.property}</span>
-              {t.source.period(displayDay(s.period.start, locale), displayDay(s.period.end, locale), s.capturedAt ? displayDate(s.capturedAt, locale) : "")}
-            </p>
+            {s.period ? (
+              <p className="text-xs text-muted-foreground">
+                {t.source.prefix}
+                <span className="font-mono break-all">{s.property}</span>
+                {t.source.period(displayDay(s.period.start, locale), displayDay(s.period.end, locale), s.capturedAt ? displayDate(s.capturedAt, locale) : "")}
+              </p>
+            ) : null}
           </>
         ) : s.metrics && s.period ? (
           <>

@@ -233,7 +233,8 @@ function SeoCard({
             {c.technical.warning(h.counts.warning)}
           </p>
         ) : null}
-        <p className="text-xs text-muted-foreground">{h.headline}</p>
+        {/* With counts the verdict is already in the pill; the sentence explains only why there are none. */}
+        {h.counts ? null : <p className="text-xs text-muted-foreground">{h.headline}</p>}
         {h.reason ? (
           <p className="text-xs text-muted-foreground">{h.reason}</p>
         ) : null}

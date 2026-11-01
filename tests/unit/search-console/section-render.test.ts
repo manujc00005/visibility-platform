@@ -8,7 +8,8 @@ import { getMessages } from "@/i18n/messages";
 import { PREVIOUS_QUERIES } from "@/modules/search-console/collect";
 import type { SearchConsoleConfig } from "@/modules/search-console/deps";
 import type { SearchConsoleSnapshot } from "@/modules/search-console/schema";
-import { summarizeSearchConsole } from "@/modules/search-console/summary";
+import { displayDay, summarizeSearchConsole } from "@/modules/search-console/summary";
+import { displayDate } from "@/modules/workspaces/presentation";
 
 /**
  * What the Search Console section paints for the brand split (feature 007, AC-001, AC-005,
@@ -131,6 +132,33 @@ describe("SearchConsoleSection brand split", () => {
     expect(html).not.toContain(t.segments.title);
     expect(html).not.toContain(t.privacyNote);
     expect(html).not.toContain(t.noQueries);
+  });
+
+  it("keeps the empty state's source, button and notices, and never its setup or figures (feature 014, review DOM-07)", () => {
+    const zeros = completed({ totals: tot(0, 0), previousTotals: tot(0, 0), queries: [], segments: null });
+    const ready = render(zeros);
+    expect(ready).toContain(t.source.period(displayDay("2026-09-27"), displayDay("2026-10-24"), displayDate(zeros.createdAt)));
+    expect(ready.split("<button").length - 1).toBe(1);
+    expect(ready).not.toContain(t.setup.addUserFallback);
+    expect(ready).not.toContain("GSC_SERVICE_ACCOUNT_JSON");
+    expect(render(zeros, NOT_CONFIGURED)).not.toContain("<button");
+    const invalid = render(zeros, { state: "invalid", reason: "not_json" });
+    expect(invalid).not.toContain("<button");
+    expect(invalid).toContain(t.reasons.invalidConfig.not_json);
+    const failed = completed({ id: "f1", status: "failed", totals: null, previousTotals: null, errorKind: "quota_exceeded", createdAt: new Date("2026-10-28T10:00:00Z") });
+    const afterFailure = renderToStaticMarkup(
+      createElement(SearchConsoleSection, { s: summarizeSearchConsole({ latest: failed, latestCompleted: zeros }, READY, "olessium.com", "es"), config: READY, action: noop, locale: "es" }),
+    );
+    expect(afterFailure).toContain(`>${t.status.empty}</span>`);
+    expect(afterFailure).toContain(t.failures.quota_exceeded);
+    expect(afterFailure).not.toContain(`>${t.metrics.clicks.label}</dt>`);
+    const en = render(zeros, READY, "en");
+    expect(en).toContain(">No impressions</span>");
+    expect(en).toContain(getMessages("en").searchConsole.reasons.empty);
+    // The ok branch keeps its figures, segments and privacy note.
+    const ok = render(completed());
+    expect(ok.split("<dt").length - 1).toBe(6);
+    expect(ok).toContain(t.privacyNote);
   });
 
   it("explains a mismatch and a truncated term list (AC-004, AC-012)", () => {

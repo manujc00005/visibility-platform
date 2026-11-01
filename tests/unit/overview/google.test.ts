@@ -129,7 +129,7 @@ describe("summarizeGoogleCard: technical block and notices (AC-002, AC-004)", ()
     const gsc = summarizeSearchConsole({ latest: failed, latestCompleted: good }, READY, "olessium.com");
     const g = summarizeGoogleCard(gsc, seoClean(), NOW);
     expect(g.ranking.state).toBe("ok");
-    expect(g.notices).toEqual([{ kind: "failed", text: "El último intento de actualización falló; se muestra la captura anterior." }]);
+    expect(g.notices).toEqual([{ kind: "failed", text: "Posicionamiento · el último intento de actualización falló; se muestra la captura anterior." }]);
   });
 
   it("translates every branch into English", () => {
@@ -142,5 +142,53 @@ describe("summarizeGoogleCard: technical block and notices (AC-002, AC-004)", ()
     expect(empty.ranking.status.label).toBe("No impressions");
     expect(empty.ranking.headline).toEqual({ kind: "text", text: "No impressions recorded in this period" });
     expect(summarizeGoogleCard(gscOf(null, NOT_CONFIGURED, "en"), seoClean("en"), NOW, "en").ranking).toMatchObject({ status: { label: "Not set up" }, line: "Google Search Console is not connected." });
+  });
+});
+
+describe("summarizeGoogleCard: remaining states and edge cases (review DOM-06)", () => {
+  const INVALID = { state: "invalid" as const, reason: "not_json" as const };
+  const gscWith = (latest: SearchConsoleSnapshot | null, latestCompleted: SearchConsoleSnapshot | null, config: Parameters<typeof summarizeSearchConsole>[1] = READY) =>
+    summarizeSearchConsole({ latest, latestCompleted }, config, "olessium.com");
+
+  it("treats an unusable credential as not set up, but keeps a stored good capture as measured", () => {
+    const invalid = summarizeGoogleCard(gscWith(null, null, INVALID), seoClean(), NOW);
+    expect(invalid.ranking.status).toEqual({ tone: "neutral", label: "Sin configurar" });
+    expect(invalid.ranking.line).toBe("Falta conectar Google Search Console.");
+    const stored = summarizeGoogleCard(gscWith(snapshot(), snapshot(), INVALID), seoClean(), NOW);
+    expect(stored.ranking.state).toBe("ok");
+    expect(stored.ranking.headline).toMatchObject({ kind: "figures", clicks: "12" });
+    expect(stored.notices).toEqual([]);
+  });
+
+  it("keeps the empty state with the failed-attempt notice, and a drop to zero as figures with a worse change", () => {
+    const zeros = snapshot({ totals: zero, previousTotals: zero });
+    const failed = snapshot({ id: "f1", status: "failed", totals: null, previousTotals: null, errorKind: "error", createdAt: daysAgo(0) });
+    const empty = summarizeGoogleCard(gscWith(failed, zeros), seoClean(), NOW);
+    expect(empty.ranking.state).toBe("empty");
+    expect(empty.notices).toEqual([{ kind: "failed", text: "Posicionamiento · el último intento de actualización falló; se muestra la captura anterior." }]);
+    const drop = summarizeGoogleCard(gscOf(snapshot({ totals: zero })), seoClean(), NOW);
+    expect(drop.ranking.state).toBe("ok");
+    expect(drop.ranking.headline).toEqual({ kind: "figures", clicks: "0", clicksUnit: "clics", impressions: "0", impressionsUnit: "impresiones" });
+    expect(drop.ranking.change?.direction).toBe("worse");
+  });
+
+  it("gives an error no notices, and uses singular units for one click and one impression", () => {
+    const failed = snapshot({ status: "failed", totals: null, previousTotals: null, errorKind: "error", createdAt: daysAgo(0) });
+    expect(summarizeGoogleCard(gscOf(failed), seoClean(), NOW).notices).toEqual([]);
+    const one = summarizeGoogleCard(gscOf(snapshot({ totals: { clicks: 1, impressions: 1, ctr: 1, position: 1 } })), seoClean(), NOW);
+    expect(one.ranking.headline).toMatchObject({ clicksUnit: "clic", impressionsUnit: "impresión" });
+    const oneEn = summarizeGoogleCard(gscOf(snapshot({ totals: { clicks: 1, impressions: 1, ctr: 1, position: 1 } }), READY, "en"), seoClean("en"), NOW, "en");
+    expect(oneEn.ranking.headline).toMatchObject({ clicksUnit: "click", impressionsUnit: "impression" });
+  });
+
+  it("explains a technical block that is analysing or failed without a prior result", () => {
+    const running = audit({ at: daysAgo(0), status: "running" });
+    const analyzing = summarizeGoogleCard(gscOf(snapshot()), summarizeSeo([running], {}, NOW), NOW);
+    expect(analyzing.technical).toMatchObject({ status: { tone: "neutral", label: "Analizando" }, counts: null, headline: "Analizando…" });
+    expect(analyzing.source).toMatch(/ · Auditoría técnica · sin resultado$/);
+    const failed = audit({ at: daysAgo(0), status: "failed" });
+    const error = summarizeGoogleCard(gscOf(snapshot()), summarizeSeo([failed], {}, NOW), NOW);
+    expect(error.technical).toMatchObject({ status: { tone: "bad", label: "Error" }, counts: null, headline: "Sin resultado" });
+    expect(error.source).toMatch(/ · Auditoría técnica · sin resultado$/);
   });
 });

@@ -312,7 +312,7 @@ export const en = {
     sectionLabel: "Status of your online presence",
     nav: { label: "Company sections", overview: "Overview", performance: "Performance", seo: "Google", geo: "AI presence", geoShort: "AI" },
     /** One state vocabulary for the three cards (feature 014, D004); only the verdicts below carry a tone. */
-    states: { not_configured: "Not set up", no_data: "No data", analyzing: "Analysing", partial: "Partial", error: "Error", ok: "Measured", empty: "No activity", not_measured: "Not measured" },
+    states: { not_configured: "Not set up", no_data: "No data", analyzing: "Analysing", partial: "Partial", error: "Error", ok: "Measured", not_measured: "Not measured" },
     verdict: { good: "Good", fair: "Needs improvement", bad: "Poor", info: "Minor fixes", neutral: "Partial" },
     partial: (verdict: string) => `${verdict} (partial)`,
     viewReport: "View report",
@@ -344,7 +344,7 @@ export const en = {
         noFetch: "No data has been fetched from Search Console yet.",
         notConnected: "Google Search Console is not connected.",
         fetchFailed: "The Search Console data could not be read.",
-        lastAttemptFailed: "The last update attempt failed; the previous capture is shown.",
+        lastAttemptFailed: "Rankings · the last update attempt failed; the previous capture is shown.",
         staleRanking: (days: number) => `Rankings · data from ${days} ${days === 1 ? "day" : "days"} ago`,
         /** The technical health of the home page, apart from the figures (D001). */
         technical: {
