@@ -14,7 +14,8 @@ import type { LatestSearchConsole } from "@/modules/search-console/service";
  * which stays as a diagnostic.
  */
 
-export type SearchConsoleState = "not_configured" | "invalid_config" | "no_data" | "error" | "ok";
+/** `empty`: a good capture with no impressions in either period (feature 014, D003; roadmap D-31). */
+export type SearchConsoleState = "not_configured" | "invalid_config" | "no_data" | "empty" | "error" | "ok";
 
 export interface MetricView {
   value: string;
@@ -234,11 +235,12 @@ export function summarizeSearchConsole(
   if (latestCompleted?.totals && latestCompleted.previousTotals && latestCompleted.currentStart && latestCompleted.currentEnd) {
     const totals = latestCompleted.totals;
     const segments = latestCompleted.segments;
-    const clicks = `${f.integer(totals.clicks)} ${t.units.clicks(Math.round(totals.clicks))}`;
-    const impressions = `${f.integer(totals.impressions)} ${t.units.impressions(Math.round(totals.impressions))}`;
+    // Zero in both periods is an explained empty state, not four zeros under "Conectado" (D-31).
+    const empty = totals.impressions === 0 && latestCompleted.previousTotals.impressions === 0;
     return {
       ...base,
-      state: "ok",
+      state: empty ? "empty" : "ok",
+      reason: empty ? t.reasons.empty : null,
       property: latestCompleted.property,
       period: { start: latestCompleted.currentStart, end: latestCompleted.currentEnd },
       capturedAt: latestCompleted.createdAt,
@@ -247,7 +249,7 @@ export function summarizeSearchConsole(
       pages: latestCompleted.pages,
       segments: segments ? segmentsOf(segments, totals, latestCompleted.previousTotals, t, f) : null,
       lastFailure: failed,
-      cardLine: totals.impressions > 0 ? t.card.line(clicks, impressions, f.decimal(totals.position)) : t.card.noImpressions,
+      cardLine: totals.impressions > 0 ? t.card.line(`${f.integer(totals.clicks)} ${t.units.clicks(Math.round(totals.clicks))}`, `${f.integer(totals.impressions)} ${t.units.impressions(Math.round(totals.impressions))}`, f.decimal(totals.position)) : t.card.noImpressions,
     };
   }
 

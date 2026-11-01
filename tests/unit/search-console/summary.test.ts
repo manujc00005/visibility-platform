@@ -97,6 +97,22 @@ describe("summarizeSearchConsole", () => {
     expect(s.cardLine).toBe("En Google: sin impresiones en los últimos 28 días (Search Console).");
   });
 
+  it("is an explained empty state only when both periods have no impressions (feature 014, AC-001)", () => {
+    const zero = { clicks: 0, impressions: 0, ctr: 0, position: 0 };
+    const both = completed({ totals: zero, previousTotals: zero });
+    const s = summarizeSearchConsole({ latest: both, latestCompleted: both }, READY, "olessium.com");
+    expect(s.state).toBe("empty");
+    expect(s.reason).toBe("Search Console no registra impresiones de esta web en los últimos 56 días. Si la propiedad es reciente, Google tarda unos días en acumular datos.");
+    expect(s.period).toEqual({ start: "2026-09-27", end: "2026-10-24" });
+    expect(s.metrics?.clicks.value).toBe("0");
+    expect(summarizeSearchConsole({ latest: both, latestCompleted: both }, READY, "olessium.com", "en").reason).toMatch(/^Search Console records no impressions/);
+    // A drop to zero after a period with impressions is a change, not an empty state.
+    const drop = completed({ totals: zero });
+    const d = summarizeSearchConsole({ latest: drop, latestCompleted: drop }, READY, "olessium.com");
+    expect(d.state).toBe("ok");
+    expect(d.metrics?.clicks.change).toEqual({ direction: "worse", text: "Antes: 8 clics (-100 %)" });
+  });
+
   it("keeps the last good data visible after a failed attempt and reports the failure", () => {
     const s = summarizeSearchConsole({ latest: failed("quota_exceeded"), latestCompleted: completed() }, READY, "olessium.com");
     expect(s.state).toBe("ok");

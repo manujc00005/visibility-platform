@@ -846,7 +846,7 @@ export const es = {
     },
 
     name: "Google Search Console",
-    status: { ok: "Conectado", no_data: "Sin datos", error: "Error", not_configured: "Sin configurar", invalid_config: "Configuración no válida" },
+    status: { ok: "Conectado", no_data: "Sin datos", empty: "Sin impresiones", error: "Error", not_configured: "Sin configurar", invalid_config: "Configuración no válida" },
     button: { fetch: "Traer datos de Search Console", update: "Actualizar datos", pending: "Consultando Search Console…" },
     actionErrors: { notConfigured: "Search Console no está configurado en la plataforma.", workspaceGone: "Esta empresa ya no existe." },
     setup: {
@@ -861,6 +861,7 @@ export const es = {
     reasons: {
       notConfigured: "Search Console no está configurado en la plataforma.",
       noData: (button: string) => `Pulsa «${button}» para ver cómo te encuentran en Google.`,
+      empty: "Search Console no registra impresiones de esta web en los últimos 56 días. Si la propiedad es reciente, Google tarda unos días en acumular datos.",
       invalidConfig: {
         not_json: "GSC_SERVICE_ACCOUNT_JSON no es un JSON válido, ni en crudo ni en base64.",
         not_service_account: "GSC_SERVICE_ACCOUNT_JSON no es una clave de cuenta de servicio de Google.",

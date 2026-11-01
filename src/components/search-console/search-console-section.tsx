@@ -17,6 +17,7 @@ type Texts = Messages["searchConsole"];
 const STATUS_TONE: Record<SearchConsoleState, Tone> = {
   ok: "good",
   no_data: "neutral",
+  empty: "neutral",
   error: "bad",
   not_configured: "neutral",
   invalid_config: "bad",
@@ -173,10 +174,12 @@ export function SearchConsoleSection({
 }) {
   const t = getMessages(locale).searchConsole;
   const canRun = config.state === "ready";
+  // A good capture, with or without impressions (feature 014): the empty state keeps its source and notices.
+  const captured = s.state === "ok" || s.state === "empty";
   const notices = [
-    ...(s.state === "ok" && s.lastFailure ? [{ kind: "failed" as const, text: t.failures.lastAttempt(displayDate(s.lastFailure.at, locale), s.lastFailure.text) }] : []),
+    ...(captured && s.lastFailure ? [{ kind: "failed" as const, text: t.failures.lastAttempt(displayDate(s.lastFailure.at, locale), s.lastFailure.text) }] : []),
     // Stored figures stay, but without a usable credential there is no button to refresh them.
-    ...(s.state === "ok" && config.state === "invalid" ? [{ kind: "info" as const, text: t.reasons.invalidConfig[config.reason] }] : []),
+    ...(captured && config.state === "invalid" ? [{ kind: "info" as const, text: t.reasons.invalidConfig[config.reason] }] : []),
   ];
   return (
     <div className="flex flex-col gap-4">
@@ -190,11 +193,22 @@ export function SearchConsoleSection({
             <StatusPill tone={STATUS_TONE[s.state]}>{t.status[s.state]}</StatusPill>
           </div>
           {canRun ? (
-            <RefreshSearchConsoleButton labels={{ idle: s.state === "ok" ? t.button.update : t.button.fetch, pending: t.button.pending }} action={action} />
+            <RefreshSearchConsoleButton labels={{ idle: captured ? t.button.update : t.button.fetch, pending: t.button.pending }} action={action} />
           ) : null}
         </div>
 
-        {s.metrics && s.period ? (
+        {s.state === "empty" && s.period ? (
+          // Zero impressions in both periods: the reason, the notices and the source; no grid of zeros (D-31).
+          <>
+            {s.reason ? <p className="max-w-3xl text-sm text-muted-foreground">{s.reason}</p> : null}
+            <NoticeList notices={notices} />
+            <p className="text-xs text-muted-foreground">
+              {t.source.prefix}
+              <span className="font-mono break-all">{s.property}</span>
+              {t.source.period(displayDay(s.period.start, locale), displayDay(s.period.end, locale), s.capturedAt ? displayDate(s.capturedAt, locale) : "")}
+            </p>
+          </>
+        ) : s.metrics && s.period ? (
           <>
             <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               {METRICS.map((key) => (
@@ -228,7 +242,7 @@ export function SearchConsoleSection({
         )}
       </div>
 
-      {s.metrics ? (
+      {s.metrics && s.state !== "empty" ? (
         <>
           {s.queries.length > 0 ? (
             <Table

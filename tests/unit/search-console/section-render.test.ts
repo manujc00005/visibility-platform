@@ -121,6 +121,18 @@ describe("SearchConsoleSection brand split", () => {
     expect(html.split(t.noQueries)).toHaveLength(2);
   });
 
+  it("explains a capture with no impressions in either period instead of painting zeros (feature 014, AC-006)", () => {
+    const html = render(completed({ totals: tot(0, 0), previousTotals: tot(0, 0), queries: [], segments: null }));
+    expect(html).toContain(`>${t.status.empty}</span>`);
+    expect(html).toContain(t.reasons.empty);
+    expect(html).toContain(t.button.update);
+    expect(html).toContain("sc-domain:olessium.com");
+    expect(html).not.toContain(`>${t.metrics.clicks.label}</dt>`);
+    expect(html).not.toContain(t.segments.title);
+    expect(html).not.toContain(t.privacyNote);
+    expect(html).not.toContain(t.noQueries);
+  });
+
   it("explains a mismatch and a truncated term list (AC-004, AC-012)", () => {
     const html = render(completed({ segments: { ...SEGMENTS, termsTruncated: true, branded: tot(70, 400) } }));
     expect(html).toContain(t.segments.mismatch);
