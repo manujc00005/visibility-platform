@@ -65,8 +65,11 @@ describe("GEO labels and formats", () => {
     expect(fraction({ k: 0, n: 0 }, "en")).toBe("No data");
     // Feature 013 (D004): no percentage below three observations, so one answer never reads as "100 %".
     expect(fraction({ k: 1, n: 1 })).toBe("1 de 1");
+    expect(fraction({ k: 1, n: 1 }, "en")).toBe("1 of 1");
     expect(fraction({ k: 1, n: 2 }, "en")).toBe("1 of 2");
     expect(fraction({ k: 2, n: 3 })).toBe("2 de 3 (67 %)");
+    expect(fraction({ k: 2, n: 3 }, "en")).toBe("2 of 3 (67%)");
+    expect(fraction({ k: 0, n: 0 })).toBe("Sin datos");
     expect(formatMicros(1_200, "en")).toBe("0.0012 USD");
     expect(formatMicros(5_000_000)).toBe("5,00 USD");
   });
@@ -76,5 +79,10 @@ describe("GEO labels and formats", () => {
     expect(geoLabels("en").observationStatus.uncertain).toBe("Uncertain submission");
     expect(geoLabels("en").intent.branded).toBe("About your brand");
     expect(geoLabels().provider.manual).toBe("Captura asistida (ChatGPT web)");
+    // Feature 013 (AC-005): origin labels for the history and the detail notice.
+    expect(geoLabels("en").origin).toEqual({ real: "Real", demo: "Demo", test: "Internal test" });
+    expect(geoLabels().origin).toEqual({ real: "Real", demo: "Demostración", test: "Prueba interna" });
+    expect(getMessages("en").geo.run.nonReal.test).toBe("Internal test measurement: it does not count in the overview, the comparison or the report.");
+    expect(getMessages("es").geo.run.nonReal.demo).toMatch(/^Medición de demostración: sus datos son inventados/);
   });
 });

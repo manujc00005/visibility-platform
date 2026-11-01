@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready (2026-11-01). Fase A del cierre del MVP (`docs/visibility-mvp/19-cierre-mvp-fases.md`), hallazgos 1, 3, 4 y 12 de la auditoría de Codex del 2026-11-01.
+Done (2026-11-01). T001–T010 hechas; revisiones de seguridad (sin hallazgos) y de conformidad (Pass con menores, corregidos: D007) sobre `90a6039`; AC-007 y AC-011 verificados en navegador sobre `dev`. Fase A del cierre del MVP (`docs/visibility-mvp/19-cierre-mvp-fases.md`), hallazgos 1, 3, 4 y 12 de la auditoría de Codex del 2026-11-01.
 
 ## Problem
 
@@ -55,7 +55,7 @@ Ninguna medición de prueba o demostración altera un resultado real, una compar
 
 - FR-001 Columna `geo_runs.origin` texto, no nula, por defecto `real`, con `CHECK` en (`real`, `demo`, `test`). Migración aditiva; las filas existentes quedan `real` hasta FR-010.
 - FR-002 `createGeoRun` acepta `origin` opcional (`real` por defecto) validado por enumeración; se guarda en la fila y **no** entra en `config` ni en `methodologyKey` (una demo con la misma configuración es comparable técnicamente; la exclusión es por origen, no por clave).
-- FR-003 `RunLike` lleva `origin`. `summarizeAi` descarta antes de nada las runs cuyo origen no sea `real`: no son resultado, ni intento, ni comparación. Si descartó alguna y no queda ninguna, `reason` es `onlyNonReal` («Solo hay mediciones de demostración o prueba: no cuentan como resultado.») y el estado es `no_data` (o `not_configured` si no hay preguntas).
+- FR-003 `RunLike` lleva `origin`. `summarizeAi` descarta antes de nada las runs cuyo origen no sea `real`: no son resultado, ni intento, ni comparación. Si descartó alguna y no queda ninguna, `reason` es `onlyNonReal` («Solo hay mediciones de demostración o de prueba: no cuentan como resultado.») y el estado es `no_data` (o `not_configured` si no hay preguntas).
 - FR-004 `createReport` solo considera runs con `origin = 'real'`.
 - FR-005 Histórico de `/geo`: rótulo por origen distinto de `real`, en `es` y `en`. Detalle: aviso en la cabecera para origen distinto de `real`.
 - FR-006 Función pura `runResultState(metrics, status)` en `overview/ai.ts` que devuelve el estado y la frase que `summarizeAi` ya calcula para una run (`ok`, `partial`, `analyzing`, `error`) con el mismo catálogo. El detalle lo muestra con `StatusPill` y la frase, antes de las tarjetas.
@@ -75,7 +75,7 @@ Ninguna medición de prueba o demostración altera un resultado real, una compar
 ## API / Interface changes
 
 - `createGeoRun(db, workspaceId, raw, deps)`: `raw.origin` opcional.
-- `RunLike.origin: GeoRunOrigin` (obligatorio en el tipo).
+- `RunLike.origin: GeoRunOrigin` (obligatorio en el tipo). `AiSummary.nonRealOnly` para que las páginas distingan «solo hay demos» de «no hay nada» (D007).
 - `runResultState(metrics, status, locale)` exportada desde `@/modules/overview`.
 - `RunForm` recibe las etiquetas de origen por props y muestra un `select name="origin"`.
 - `fraction()` cambia su salida para `n < 3`.

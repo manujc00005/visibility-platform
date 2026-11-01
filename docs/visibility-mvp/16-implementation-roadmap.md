@@ -1,6 +1,6 @@
 # 16 — Roadmap de implementación (referencia operativa)
 
-**Última actualización:** 2026-10-29: conectores de Search Console, Bing y GA4 cerrados; búsquedas con marca y sin marca (spec 007) y conversiones desde buscadores en GA4 (spec 008) cerradas (§8); 2026-10-30: cambios de posición por búsqueda (spec 009) cerrada (§8); seguimientos y backlog (§6, §9).
+**Última actualización:** 2026-11-01: origen y estados de la medición en IA (spec 013) cerrada, D-23 resuelto (§6, §8); el orden de trabajo del cierre del MVP está en `19-cierre-mvp-fases.md`. Antes: 2026-10-29: conectores de Search Console, Bing y GA4 cerrados; búsquedas con marca y sin marca (spec 007) y conversiones desde buscadores en GA4 (spec 008) cerradas (§8); 2026-10-30: cambios de posición por búsqueda (spec 009) cerrada (§8); seguimientos y backlog (§6, §9).
 **Estado del diseño:** `00`–`12` siguen siendo referencia arquitectónica (versión 1, PROPUESTA). `13-codex-review.md` (REQUEST CHANGES) sigue siendo el registro de riesgos. **Este documento manda sobre el orden de trabajo y sobre las decisiones técnicas de construcción.** Donde contradiga a `00`–`12`, prevalece este y la contradicción se lista en §7.
 
 Nota: `14-architecture-sync.md` no llegó a escribirse; el cambio de estrategia lo sustituyó por este documento antes de redactarlo. Los hallazgos de Codex se gestionan aquí de forma progresiva (§4).
@@ -273,7 +273,7 @@ Copias de seguridad de las versiones anteriores de `.env.local` (local y `produc
 | D-20 | El texto de las respuestas se guarda sin purga (M07 pedía 90 días) | Retención indefinida de contenido de terceros | Antes de clientes reales: purga programada (Fase 6) |
 | D-21 | Tope de gasto global, no por empresa; la captura asistida usa una sola repetición; una sola superficie (ChatGPT); AI Overviews vía SERP no implementado | Alcance reducido de la medición | Ampliar cuando haya demanda o volumen |
 | D-22 | **Desplegar la migración antes del código.** Durante el desarrollo hubo 500 transitorios («column brand_aliases does not exist») por servir código nuevo con la BD sin migrar | Caída breve en un despliegue | El procedimiento de despliegue (M13) migra primero |
-| D-23 | La rama `dev` contiene para Olessium un competidor de ejemplo, 3 preguntas y una medición con respuestas marcadas «[RESPUESTA DE PRUEBA]» | Datos de prueba en desarrollo | Archivarlos o borrarlos cuando molesten; no afectan a `test` ni a `production` |
+| D-23 | ~~La rama `dev` contiene para Olessium un competidor de ejemplo, 3 preguntas y una medición con respuestas marcadas «[RESPUESTA DE PRUEBA]»~~ | Resuelto el 2026-11-01 (spec 013): `geo_runs.origin` distingue `real`, `demo` y `test`; esa medición está marcada `test` y la de Buchhandlung Müller `demo`, y ninguna de las dos cuenta en resumen, comparación ni informe. El competidor de ejemplo se archivó en la 012 | — |
 | D-24 | La prueba de integración de concurrencia de auditorías falló una vez en la suite completa y pasó en las tres repeticiones siguientes. El 2026-10-26 falló en 2 de 3 ejecuciones seguidas sin cambios en el servicio ni en la prueba | Prueba intermitente: depende de que tres auditorías se solapen en una ventana de 300 ms; la latencia hasta Neon `test` la rompe con frecuencia | Hacer el solapamiento determinista (barrera en el `pageSpeed` simulado). Volvió a fallar 2 de 9 veces el 2026-10-28. Aparcado en el backlog como BL-06 |
 | D-25 | Dev perdió y recuperó `geo_competitors` el 2026-10-26 por un `DROP` con patrón `LIKE` demasiado amplio; la fila se restauró desde `geo_runs.config` | Datos de prueba de `dev`; `test` se limpia en cada prueba | Nunca borrar tablas por patrón; nombrar explícitamente. Antes de clientes reales, backups coherentes (M13) |
 | D-26 | **Perímetro de la extracción de competidores:** `extractCompetitorsAction` no tiene autenticación ni límite de frecuencia (perímetro de operador único, D-03) y lanza hasta 25 GET a webs públicas elegidas por quien pegue la respuesta; además distingue «destino no público» de «no responde» (oráculo DNS). Revisión de seguridad del 2026-10-26: Low | Solo relevante si la app se expone a terceros | Antes de abrir acceso a clientes (Fase 5): autenticación y límite por empresa; decidir si se unifica la etiqueta de destino bloqueado |
@@ -491,6 +491,16 @@ Los tres conectores siguen el mismo patrón: credencial del operador en el entor
 **Verificación:** 939 unitarias, 188 de integración, lint, typecheck y build sobre `05c4f70`. Olessium en navegador a 375 px en `es`, sin desbordes: SEO 100/100, accesibilidad 95/100 con 2 fallos y buenas prácticas 100/100. Llamada real a PageSpeed con el código final, sin guardar: 12 s, 562 KB y ningún `id` descartado.
 
 **Seguimiento:** D-35, ampliada. No se ha visto en pantalla un título sin traducción propia con datos reales: la auditoría de Olessium solo falla en dos comprobaciones con texto propio.
+
+### Origen y estados de la medición en IA (spec `specs/features/013-geo-run-origin`) — 2026-11-01, hecha
+
+**Alcance:** primera spec de la fase A del cierre del MVP (`19-cierre-mvp-fases.md`), hallazgos 1, 3, 4 y 12 de la auditoría de Codex del 2026-11-01. Cada medición en IA lleva un origen (`real`, `demo`, `test`) elegido al lanzarla; solo las reales cuentan en el resumen, la comparación entre mediciones y el informe, y el histórico rotula las demás. El detalle de una medición calcula su estado con la misma función que el resumen, antepone las respuestas válidas a las recogidas, no muestra porcentaje con menos de tres observaciones y declara el denominador de la comparación de menciones. El bloque AEO pasa a «Preguntas que conviene revisar».
+
+**Commits:** `a7ac521` (spec), `90a6039` (código) y los de evidencia. **Migraciones:** `0017_geo_run_origin` (columna con `CHECK`, aditiva, aplicada en `dev`).
+
+**Verificación:** 1.165 unitarias, 266 de integración, lint, typecheck y build. En `dev`, la medición de prueba de Olessium (`0361e4ad…`) pasó a `test` y la demo de Buchhandlung Müller (`3709cad2…`) a `demo` con un `UPDATE` por id; el resumen de ambas muestra «Sin mediciones» con la frase que lo explica, y el detalle de la de Olessium abre con el aviso, «Parcial» y su motivo.
+
+**Seguimiento:** cierra D-23. Siguiente de la fase A: spec 014 (tarjeta «Visibilidad en Google»).
 
 ## 9. Backlog (aparcado por decisión del owner, 2026-10-26)
 
