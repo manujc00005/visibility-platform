@@ -141,3 +141,17 @@
 **Reasoning:** es un problema del lector compartido, no de la 012, y arreglarlo aquí excede el alcance.
 
 **Consequences:** una web citada podría bloquear el proceso local un tiempo. El límite de 1 MiB (D009) es menor que el que ya admite la auditoría.
+
+### D011 - Sector y servicios se comparan por palabras significativas
+
+**Date:** 2026-11-01
+
+**Status:** Accepted
+
+**Context:** Con la respuesta real de AC-018, los cinco candidatos de Olessium salieron «sin indicios» de sector y servicios, aunque sus portadas hablaban de lo mismo. La regla de la 001 exigía la frase entera, y con textos como «Agencia de automatización y CRM» eso casi nunca ocurre.
+
+**Decision:** sector y servicios comparan palabras sin relleno, con singular y plural unificados, en título y descripción juntos. Un término de una o dos palabras exige todas; uno más largo, dos tercios. El origen es `title` si el título basta. La zona sigue siendo literal. Versión `evaluate-2026-11-01.1`.
+
+**Reasoning:** son frases nuestras, no nombres propios. Un lugar sí lo es, y coincidir en parte daría falsos positivos.
+
+**Consequences:** en los candidatos reales pasan de 0 a 5 con señal de servicios y de 0 a 4 con señal de sector. Clientify queda sin sector, y es correcto porque vende software. Puede haber falsos positivos con palabras dispersas, por ejemplo «clínica» y «dental» en una veterinaria. Es un indicio y decide el operador. Las extracciones ya guardadas conservan sus factores y su versión.

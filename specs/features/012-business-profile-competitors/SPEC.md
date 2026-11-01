@@ -150,7 +150,7 @@ El operador confirma un perfil de negocio propuesto desde la portada de su web. 
 ## Open questions
 
 - AC-018 dependía de una acción del operador: Resolved el 2026-11-01.
-- Las señales de sector y servicios exigen la frase literal, así que con frases largas salen «sin indicios» aunque la web hable de lo mismo: Deferred. No afecta a quién se puede aceptar, solo a la señal y al orden.
+- Las señales de sector y servicios exigían la frase literal, así que con frases largas salían «sin indicios» aunque la web hablara de lo mismo: Resolved el 2026-11-01 (D011).
 
 ## Contracted services
 

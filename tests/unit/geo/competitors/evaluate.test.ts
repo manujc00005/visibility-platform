@@ -175,3 +175,42 @@ describe("with a business profile (012)", () => {
     expect(evaluateCandidates([c], context, known).shown).toHaveLength(1);
   });
 });
+
+describe("sector and service signals from real home pages (D011)", () => {
+  const agency: ExtractionContext = {
+    ...context,
+    sector: "Agencia de automatización y CRM",
+    services: ["Agentes de IA", "Automatizaciones", "CRM para pymes"],
+  };
+  const page = (title: string, description: string) => candidate("x", "x.es", head("x.es", title, description));
+
+  it("recognises a sector said in other words", () => {
+    const adqueria = page("Adqueria · Implementación GoHighLevel España | CRM & Automatización IA", "Adqueria es la agencia de referencia. Expertos en CRM, automatización con IA, chatbots y agentes IA.");
+    expect(evaluateCandidate(adqueria, agency).sector).toMatchObject({ state: "matched", terms: ["Agencia de automatización y CRM"], origin: "title" });
+    const telkora = page("Automatización con IA en Zaragoza y España", "Chatbots, WhatsApp, CRM e integraciones con IA para empresas.");
+    expect(evaluateCandidate(telkora, agency).sector.state).toBe("matched");
+  });
+
+  it("joins title and description, and names the description as origin when the title alone is not enough", () => {
+    const sapi = page("Soluciones de Automatización y Procesos Inteligentes", "Chatbots y CRM personalizados.");
+    expect(evaluateCandidate(sapi, agency).sector).toMatchObject({ state: "matched", origin: "description" });
+  });
+
+  it("treats singular and plural as the same word", () => {
+    const f = evaluateCandidate(page("Automatización para pymes", "Un agente de IA y tu CRM"), agency);
+    expect(f.services.terms).toEqual(["Agentes de IA", "Automatizaciones", "CRM para pymes"]);
+  });
+
+  it("keeps a shared word from counting as a match", () => {
+    const travel = evaluateCandidate(page("Agencia de viajes", "Escapadas a medida"), agency);
+    expect(travel.sector.state).toBe("unknown");
+    const software = evaluateCandidate(page("Software de CRM", "Para equipos de ventas"), agency);
+    expect(software.services.state).toBe("unknown");
+  });
+
+  it("keeps the zone literal: a place is not matched by a shared word", () => {
+    const regional: ExtractionProfile = { summary: "s", offerings: [], customerType: "b2b", targetCustomer: "t", zoneRelevance: "regional", servedArea: "Palma de Mallorca", competitorKinds: ["direct"] };
+    const zone = evaluateCandidate(page("Dentistas en Palma", "Isla de Mallorca"), { ...context, profile: regional }).zone;
+    expect(zone.state).toBe("unknown");
+  });
+});

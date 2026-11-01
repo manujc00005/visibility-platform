@@ -10,7 +10,7 @@ import type { ExtractionContext, FactorEvidence, SuggestionFactors } from "@/mod
  * The question the operator asked is context and never evidence about a candidate.
  * No score, no weights: a fixed order the operator can understand.
  */
-export const EVALUATION_RULES_VERSION = "evaluate-2026-10-31.1";
+export const EVALUATION_RULES_VERSION = "evaluate-2026-11-01.1";
 export const MAX_SHOWN = 5;
 
 export interface EvaluatedCandidate extends Candidate {
@@ -48,6 +48,38 @@ function matchedTerms(terms: string[], texts: (string | null)[]): { terms: strin
         break;
       }
     }
+  }
+  return { terms: matched, origin };
+}
+
+const FILLER_WORDS = new Set("a al an and con de del e el en for in la las los o of or para por the to u un una with y".split(" "));
+
+/** Singular and plural meet at one form: «agente» and «agentes», «automatización» and «automatizaciones». */
+function wordRoot(word: string): string {
+  return word.length > 3 ? word.replace(/s$/, "").replace(/e$/, "") : word;
+}
+
+function meaningfulWords(text: string | null): string[] {
+  return nameKey(text ?? "").split(" ").filter((word) => word && !FILLER_WORDS.has(word)).map(wordRoot);
+}
+
+/** Every word of a short term; two thirds of a longer one, which a web rarely repeats in full. */
+function saysTheTerm(words: string[], text: Set<string>): boolean {
+  const needed = words.length <= 2 ? words.length : Math.ceil((words.length * 2) / 3);
+  return words.filter((word) => text.has(word)).length >= needed;
+}
+
+/** Sector and offers are phrases of our own (D011): compared by meaningful words, unlike places. */
+function matchedTopics(terms: string[], title: string | null, description: string | null): { terms: string[]; origin: string } {
+  const inTitle = new Set(meaningfulWords(title));
+  const inPage = new Set([...inTitle, ...meaningfulWords(description)]);
+  const matched: string[] = [];
+  let origin = "none";
+  for (const term of terms) {
+    const words = [...new Set(meaningfulWords(term))];
+    if (words.length === 0 || !saysTheTerm(words, inPage)) continue;
+    matched.push(term);
+    if (origin === "none") origin = saysTheTerm(words, inTitle) ? "title" : "description";
   }
   return { terms: matched, origin };
 }
@@ -95,11 +127,11 @@ function termFactor(label: "sector" | "services", terms: string[], candidate: Ca
   const what = label === "sector" ? "el sector" : "los servicios";
   if (terms.length === 0) return { state: "unknown", reason: `La ficha no indica ${what}.`, origin: "none" };
   if (!head || head.webStatus !== "reachable") return { state: "unknown", reason: `No se pudo leer la portada para comprobar ${what}.`, origin: "none" };
-  const found = matchedTerms(terms, [head.title, head.description]);
+  const found = matchedTopics(terms, head.title, head.description);
   if (found.terms.length > 0) {
-    return { state: "matched", reason: `Su portada menciona «${found.terms.join("», «")}».`, terms: found.terms.slice(0, 10), origin: found.origin };
+    return { state: "matched", reason: `Su portada coincide con «${found.terms.join("», «")}».`, terms: found.terms.slice(0, 10), origin: found.origin };
   }
-  return { state: "unknown", reason: `Su portada no menciona ${what} con las mismas palabras.`, origin: "none" };
+  return { state: "unknown", reason: `Su portada no menciona ${what} con palabras parecidas.`, origin: "none" };
 }
 
 export function evaluateCandidate(candidate: Candidate, context: ExtractionContext): SuggestionFactors {
