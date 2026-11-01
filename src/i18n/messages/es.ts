@@ -243,8 +243,8 @@ export const es = {
     },
     /** Serializable fragments for the client buttons. */
     runButton: {
-      run: "Ejecutar auditoría",
-      running: "Auditando…",
+      run: "Analizar portada",
+      running: "Analizando portada…",
       runningHint: "Leyendo la web y midiendo su rendimiento. Puede tardar hasta un minuto.",
       viewRunning: "Ver auditoría en curso",
     },
@@ -382,7 +382,6 @@ export const es = {
     cards: {
       performance: {
         title: "Rendimiento de tu web",
-        description: "Descubre cómo de rápida y cómoda es tu página para los visitantes.",
         analyzing: "Analizando…",
         noResult: "Sin resultado",
         notMeasured: "No medida",
@@ -390,14 +389,12 @@ export const es = {
         topIssue: "Principal problema:",
         /** Under a good verdict the slowest point is not a problem, only the biggest margin left. */
         topIssueGood: "Lo que más podría mejorar:",
-        fieldSource: (source: string) => `Fuente de este dato: ${source}`,
         source: (when: string) => `PageSpeed Insights · ${when}`,
         noResultShort: "sin resultado",
         notMeasuredShort: "sin medir",
       },
       seo: {
         title: "Visibilidad en Google",
-        description: "Descubre si los clientes encuentran tu empresa cuando buscan tus servicios.",
         pending: "Posicionamiento pendiente de medir",
         noImpressions: "Sin impresiones registradas en este periodo",
         noImpressionsLabel: "Sin impresiones",
@@ -429,7 +426,6 @@ export const es = {
       },
       ai: {
         title: "Presencia en IA",
-        description: "Descubre si herramientas como ChatGPT mencionan o recomiendan tu empresa.",
         /** The two states whose word differs from the shared vocabulary (D004); the rest come from `overview.states`. */
         status: { analyzing: "Recogiendo respuestas", no_data: "Sin mediciones" },
         ofQuestions: (n: number) => `de ${n} ${n === 1 ? "pregunta" : "preguntas"}`,
@@ -440,15 +436,6 @@ export const es = {
         pending: "Pendiente de medir",
         sampleNote: "Preguntas monitorizadas en las que ChatGPT te mencionó, de las que obtuvieron respuesta válida. Es una muestra, no el total de búsquedas en IA.",
         cited: (k: number, n: number) => `Tu web aparece citada como fuente en ${k} de ${n} ${n === 1 ? "respuesta" : "respuestas"}.`,
-        topOpportunity: "Principal oportunidad:",
-        notMentioned: (question: string) => `no te menciona en «${question}».`,
-        footnote: {
-          measured: (n: number) => `${n} ${n === 1 ? "pregunta medida" : "preguntas medidas"}`,
-          captured: (k: number, n: number) => `${k} de ${n} respuestas recogidas`,
-          unanswered: (n: number) => `${n} sin respuesta válida`,
-          branded: (questions: number, k: number, n: number) => `${questions} sobre tu marca (te nombra en ${k} de ${n} ${n === 1 ? "respuesta" : "respuestas"})`,
-          line: (parts: string) => `${parts}. Solo cuentan arriba las preguntas evaluadas que no nombran tu marca.`,
-        },
         source: (detail: string) => `Medición en ChatGPT · ${detail}`,
         noResultShort: "sin resultado",
         noMeasurementsShort: "sin mediciones",
@@ -456,7 +443,7 @@ export const es = {
       },
     },
     /** `{link}` is replaced by the link to the AI setup, in the view. */
-    emptyAction: "Pulsa «Ejecutar auditoría» arriba o {link}.",
+    emptyAction: "Pulsa «Analizar portada» arriba o {link}.",
     emptyActionLink: "configura las preguntas de IA",
     /** One line under the header with the first opportunity, so the action is not left for the end. */
     lead: {
@@ -679,6 +666,14 @@ export const es = {
     metaTitle: "Visibilidad en Google",
     title: "Visibilidad en Google",
     description: "Si los clientes encuentran tu empresa cuando buscan tus servicios, y si Google puede leer y entender tu web.",
+    jump: "Ir a un bloque de esta página",
+    technicalDetail: "Ver la puntuación de Lighthouse y el histórico de auditorías",
+    blocks: {
+      results: { title: "Resultados en buscadores", description: "Cuánto apareces, cuántas personas entran y qué hacen en tu web." },
+      queries: { title: "Consultas y páginas", description: "Con qué búsquedas te encuentran y qué páginas se ven más." },
+      health: { title: "Salud técnica", description: "Si Google puede leer tu portada, y qué conviene corregir." },
+      competitors: { title: "Competidores" },
+    },
     ranking: {
       title: "Posicionamiento en Google",
       description:
@@ -733,7 +728,7 @@ export const es = {
       not_configured: "Sin configurar",
       invalid_config: "Configuración no válida",
     },
-    button: { fetch: "Traer datos de Analytics", update: "Actualizar datos", pending: "Consultando Analytics…" },
+    button: { fetch: "Traer datos de Analytics", update: "Sincronizar Google Analytics", pending: "Consultando Analytics…" },
     actionErrors: { notConfigured: "Google Analytics no está configurado en la plataforma.", workspaceGone: "Esta empresa ya no existe." },
     setup: {
       keyBefore: "Usa la misma cuenta de servicio que Search Console, guardada en la variable de entorno ",
@@ -849,7 +844,7 @@ export const es = {
       not_configured: "Sin configurar",
       invalid_config: "Configuración no válida",
     },
-    button: { fetch: "Traer datos de Bing", update: "Actualizar datos", pending: "Consultando Bing…" },
+    button: { fetch: "Traer datos de Bing", update: "Sincronizar Bing", pending: "Consultando Bing…" },
     actionErrors: { notConfigured: "Bing Webmaster Tools no está configurado en la plataforma.", workspaceGone: "Esta empresa ya no existe." },
     setup: {
       verify: "Añade la web en Bing Webmaster Tools y verifícala. Si ya está en Search Console, puedes importarla desde allí.",
@@ -930,7 +925,7 @@ export const es = {
 
     name: "Google Search Console",
     status: { ok: "Conectado", no_data: "Sin datos", empty: "Sin impresiones", error: "Error", not_configured: "Sin configurar", invalid_config: "Configuración no válida" },
-    button: { fetch: "Traer datos de Search Console", update: "Actualizar datos", pending: "Consultando Search Console…" },
+    button: { fetch: "Traer datos de Search Console", update: "Sincronizar Search Console", pending: "Consultando Search Console…" },
     actionErrors: { notConfigured: "Search Console no está configurado en la plataforma.", workspaceGone: "Esta empresa ya no existe." },
     setup: {
       createKeyBefore:
@@ -1038,7 +1033,7 @@ export const es = {
       title: "Comparativa con competidores",
       description: "Tu web y las de tus competidores, medidas en la misma ejecución: rendimiento, salud técnica y autoridad. No muestra qué búsquedas posicionan ni su tráfico.",
     },
-    button: { run: "Comparar", rerun: "Volver a comparar", pending: "Comparando… puede tardar unos minutos" },
+    button: { run: "Comparar (consume PageSpeed)", rerun: "Volver a comparar (consume PageSpeed)", pending: "Comparando… puede tardar unos minutos" },
     actionErrors: {
       not_found: "Esta empresa ya no existe.",
       not_configured: "Falta la clave de PageSpeed.",
@@ -1068,6 +1063,8 @@ export const es = {
     pending: "Pendiente de la próxima comparativa",
     measuredAs: (name: string) => `Medido como ${name}`,
     tableLabel: "Comparativa por sitio",
+    allMetrics: "Ver todas las métricas",
+    allMetricsLabel: "Todas las métricas por sitio",
     columns: {
       site: "Sitio",
       performance: "Rendimiento",
@@ -1268,8 +1265,8 @@ export const es = {
       competitor: { submit: "Añadir competidor", name: "Nombre", website: "Web (opcional)", websitePlaceholder: "competidor.es", aliases: "Otros nombres (opcional)", aliasesPlaceholder: "Uno solo" },
       prompt: { submit: "Añadir pregunta", text: "Pregunta", placeholder: "¿Qué clínica dental me recomiendas en Valladolid?", intent: "Tipo" },
       run: {
-        submit: "Iniciar medición",
-        pending: "Iniciando…",
+        submit: "Medir preguntas en IA",
+        pending: "Preparando la medición…",
         legend: "Cómo se obtienen las respuestas",
         manualTitle: "Captura asistida",
         manualBody: "(sin coste): haces cada pregunta en ChatGPT y pegas aquí la respuesta y sus fuentes.",

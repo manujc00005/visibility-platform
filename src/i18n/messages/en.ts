@@ -241,7 +241,7 @@ export const en = {
       cleanDetail: "Run the analysis again after any major change to the website.",
     },
     runButton: {
-      run: "Run audit",
+      run: "Analyse home page",
       running: "Auditing…",
       runningHint: "Reading the website and measuring its performance. This can take up to a minute.",
       viewRunning: "View the running audit",
@@ -379,21 +379,18 @@ export const en = {
     cards: {
       performance: {
         title: "Your website's performance",
-        description: "Find out how fast and comfortable your page is for visitors.",
         analyzing: "Analysing…",
         noResult: "No result",
         notMeasured: "Not measured",
         labNote: "Google's score on a simulated mobile device, not the experience of all your visitors.",
         topIssue: "Main problem:",
         topIssueGood: "Biggest room for improvement:",
-        fieldSource: (source: string) => `Source of this figure: ${source}`,
         source: (when: string) => `PageSpeed Insights · ${when}`,
         noResultShort: "no result",
         notMeasuredShort: "not measured",
       },
       seo: {
         title: "Visibility on Google",
-        description: "Find out whether customers find your company when they search for your services.",
         pending: "Rankings not measured yet",
         noImpressions: "No impressions recorded in this period",
         noImpressionsLabel: "No impressions",
@@ -425,7 +422,6 @@ export const en = {
       },
       ai: {
         title: "AI presence",
-        description: "Find out whether tools like ChatGPT mention or recommend your company.",
         /** The two states whose word differs from the shared vocabulary (D004); the rest come from `overview.states`. */
         status: { analyzing: "Collecting answers", no_data: "No measurements" },
         ofQuestions: (n: number) => `of ${n} ${n === 1 ? "question" : "questions"}`,
@@ -436,22 +432,13 @@ export const en = {
         pending: "Not measured yet",
         sampleNote: "Monitored questions in which ChatGPT mentioned you, among those that got a valid answer. It is a sample, not the total of AI searches.",
         cited: (k: number, n: number) => `Your website is cited as a source in ${k} of ${n} ${n === 1 ? "answer" : "answers"}.`,
-        topOpportunity: "Main opportunity:",
-        notMentioned: (question: string) => `you are not mentioned in “${question}”.`,
-        footnote: {
-          measured: (n: number) => `${n} ${n === 1 ? "question measured" : "questions measured"}`,
-          captured: (k: number, n: number) => `${k} of ${n} answers collected`,
-          unanswered: (n: number) => `${n} without a valid answer`,
-          branded: (questions: number, k: number, n: number) => `${questions} about your brand (named in ${k} of ${n} ${n === 1 ? "answer" : "answers"})`,
-          line: (parts: string) => `${parts}. Only evaluated questions that do not name your brand count above.`,
-        },
         source: (detail: string) => `ChatGPT measurement · ${detail}`,
         noResultShort: "no result",
         noMeasurementsShort: "no measurements",
         configure: "Set up",
       },
     },
-    emptyAction: "Press “Run audit” above or {link}.",
+    emptyAction: "Press “Analyse home page” above or {link}.",
     emptyActionLink: "set up the AI questions",
     lead: {
       label: "Most important",
@@ -673,6 +660,14 @@ export const en = {
     metaTitle: "Visibility on Google",
     title: "Visibility on Google",
     description: "Whether customers find your company when they search for your services, and whether Google can read and understand your website.",
+    jump: "Go to a block of this page",
+    technicalDetail: "View the Lighthouse score and the audit history",
+    blocks: {
+      results: { title: "Search engine results", description: "How often you appear, how many people come in and what they do on your website." },
+      queries: { title: "Searches and pages", description: "Which searches find you and which pages are seen most." },
+      health: { title: "Technical health", description: "Whether Google can read your home page, and what is worth fixing." },
+      competitors: { title: "Competitors" },
+    },
     ranking: {
       title: "Rankings on Google",
       description:
@@ -727,7 +722,7 @@ export const en = {
       not_configured: "Not set up",
       invalid_config: "Invalid configuration",
     },
-    button: { fetch: "Get Analytics data", update: "Update data", pending: "Querying Analytics…" },
+    button: { fetch: "Get Analytics data", update: "Sync Google Analytics", pending: "Querying Analytics…" },
     actionErrors: { notConfigured: "Google Analytics is not set up on the platform.", workspaceGone: "This company no longer exists." },
     setup: {
       keyBefore: "Use the same service account as Search Console, stored in the environment variable ",
@@ -842,7 +837,7 @@ export const en = {
       not_configured: "Not set up",
       invalid_config: "Invalid configuration",
     },
-    button: { fetch: "Get Bing data", update: "Update data", pending: "Querying Bing…" },
+    button: { fetch: "Get Bing data", update: "Sync Bing", pending: "Querying Bing…" },
     actionErrors: { notConfigured: "Bing Webmaster Tools is not set up on the platform.", workspaceGone: "This company no longer exists." },
     setup: {
       verify: "Add the website in Bing Webmaster Tools and verify it. If it is already in Search Console, you can import it from there.",
@@ -923,7 +918,7 @@ export const en = {
 
     name: "Google Search Console",
     status: { ok: "Connected", no_data: "No data", empty: "No impressions", error: "Error", not_configured: "Not set up", invalid_config: "Invalid configuration" },
-    button: { fetch: "Get Search Console data", update: "Update data", pending: "Querying Search Console…" },
+    button: { fetch: "Get Search Console data", update: "Sync Search Console", pending: "Querying Search Console…" },
     actionErrors: { notConfigured: "Search Console is not set up on the platform.", workspaceGone: "This company no longer exists." },
     setup: {
       createKeyBefore:
@@ -1029,7 +1024,7 @@ export const en = {
       title: "Competitor comparison",
       description: "Your website and your competitors', measured in the same run: performance, technical health and authority. It does not show which searches they rank for or their traffic.",
     },
-    button: { run: "Compare", rerun: "Compare again", pending: "Comparing… this can take a few minutes" },
+    button: { run: "Compare (uses PageSpeed)", rerun: "Compare again (uses PageSpeed)", pending: "Comparing… this can take a few minutes" },
     actionErrors: {
       not_found: "This company no longer exists.",
       not_configured: "The PageSpeed key is missing.",
@@ -1059,6 +1054,8 @@ export const en = {
     pending: "Waiting for the next comparison",
     measuredAs: (name: string) => `Measured as ${name}`,
     tableLabel: "Comparison by site",
+    allMetrics: "View all metrics",
+    allMetricsLabel: "All metrics by site",
     columns: {
       site: "Site",
       performance: "Performance",
@@ -1257,8 +1254,8 @@ export const en = {
       competitor: { submit: "Add competitor", name: "Name", website: "Website (optional)", websitePlaceholder: "competitor.com", aliases: "Other names (optional)", aliasesPlaceholder: "Just one" },
       prompt: { submit: "Add question", text: "Question", placeholder: "¿Qué clínica dental me recomiendas en Valladolid?", intent: "Type" },
       run: {
-        submit: "Start measurement",
-        pending: "Starting…",
+        submit: "Measure AI questions",
+        pending: "Preparing the measurement…",
         legend: "How answers are obtained",
         manualTitle: "Assisted capture",
         manualBody: "(free): you ask each question in ChatGPT and paste the answer and its sources here.",

@@ -1,8 +1,8 @@
-import { createElement } from "react";
+import { createElement, Fragment } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { RefreshSearchConsoleState } from "@/app/workspaces/[id]/seo/actions";
-import { SearchConsoleSection } from "@/components/search-console/search-console-section";
+import { SearchConsoleQueries, SearchConsoleSection } from "@/components/search-console/search-console-section";
 import type { Locale } from "@/i18n/locale";
 import { getMessages } from "@/i18n/messages";
 import { PREVIOUS_QUERIES } from "@/modules/search-console/collect";
@@ -62,11 +62,37 @@ function completed(overrides: Partial<SearchConsoleSnapshot> = {}): SearchConsol
 
 function render(stored: SearchConsoleSnapshot, config: SearchConsoleConfig = READY, locale: Locale = "es") {
   const s = summarizeSearchConsole({ latest: stored, latestCompleted: stored }, config, "olessium.com", locale);
-  return renderToStaticMarkup(createElement(SearchConsoleSection, { s, config, action: noop, locale }));
+  return renderToStaticMarkup(createElement(Fragment, null, createElement(SearchConsoleSection, { s, config, action: noop, locale }), createElement(SearchConsoleQueries, { s, config, locale })));
 }
 
 const t = getMessages("es").searchConsole;
 const BADGE = `>${t.segments.badge}</span>`;
+
+describe("results and queries are two blocks (feature 017, AC-002)", () => {
+  it("keeps figures, notices and source in the results; brand split, tables and privacy note in the queries", () => {
+    const stored = completed();
+    const s = summarizeSearchConsole({ latest: stored, latestCompleted: stored }, READY, "olessium.com", "es");
+    const results = renderToStaticMarkup(createElement(SearchConsoleSection, { s, config: READY, action: noop, locale: "es" }));
+    expect(results).toContain(`>${t.metrics.clicks.label}</dt>`);
+    expect(results).toContain("sc-domain:olessium.com");
+    expect(results).not.toContain(t.segments.title);
+    expect(results).not.toContain(t.tables.queries);
+    expect(results).not.toContain(t.privacyNote);
+    const queries = renderToStaticMarkup(createElement(SearchConsoleQueries, { s, config: READY, locale: "es" }));
+    expect(queries).toContain(t.segments.title);
+    expect(queries).toContain(t.tables.queries);
+    expect(queries).toContain(t.privacyNote);
+    expect(queries).not.toContain(`>${t.metrics.clicks.label}</dt>`);
+  });
+
+  it("paints no queries block without figures or with an empty capture", () => {
+    const none = summarizeSearchConsole({ latest: null, latestCompleted: null }, READY, "olessium.com", "es");
+    expect(renderToStaticMarkup(createElement(SearchConsoleQueries, { s: none, config: READY, locale: "es" }))).toBe("");
+    const zeros = completed({ totals: tot(0, 0), previousTotals: tot(0, 0), queries: [], segments: null });
+    const empty = summarizeSearchConsole({ latest: zeros, latestCompleted: zeros }, READY, "olessium.com", "es");
+    expect(renderToStaticMarkup(createElement(SearchConsoleQueries, { s: empty, config: READY, locale: "es" }))).toBe("");
+  });
+});
 
 describe("SearchConsoleSection brand split", () => {
   it("paints both blocks, their shares, the unclassified gap and the terms (AC-001)", () => {
@@ -259,8 +285,8 @@ describe("SearchConsoleSection position change per query (feature 009)", () => {
     const failed = completed({ id: "f1", status: "failed", property: null, totals: null, previousTotals: null, queries: [], segments: null, errorKind: "quota_exceeded", errorMessage: "x", createdAt: new Date("2026-10-28T10:00:00Z") });
     const s = summarizeSearchConsole({ latest: failed, latestCompleted: good }, READY, "olessium.com", "es");
     const html = renderToStaticMarkup(createElement(SearchConsoleSection, { s, config: READY, action: noop, locale: "es" }));
-    expect(html).toContain("Sube 4,0");
     expect(html).toContain(t.failures.quota_exceeded);
+    expect(renderToStaticMarkup(createElement(SearchConsoleQueries, { s, config: READY, locale: "es" }))).toContain("Sube 4,0");
   });
 
   it("asks to update a capture whose rows lack the comparison, or to set up without a button (AC-006)", () => {

@@ -46,11 +46,24 @@ const summary = (rows: ComparisonRow[], over: Partial<ComparisonSummary> = {}): 
   duplicates: [],
   ...over,
 });
+/** The main table only: the full one repeats every row under «Ver todas las métricas». */
+const main = (html: string) => html.slice(0, html.indexOf("<details"));
 const render = (s: ComparisonSummary, locale: Locale = "es") => renderToStaticMarkup(createElement(ComparisonSection, { s, action: noop, manageHref: "/workspaces/x/geo/setup", locale }));
 const text = (html: string) => html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
 const locales = ["es", "en"] as const;
 
 describe("comparison section", () => {
+  it.each(locales)("shows five columns first and all eleven one click below, with the row notes once (feature 017, %s)", (locale) => {
+    const t = getMessages(locale).competitorComparison;
+    const html = render(summary([measured(site())]), locale);
+    expect(main(html).match(/role="columnheader"/g)).toHaveLength(6);
+    const all = html.slice(html.indexOf("<details"));
+    expect(all).toContain(`>${t.allMetrics}</summary>`);
+    expect(all).toContain(`aria-label="${t.allMetricsLabel}"`);
+    expect(all.match(/role="columnheader"/g)).toHaveLength(12);
+    expect(html.split(t.authorityDetail("rival.es", displayDay("2026-10-01", locale))).length - 1).toBe(1);
+  });
+
   it.each(locales)("shows the figures, the capture and the sources in %s", (locale) => {
     const t = getMessages(locale).competitorComparison;
     const html = render(summary([measured(site({ role: "company", competitorId: null, name: "Olessium", domain: "olessium.com" })), measured(site())]), locale);
@@ -82,7 +95,8 @@ describe("comparison section", () => {
     const header = html.match(/<th role="rowheader".*?<\/th>/)![0];
     expect(header).toContain("rival.es");
     expect(header).not.toContain(t.fieldDetail(t.scope.origin, ""));
-    expect(html).toContain('aria-colspan="12"');
+    // The site column plus the five of the main table.
+    expect(html).toContain('aria-colspan="6"');
   });
 
   it.each(locales)("names no winner and adds no combined score (%s)", (locale) => {
@@ -98,9 +112,11 @@ describe("comparison section", () => {
       warningCount: 0,
       authority: { ...authority, score: 0, referringDomains: 0 } as AuthorityResult,
     });
-    const cells = [...render(summary([measured(zero)]), locale).matchAll(/<td role="cell"[^>]*><span aria-hidden="true"[^>]*>[^<]*<\/span><span>([^<]*)<\/span>/g)].map((m) => m[1]);
+    const html = render(summary([measured(zero)]), locale);
+    const cellsOf = (part: string) => [...part.matchAll(/<td role="cell"[^>]*><span aria-hidden="true"[^>]*>[^<]*<\/span><span>([^<]*)<\/span>/g)].map((m) => m[1]);
     const none = locale === "es" ? "0,00" : "0.00";
-    expect(cells).toEqual(["0", "0", "0", "0", formatMs(3100, locale), formatMs(240, locale), none, "0", "0", none, "0"]);
+    expect(cellsOf(main(html))).toEqual(["0", "0", formatMs(3100, locale), "0", none]);
+    expect(cellsOf(html.slice(html.indexOf("<details")))).toEqual(["0", "0", "0", "0", formatMs(3100, locale), formatMs(240, locale), none, "0", "0", none, "0"]);
   });
 
   it.each(locales)("tells each column it spans to assistive technology (%s)", (locale) => {
@@ -126,7 +142,7 @@ describe("comparison section", () => {
   it("adds no empty detail row, and no authority note where there is no authority", () => {
     const t = getMessages("es").competitorComparison;
     const bare = site({ access: "robots_disallowed", criticalCount: null, warningCount: null, lighthouse: { status: "skipped" }, field: { status: "skipped" }, authority: { status: "not_configured", requestedDomain: "rival.es" } });
-    expect(render(summary([measured(bare)])).match(/role="row"/g)).toHaveLength(2);
+    expect(main(render(summary([measured(bare)]))).match(/role="row"/g)).toHaveLength(2);
     const notFound: AuthorityResult = { status: "not_found", requestedDomain: "blog.rival.es", effectiveDomain: "rival.es", scope: "registered_domain", asOf: "2026-10-01" };
     expect(render(summary([measured(site({ authority: notFound }))]))).not.toContain(t.subdomainNote);
   });
@@ -150,7 +166,9 @@ describe("comparison section", () => {
   it.each(locales)("explains a metric not measured without losing the others (%s)", (locale) => {
     const t = getMessages(locale).competitorComparison;
     const html = render(summary([measured(site({ lighthouse: { ...lighthouse, seo: none } as LighthouseResult, field: { ...field, inpMs: none } as FieldResult }))]), locale);
-    expect(html.match(new RegExp(t.notMeasured, "g"))).toHaveLength(2);
+    // The main table only has SEO of the two; the full one shows both.
+    expect(main(html).match(new RegExp(t.notMeasured, "g"))).toHaveLength(1);
+    expect(html.slice(html.indexOf("<details")).match(new RegExp(t.notMeasured, "g"))).toHaveLength(2);
     expect(html).not.toMatch(/colSpan="[234]"/);
     expect(html).toContain(">41<");
   });
@@ -179,7 +197,7 @@ describe("comparison section", () => {
     const t = getMessages(locale).competitorComparison;
     for (const access of ["robots_disallowed", "http_error", "non_html", "processing_error"] as const) {
       const html = render(summary([measured(site({ access, criticalCount: null, warningCount: null, lighthouse: { status: "skipped" }, field: { status: "skipped" } }))]), locale);
-      expect(html.match(new RegExp(t.access[access].replace(".", "\\."), "g"))!.length).toBe(3);
+      expect(main(html).match(new RegExp(t.access[access].replace(".", "\\."), "g"))!.length).toBe(3);
     }
     const down = site({ access: "unreachable", cause: "dns", criticalCount: null, warningCount: null, lighthouse: { status: "skipped" }, field: { status: "skipped" } });
     expect(render(summary([measured(down)]), locale)).toContain(t.access.unreachable);

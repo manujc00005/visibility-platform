@@ -64,7 +64,7 @@ describe("i18n type contract", () => {
     expect(geoFormLabels.saving).toBe("Guardando…");
     expect(suggestionLabels.sourcesCount).toEqual({ one: "{count} web citada", other: "{count} webs citadas" });
     expect(intentLabels.branded).toBe("Sobre tu marca");
-    expect(runButtonLabels.run).toBe("Ejecutar auditoría");
+    expect(runButtonLabels.run).toBe("Analizar portada");
     expect(reportButtonLabels.generate).toBe("Generar informe");
   });
 });

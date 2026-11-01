@@ -123,7 +123,6 @@ function PerformanceCard({
       href={`/workspaces/${workspaceId}/performance`}
       icon={Gauge}
       title={c.title}
-      description={c.description}
       status={status}
       headline={
         s.score !== null ? (
@@ -168,16 +167,6 @@ function PerformanceCard({
           </span>
         </p>
       ) : null}
-      {s.measuredAt ? (
-        <div className="flex flex-col gap-0.5">
-          <Line>{s.field.text}</Line>
-          {s.field.source ? (
-            <p className="text-xs text-muted-foreground">
-              {c.fieldSource(s.field.source)}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
     </OverviewCard>
   );
 }
@@ -200,7 +189,6 @@ function SeoCard({
       href={`/workspaces/${workspaceId}/seo`}
       icon={Search}
       title={c.title}
-      description={c.description}
       status={r.status}
       headline={
         r.headline.kind === "figures" ? (
@@ -271,33 +259,6 @@ const AI_TONE = {
   no_data: "neutral",
 } as const satisfies Record<AiSummary["state"], Tone>;
 
-/** What the headline leaves out, in one small line: capture, unanswered and branded questions. */
-function AiFootnote({
-  s,
-  t,
-}: {
-  s: AiSummary;
-  t: OverviewTexts["cards"]["ai"]["footnote"];
-}) {
-  if (s.configured === null || s.capture === null) return null;
-  const parts = [t.measured(s.configured)];
-  if (s.capture.k < s.capture.n)
-    parts.push(t.captured(s.capture.k, s.capture.n));
-  if (s.unanswered.length > 0) parts.push(t.unanswered(s.unanswered.length));
-  if (s.branded)
-    parts.push(
-      t.branded(
-        s.branded.questions,
-        s.branded.mentioned.k,
-        s.branded.mentioned.n,
-      ),
-    );
-  if (parts.length === 1) return null;
-  return (
-    <p className="text-xs text-muted-foreground">{t.line(parts.join(" · "))}</p>
-  );
-}
-
 function AiCard({
   workspaceId,
   s,
@@ -319,7 +280,6 @@ function AiCard({
       href={`/workspaces/${workspaceId}/geo${toSetup ? "/setup" : ""}`}
       icon={Sparkles}
       title={c.title}
-      description={c.description}
       status={{
         tone: AI_TONE[s.state],
         label:
@@ -369,13 +329,6 @@ function AiCard({
         <Line>{c.cited(s.citing.k, s.citing.n)}</Line>
       ) : null}
       <ChangeLine change={s.change} note={s.comparisonNote} />
-      {s.uncovered[0] ? (
-        <p className="text-sm">
-          <span className="text-muted-foreground">{c.topOpportunity} </span>
-          {c.notMentioned(s.uncovered[0])}
-        </p>
-      ) : null}
-      <AiFootnote s={s} t={c.footnote} />
     </OverviewCard>
   );
 }
