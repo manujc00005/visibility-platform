@@ -45,21 +45,25 @@ describe("AppHeader markup", () => {
     expect(render("es", "/")).toContain(">Saltar al contenido</a>");
   });
 
-  it("labels the navigation and marks the current page", () => {
-    const home = render("es", "/");
-    expect(home).toContain('<nav aria-label="Principal"');
-    const atHome = tags(home, "a").filter((t) => t.includes('aria-current="page"'));
-    expect(atHome).toHaveLength(1);
-    expect(atHome[0]).toContain('href="/"');
-    expect(home).toContain(">Inicio</a>");
-    expect(home).toContain(">Empresas</a>");
+  it("labels the navigation and marks the current page; the root item is gone (feature 015)", () => {
+    const list = render("es", "/workspaces");
+    expect(list).toContain('<nav aria-label="Principal"');
+    const atList = tags(list, "a").filter((t) => t.includes('aria-current="page"'));
+    expect(atList).toHaveLength(1);
+    expect(atList[0]).toContain('href="/workspaces"');
+    expect(list).toContain(">Empresas</a>");
+    expect(list).not.toContain(">Inicio</a>");
+    // The brand goes to the company list too: the root only redirects there.
+    expect(tags(list, "a").filter((t) => t.includes('href="/workspaces"')).length).toBe(2);
+    expect(tags(list, "a").some((t) => t.includes('href="/"'))).toBe(false);
+    expect(tags(render("es", "/admin/status"), "a").filter((t) => t.includes('aria-current="page"'))).toHaveLength(0);
 
     const geo = render("en", "/workspaces/4f2c/geo");
     expect(geo).toContain('<nav aria-label="Main"');
     const current = tags(geo, "a").filter((t) => t.includes('aria-current="page"'));
     expect(current).toHaveLength(1);
     expect(current[0]).toContain('href="/workspaces"');
-    expect(geo).toContain(">Home</a>");
+    expect(geo).not.toContain(">Home</a>");
     expect(geo).toContain(">Companies</a>");
   });
 

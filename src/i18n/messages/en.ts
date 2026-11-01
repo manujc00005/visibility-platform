@@ -15,7 +15,6 @@ export const en = {
   },
   header: {
     navLabel: "Main",
-    home: "Home",
     workspaces: "Companies",
   },
   notFound: {
@@ -50,6 +49,23 @@ export const en = {
         { label: "Phase 5 · Access and paid audits", state: "Next" },
       ],
     },
+  },
+  /** Per-company panel of data sources (feature 015): labels only; states come from each source. */
+  sources: {
+    title: "Data sources",
+    description: "Which sources feed this company, when each was last read and what is left to do. Stored data only; providers are not contacted.",
+    columns: { source: "Source", status: "Status", target: "Property or provider", lastGood: "Last successful read", note: "What to do", open: "Go" },
+    names: {
+      search_console: "Google Search Console",
+      bing: "Bing Webmaster Tools",
+      analytics: "Google Analytics 4",
+      pagespeed: "PageSpeed Insights and Chrome UX Report",
+      ai: "ChatGPT measurement",
+    },
+    never: "Never",
+    pagespeed: { keyOnly: "PageSpeed Insights key (Chrome UX Report uses the same one)", keyAndCrux: "PageSpeed Insights and Chrome UX Report keys" },
+    ai: { providers: (manual: string, paid: string | null) => (paid ? `${manual} · ${paid}` : manual) },
+    open: { seo: "View on Google", performance: "View on Performance", ai: "Set up the measurement" },
   },
   workspaces: {
     list: {
@@ -1182,8 +1198,8 @@ export const en = {
       nonBusinessHost: "That website is a directory, social network or search engine, not a competitor.",
     },
     providerStatus: {
-      missingCredentials: "The DataForSEO credentials are missing (DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD).",
-      missingBudget: "The monthly budget is missing (GEO_MONTHLY_BUDGET_USD): without it no paid calls are made.",
+      missingCredentials: "Automatic measurement (DataForSEO) is not available in this environment.",
+      missingBudget: "Automatic measurement is not available: a monthly budget has to be set first.",
     },
     forms: {
       saving: "Saving…",

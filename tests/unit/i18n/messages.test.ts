@@ -34,6 +34,7 @@ const FUNCTION_CALLS: Record<string, unknown[][]> = {
   "overview.partial": [["Mal"]],
   "overview.cards.performance.fieldSource": [["Chrome UX Report · periodo"]],
   "overview.cards.performance.source": [["27 oct 2026, 13:34"]],
+  "sources.ai.providers": [["Captura asistida", null], ["Captura asistida", "DataForSEO"]],
   "overview.cards.seo.clicks": [[1], [2]],
   "overview.cards.seo.impressions": [[1], [2]],
   "overview.cards.seo.period": [["27 sept 2026", "24 oct 2026"]],

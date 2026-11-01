@@ -44,8 +44,8 @@ const reportButtonLabels: ClientMessages = es.audits.reportButton;
 
 // The catalog type keeps string leaves as `string`, not as the Spanish literal: an English
 // value is accepted where the Spanish one is expected.
-type HomeLabel = Messages["header"]["home"];
-const englishLabel: HomeLabel = "Home";
+type NavLabel = Messages["header"]["workspaces"];
+const englishLabel: NavLabel = "Companies";
 
 // A catalog missing a key is rejected. Kept on one line so the directive covers the
 // position TypeScript reports for `satisfies`.
@@ -56,7 +56,7 @@ const partialCatalog = onlyCommon satisfies Messages;
 describe("i18n type contract", () => {
   it("compiles the serializable fragments", () => {
     expect(okFragment.label).toBe("Nombre");
-    expect(englishLabel).toBe("Home");
+    expect(englishLabel).toBe("Companies");
     expect(fnTop).toBeDefined();
     expect(fnNested).toBeDefined();
     expect(partialCatalog).toBeDefined();

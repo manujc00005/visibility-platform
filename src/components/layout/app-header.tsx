@@ -24,7 +24,7 @@ export function AppHeader({ locale, messages }: { locale: Locale; messages: Pick
           {common.skipToContent}
         </a>
         <Link
-          href="/"
+          href="/workspaces"
           className="inline-flex h-9 shrink-0 items-center gap-2 rounded-md font-semibold tracking-tight focus-visible:ring-2 focus-visible:ring-foreground/60 focus-visible:outline-none"
         >
           <span aria-hidden="true" className="flex size-7 items-center justify-center rounded-lg bg-linear-to-br from-brand to-primary text-primary-foreground shadow-sm">
@@ -34,10 +34,7 @@ export function AppHeader({ locale, messages }: { locale: Locale; messages: Pick
         </Link>
         <HeaderNav
           label={header.navLabel}
-          items={[
-            { href: "/", label: header.home },
-            { href: "/workspaces", label: header.workspaces },
-          ]}
+          items={[{ href: "/workspaces", label: header.workspaces }]}
         />
         <LanguageSwitcher locale={locale} labels={{ group: common.languageLabel, languages: common.languages }} />
       </div>

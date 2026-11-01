@@ -23,7 +23,6 @@ export const es = {
   },
   header: {
     navLabel: "Principal",
-    home: "Inicio",
     workspaces: "Empresas",
   },
   notFound: {
@@ -58,6 +57,23 @@ export const es = {
         { label: "Fase 5 · Acceso y auditorías de pago", state: "Siguiente" },
       ],
     },
+  },
+  /** Per-company panel of data sources (feature 015): labels only; states come from each source. */
+  sources: {
+    title: "Fuentes de datos",
+    description: "Qué fuentes alimentan esta empresa, cuándo se leyeron por última vez y qué falta por hacer. Solo muestra lo guardado; no consulta a los proveedores.",
+    columns: { source: "Fuente", status: "Estado", target: "Propiedad o proveedor", lastGood: "Última lectura correcta", note: "Qué hacer", open: "Ir" },
+    names: {
+      search_console: "Google Search Console",
+      bing: "Bing Webmaster Tools",
+      analytics: "Google Analytics 4",
+      pagespeed: "PageSpeed Insights y Chrome UX Report",
+      ai: "Medición en ChatGPT",
+    },
+    never: "Nunca",
+    pagespeed: { keyOnly: "Clave de PageSpeed Insights (Chrome UX Report usa la misma)", keyAndCrux: "Claves de PageSpeed Insights y de Chrome UX Report" },
+    ai: { providers: (manual: string, paid: string | null) => (paid ? `${manual} · ${paid}` : manual) },
+    open: { seo: "Ver en Google", performance: "Ver en Rendimiento", ai: "Configurar la medición" },
   },
   workspaces: {
     list: {
@@ -1192,8 +1208,8 @@ export const es = {
       nonBusinessHost: "Esa web es un directorio, red social o buscador, no un competidor.",
     },
     providerStatus: {
-      missingCredentials: "Faltan las credenciales de DataForSEO (DATAFORSEO_LOGIN y DATAFORSEO_PASSWORD).",
-      missingBudget: "Falta el presupuesto mensual (GEO_MONTHLY_BUDGET_USD): sin él no se hacen llamadas de pago.",
+      missingCredentials: "La medición automática (DataForSEO) no está disponible en este entorno.",
+      missingBudget: "La medición automática no está disponible: falta fijar un presupuesto mensual.",
     },
     /** Serializable fragment for the client forms (`{…}` and `{one, other}` resolved with `client-format`). */
     forms: {
