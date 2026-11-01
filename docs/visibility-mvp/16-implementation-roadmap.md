@@ -1,6 +1,6 @@
 # 16 — Roadmap de implementación (referencia operativa)
 
-**Última actualización:** 2026-11-01: tarjeta «Visibilidad en Google» (spec 014) cerrada, D-31 resuelto; origen y estados de la medición en IA (spec 013) cerrada, D-23 resuelto (§6, §8); el orden de trabajo del cierre del MVP está en `19-cierre-mvp-fases.md`. Antes: 2026-10-29: conectores de Search Console, Bing y GA4 cerrados; búsquedas con marca y sin marca (spec 007) y conversiones desde buscadores en GA4 (spec 008) cerradas (§8); 2026-10-30: cambios de posición por búsqueda (spec 009) cerrada (§8); seguimientos y backlog (§6, §9).
+**Última actualización:** 2026-11-01: inicio y panel de fuentes (spec 015) cerrada; tarjeta «Visibilidad en Google» (spec 014) cerrada, D-31 resuelto; origen y estados de la medición en IA (spec 013) cerrada, D-23 resuelto (§6, §8); el orden de trabajo del cierre del MVP está en `19-cierre-mvp-fases.md`. Antes: 2026-10-29: conectores de Search Console, Bing y GA4 cerrados; búsquedas con marca y sin marca (spec 007) y conversiones desde buscadores en GA4 (spec 008) cerradas (§8); 2026-10-30: cambios de posición por búsqueda (spec 009) cerrada (§8); seguimientos y backlog (§6, §9).
 **Estado del diseño:** `00`–`12` siguen siendo referencia arquitectónica (versión 1, PROPUESTA). `13-codex-review.md` (REQUEST CHANGES) sigue siendo el registro de riesgos. **Este documento manda sobre el orden de trabajo y sobre las decisiones técnicas de construcción.** Donde contradiga a `00`–`12`, prevalece este y la contradicción se lista en §7.
 
 Nota: `14-architecture-sync.md` no llegó a escribirse; el cambio de estrategia lo sustituyó por este documento antes de redactarlo. Los hallazgos de Codex se gestionan aquí de forma progresiva (§4).
@@ -512,6 +512,16 @@ Los tres conectores siguen el mismo patrón: credencial del operador en el entor
 **Verificación:** unitarias (`google.test.ts` nuevo, `summary` y `section-render` ampliados), lint, typecheck, build e integración; Olessium, la clínica y 375 px en navegador (TASKS › Evidence).
 
 **Seguimiento:** cierra D-31. Las secciones de Bing y GA4 conservan sus etiquetas («Procesando», «Sin visitas») hasta la reorganización de la página «Google» (spec 017).
+
+### Inicio y panel de fuentes de datos (spec `specs/features/015-home-and-data-sources`) — 2026-11-01, hecha
+
+**Alcance:** primera spec de la fase B del cierre del MVP (`19-cierre-mvp-fases.md`), hallazgos 6, 10 y 11 de Codex. La raíz redirige a Empresas y el estado del sistema con la hoja de ruta pasa a `/admin/status`, sin enlace en la cabecera. La edición de una empresa muestra «Fuentes de datos»: una fila por fuente (Search Console, Bing, GA4, PageSpeed/CrUX, medición en ChatGPT) con estado, propiedad, última lectura correcta y qué hacer, mapeada desde los resúmenes que cada fuente ya calcula (`src/modules/sources/summary.ts`). La medición automática en IA ya no nombra variables de entorno.
+
+**Commits:** `db76e28` (spec), `8fcf2d0` (código) y los de evidencia. **Migraciones:** ninguna.
+
+**Verificación:** unitarias (`tests/unit/sources`), lint, typecheck, build e integración; `/`, `/admin/status`, la edición de Olessium y de la clínica, y 375 px en navegador (TASKS › Evidence).
+
+**Seguimiento:** el panel se moverá a «Configuración» cuando exista (017). `/admin/status` queda en el mismo perímetro que el resto (D-03, BL-07).
 
 ## 9. Backlog (aparcado por decisión del owner, 2026-10-26)
 

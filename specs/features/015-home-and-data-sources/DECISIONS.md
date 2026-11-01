@@ -43,3 +43,17 @@
 **Reasoning:** el operador necesita el nombre exacto para configurar; el propietario no ve esas secciones hasta la 017 y el acceso por cliente (Fase 5).
 
 **Consequences:** AC-005 limita el `grep` a `geo.providerStatus`.
+
+### D004 - Revisiones de cierre: qué se aplicó y qué no
+
+**Date:** 2026-11-01
+
+**Status:** Accepted
+
+**Context:** Revisión de conformidad («Pass con menores») y de frontend/QA («Reject» por tres hallazgos medios, sin altos) sobre `8fcf2d0`.
+
+**Decision:** aplicado en `054d47e`: `SearchConsoleSummary.configWarning`, igual que Bing y GA4, para que el panel avise de una credencial retirada o rota sin perder la captura (esto era también el seguimiento de la 003 D007); «última lectura correcta» de PageSpeed solo con auditoría que midió la velocidad; la fila de IA no pone la disponibilidad del proveedor automático en «qué hacer» (ya va en «propiedad o proveedor»); `isActivePath` sin la rama de la raíz, que mi cambio dejó sin llamante; `/admin/status` con «Estado del sistema» como `h1`; retirados los campos de configuración sin uso de `SourcesInput`; pruebas de textos sin variables, IA medida sin automático, PageSpeed parcial con fecha y estructura del panel. La SPEC se alinea con lo construido (FR-004, FR-005, FR-006, aviso de configuración, catálogo `home`). No aplicado: cargar el panel bajo `Suspense` (riesgo aceptado en el PLAN; la página de edición es de operador) y renombrar `home.*` a `admin.status.*` (solo nombre; `home.description` sigue en uso).
+
+**Reasoning:** los tres medios hacían que el panel dijera algo distinto de la sección o de la columna; el resto es código muerto creado por este cambio o texto de la spec.
+
+**Consequences:** el tono `good` del panel significa «la fuente funciona», no un veredicto; queda escrito en la cabecera del módulo.

@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready (2026-11-01). Primera spec de la fase B del cierre del MVP (`docs/visibility-mvp/19-cierre-mvp-fases.md`), hallazgos 6, 10 y 11 (variables) de la auditoría de Codex del 2026-11-01.
+Done (2026-11-01). T001–T008 hechas; revisiones de conformidad y de frontend/QA aplicadas (D004) sobre `8fcf2d0`/`054d47e`; AC-001 y AC-006 verificados en navegador sobre `dev`; suite completa en verde en solitario. Primera spec de la fase B del cierre del MVP (`docs/visibility-mvp/19-cierre-mvp-fases.md`), hallazgos 6, 10 y 11 (variables) de la auditoría de Codex del 2026-11-01.
 
 ## Problem
 
@@ -40,7 +40,7 @@ La raíz lleva al listado de empresas; el estado técnico vive en una ruta de ad
 
 1. `GET /` redirige a `/workspaces`. La tarjeta de estado del sistema y la hoja de ruta pasan a `/admin/status`, sin enlace en la cabecera; la cabecera queda con «Empresas» y la marca enlaza a `/workspaces`.
 2. En `/workspaces/[id]/edit`, debajo del formulario, la sección «Fuentes de datos» con una tabla de cinco filas: Google Search Console, Bing Webmaster Tools, Google Analytics 4, PageSpeed Insights y Chrome UX Report, Medición en ChatGPT. Columnas: fuente, estado (pill con icono y la misma etiqueta que usa su sección o tarjeta), propiedad o proveedor, última lectura correcta, qué hacer (motivo o fallo con la acción concreta) y un enlace a la sección correspondiente.
-3. Estados por fuente, sin recalcular nada: Search Console, Bing y GA4 toman `state`, `reason`, `lastFailure`, `configWarning` y la propiedad de sus `summarize*`; PageSpeed/CrUX toma la presencia de clave del entorno y el `summarizePerformance` de la última auditoría; la medición en ChatGPT toma `summarizeAi` (solo mediciones reales, 013) y `geoProviderStatus`.
+3. Estados por fuente, sin recalcular nada: Search Console, Bing y GA4 toman `state`, `reason`, `lastFailure` y la propiedad de sus `summarize*` (Bing y GA4 también `configWarning`; Search Console no lo tiene); PageSpeed/CrUX toma la presencia de clave del entorno y el `summarizePerformance` de la última auditoría; la medición en ChatGPT toma `summarizeAi` (solo mediciones reales, 013) y `geoProviderStatus`.
 4. La columna «qué hacer» muestra, por orden: el fallo del último intento si lo hubo, el aviso de configuración si existe, o el motivo del estado; vacía cuando la fuente está conectada y al día.
 5. «Última lectura correcta» muestra la fecha de la última captura o medición buena; «Nunca» si no la hay.
 6. `geo.providerStatus.missingCredentials` y `missingBudget` dejan de nombrar variables: «La medición automática (DataForSEO) no está disponible en este entorno.» y «La medición automática no está disponible: falta fijar un presupuesto mensual.».
@@ -50,9 +50,9 @@ La raíz lleva al listado de empresas; el estado técnico vive en una ruta de ad
 - FR-001 `src/app/page.tsx` hace `redirect("/workspaces")`. Nueva ruta `src/app/admin/status/page.tsx` con el contenido actual de la portada (estado del sistema y hoja de ruta), título «Estado del sistema».
 - FR-002 `AppHeader`: ítems de navegación solo «Empresas»; la marca enlaza a `/workspaces`; `header.home` se retira del catálogo.
 - FR-003 `auditProviderConfig()` en `src/modules/audits/deps.ts`: `{ pageSpeed: boolean; crux: boolean }` a partir de `PAGESPEED_API_KEY` y `CRUX_API_KEY`, sin exponer valores.
-- FR-004 Módulo puro `src/modules/sources/summary.ts` con `summarizeSources(input, locale)`; `input` lleva los resúmenes y configuraciones de las cinco fuentes; devuelve `SourceRow[]` en el orden de «Desired behavior» 2: `{ key, name, status: { tone, label }, target, lastGood, note, action: { label, href } }`.
-- FR-005 Etiquetas y tonos: Search Console, Bing y GA4 usan las etiquetas de `status` de sus catálogos y los tonos de sus secciones; PageSpeed usa `overview.states` (`not_configured` «Sin configurar» cuando falta la clave; `not_measured` para `partial`; `ok` «Medido»); la medición en ChatGPT usa las etiquetas de la tarjeta de IA (014, D004).
-- FR-006 `target`: propiedad de Search Console; sitio de Bing; nombre de propiedad de GA4 (o su id); para PageSpeed, nulo; para IA, el proveedor de captura asistida y, si está disponible, el automático.
+- FR-004 Módulo puro `src/modules/sources/summary.ts` con `summarizeSources(input, locale)`; `input` lleva los resúmenes de las cinco fuentes, la configuración de claves de PageSpeed y el estado de proveedores de IA; devuelve `SourceRow[]` en el orden de «Desired behavior» 2: `{ key, name, status: { tone, label }, target, lastGood, note, action: { label, href } }`.
+- FR-005 Etiquetas y tonos: Search Console, Bing y GA4 usan las etiquetas de `status` de sus catálogos y los tonos de sus secciones; PageSpeed usa `overview.states` (`not_configured` «Sin configurar» cuando falta la clave; `not_measured` para `partial` y para una auditoría `not_configured` anterior a la clave; `ok` «Medido»); la medición en ChatGPT usa las etiquetas de la tarjeta de IA (014, D004).
+- FR-006 `target`: propiedad de Search Console; sitio de Bing; nombre de propiedad de GA4 (o su id); para PageSpeed, qué claves hay («Clave de PageSpeed Insights (Chrome UX Report usa la misma)» o «Claves de PageSpeed Insights y de Chrome UX Report»), nunca su valor, y nulo sin clave; para IA, el proveedor de captura asistida y, si está disponible, el automático.
 - FR-007 Componente `SourcesPanel` en `src/components/workspaces/sources-panel.tsx` (servidor, sin estado): tabla con desbordamiento horizontal en móvil, enlaces a `/seo#ranking-title`, `/seo#bing-title`, `/seo#analytics-title`, `/performance` y `/geo/setup`.
 - FR-008 La página de edición carga lo guardado de las cinco fuentes y renderiza el panel bajo el formulario, con el `key` por idioma del formulario intacto.
 - FR-009 Textos de FR-004/FR-007 y «Desired behavior» 6 en `es` y `en`.
@@ -68,7 +68,7 @@ La raíz lleva al listado de empresas; el estado técnico vive en una ruta de ad
 
 - Nueva ruta `/admin/status`. `/` redirige.
 - `auditProviderConfig()`, `summarizeSources()`, `SourcesPanel`.
-- Catálogo: `sources.*`, `admin.status.*`; `header.home` retirado; `geo.providerStatus.*` reescrito.
+- Catálogo: `sources.*` nuevo; `/admin/status` reutiliza `home.*` (título «Estado del sistema» de `home.systemStatus`); `header.home` retirado; `geo.providerStatus.*` reescrito.
 
 ## Data model changes
 
@@ -77,7 +77,7 @@ Ninguno.
 ## Edge cases
 
 - Empresa recién creada, sin nada: cinco filas con «Sin configurar» o «Sin datos» y la acción de cada una.
-- Credencial retirada con captura guardada: Search Console/GA4/Bing «Conectado» con el aviso de configuración en «qué hacer».
+- Credencial retirada con captura guardada: Bing y GA4 «Conectado» con el aviso de configuración en «qué hacer»; Search Console «Conectado» sin aviso (su resumen no lo calcula; la sección sí lo muestra).
 - Último intento fallido con captura buena: estado de la captura y el fallo en «qué hacer».
 - Solo mediciones demo o prueba: IA «Sin mediciones» con la frase de la 013.
 - Sin clave de PageSpeed y con auditoría: «Sin configurar» y el motivo de la auditoría.
