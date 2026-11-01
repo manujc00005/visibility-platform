@@ -62,14 +62,14 @@ export interface SearchConsoleSummary {
   period: Period | null;
   capturedAt: Date | null;
   metrics: { clicks: MetricView; impressions: MetricView; ctr: MetricView; position: MetricView } | null;
+  /** Raw figures of the latest good capture, for views that need counts (feature 014). */
+  totals: Totals | null;
   queries: QueryView[];
   pages: PageRow[];
   /** Brand split of the latest good capture; null without one or when it predates feature 007. */
   segments: SegmentsView | null;
   /** Set when the newest attempt failed after (or without) a good capture. */
   lastFailure: { text: string; at: Date } | null;
-  /** One line for the overview card, or null when there is nothing measured. */
-  cardLine: string | null;
 }
 
 type Texts = Messages["searchConsole"];
@@ -224,11 +224,11 @@ export function summarizeSearchConsole(
     period: null,
     capturedAt: null,
     metrics: null,
+    totals: null,
     queries: [],
     pages: [],
     segments: null,
     lastFailure: null,
-    cardLine: null,
   };
   const failed = latest && latest.status === "failed" ? { text: failureText(latest, config, domain, t), at: latest.createdAt } : null;
 
@@ -245,11 +245,11 @@ export function summarizeSearchConsole(
       period: { start: latestCompleted.currentStart, end: latestCompleted.currentEnd },
       capturedAt: latestCompleted.createdAt,
       metrics: metricsOf(totals, latestCompleted.previousTotals, t, f),
+      totals,
       queries: projected(latestCompleted.queries, segments?.terms ?? null, t, f),
       pages: latestCompleted.pages,
       segments: segments ? segmentsOf(segments, totals, latestCompleted.previousTotals, t, f) : null,
       lastFailure: failed,
-      cardLine: totals.impressions > 0 ? t.card.line(`${f.integer(totals.clicks)} ${t.units.clicks(Math.round(totals.clicks))}`, `${f.integer(totals.impressions)} ${t.units.impressions(Math.round(totals.impressions))}`, f.decimal(totals.position)) : t.card.noImpressions,
     };
   }
 

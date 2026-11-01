@@ -11,6 +11,7 @@ export {
   type FindingsByAudit,
 } from "@/modules/overview/seo";
 export { summarizeAi, compareRuns, isCompleteResult, runResultState, type AiSummary, type RunLike, type AiAttempt, type RunResult } from "@/modules/overview/ai";
+export { summarizeGoogleCard, type GoogleCardSummary, type CardNotice, type CardStatus } from "@/modules/overview/google";
 export { buildOpportunities, MAX_OPPORTUNITIES, overviewOriginalText, type Opportunity, type OpportunityList, type Priority } from "@/modules/overview/opportunities";
 export {
   isStale,

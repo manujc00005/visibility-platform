@@ -54,7 +54,6 @@ describe("summarizeSearchConsole", () => {
   it("is not configured without a credential or data", () => {
     const s = summarizeSearchConsole({ latest: null, latestCompleted: null }, { state: "not_configured" }, "olessium.com");
     expect(s.state).toBe("not_configured");
-    expect(s.cardLine).toBeNull();
   });
 
   it("asks for a first capture when configured", () => {
@@ -79,7 +78,7 @@ describe("summarizeSearchConsole", () => {
     expect(s.metrics?.impressions.change).toEqual({ direction: "same", text: "Antes: 390 impresiones (sin cambio apreciable)" });
     expect(s.metrics?.position.change).toEqual({ direction: "better", text: "Antes: 12,1 (sube 2,7 puestos)" });
     expect(s.metrics?.ctr.value).toBe("3,0 %");
-    expect(s.cardLine).toBe("En Google: 12 clics y 400 impresiones en los últimos 28 días, posición media 9,4 (Search Console).");
+    expect(s.totals).toEqual({ clicks: 12, impressions: 400, ctr: 0.03, position: 9.4 });
   });
 
   it("does not compare when the previous period had no impressions", () => {
@@ -94,7 +93,6 @@ describe("summarizeSearchConsole", () => {
     const s = summarizeSearchConsole({ latest: snapshot, latestCompleted: snapshot }, READY, "olessium.com");
     expect(s.metrics?.position.value).toBe("—");
     expect(s.metrics?.position.change).toBeNull();
-    expect(s.cardLine).toBe("En Google: sin impresiones en los últimos 28 días (Search Console).");
   });
 
   it("is an explained empty state only when both periods have no impressions (feature 014, AC-001)", () => {
@@ -134,14 +132,13 @@ describe("summarizeSearchConsole", () => {
 });
 
 describe("summarizeSearchConsole in English", () => {
-  it("translates metrics, changes and the card line with en-GB numbers", () => {
+  it("translates metrics and changes with en-GB numbers", () => {
     const snapshot = completed({ totals: { clicks: 1234, impressions: 40_000, ctr: 0.03085, position: 9.4 }, previousTotals: { clicks: 1500, impressions: 39_000, ctr: 0.0385, position: 8.1 } });
     const s = summarizeSearchConsole({ latest: snapshot, latestCompleted: snapshot }, READY, "olessium.com", "en");
     expect(s.metrics?.clicks).toEqual({ value: "1,234", previous: "1,500", change: { direction: "worse", text: "Before: 1,500 clicks (−18%)" } });
     expect(s.metrics?.impressions.change?.text).toBe("Before: 39,000 impressions (no noticeable change)");
     expect(s.metrics?.ctr).toMatchObject({ value: "3.1%", change: { direction: "worse", text: "Before: 3.9% (−0.8 points)" } });
     expect(s.metrics?.position.change).toEqual({ direction: "worse", text: "Before: 8.1 (down 1.3 places)" });
-    expect(s.cardLine).toBe("On Google: 1,234 clicks and 40,000 impressions in the last 28 days, average position 9.4 (Search Console).");
   });
 
   it("translates setup and failure reasons", () => {
@@ -188,7 +185,6 @@ describe("summarizeSearchConsole keeps the Spanish output of acba536 (D007, D020
     const snapshot = completed({ totals: { clicks: 12345, impressions: 40000, ctr: 0.3, position: 9.4 }, previousTotals: { clicks: 12000, impressions: 40000, ctr: 0.3, position: 9.4 } });
     const s = summarizeSearchConsole({ latest: snapshot, latestCompleted: snapshot }, READY, "olessium.com");
     expect(s.metrics?.clicks.value).toBe("12.345");
-    expect(s.cardLine).toContain("12.345 clics");
   });
 });
 
@@ -286,12 +282,12 @@ describe("summarizeSearchConsole brand segments (feature 007)", () => {
     expect(s.queries.map((q) => q.branded)).toEqual([true, false, true]);
   });
 
-  it("leaves a capture without segments as before: no block, no labels, same card line (AC-006)", () => {
+  it("leaves a capture without segments as before: no block, no labels, same figures (AC-006)", () => {
     const old = summarize({ segments: null });
     expect(old.segments).toBeNull();
     expect(old.queries.every((q) => !("branded" in q))).toBe(true);
     const fresh = summarize({ segments: segments() });
-    expect(fresh.cardLine).toBe(old.cardLine);
+    expect(fresh.totals).toEqual(old.totals);
     expect(fresh.metrics).toEqual(old.metrics);
   });
 
