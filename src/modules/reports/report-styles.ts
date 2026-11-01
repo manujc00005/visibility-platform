@@ -1,20 +1,22 @@
 import { SafeHtml } from "@/modules/reports/html-template";
+import { REPORT_FONT_FACES } from "@/modules/reports/report-fonts";
 
 /**
- * Inline stylesheet of the report. Static and trusted (no interpolated data), system fonts
- * only, no url(): the document must not need any network resource to render.
+ * Inline stylesheet of the report. Static and trusted (no interpolated data); its only url()
+ * are the fonts embedded as data: the document must not need any network resource to render.
  */
 export const REPORT_STYLES = new SafeHtml(`
+${REPORT_FONT_FACES}
 @page { size: A4; margin: 18mm 16mm 20mm; }
 * { box-sizing: border-box; }
 html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-body { margin: 0; color: #1f2328; font: 10.5pt/1.5 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; background: #fff; }
+body { margin: 0; color: #1f2328; font: 10.5pt/1.5 "Geist", -apple-system, "Segoe UI", "DejaVu Sans", Helvetica, Arial, sans-serif; background: #fff; }
 @media screen { body { max-width: 820px; margin: 32px auto; padding: 0 24px; } }
 h1 { font-size: 24pt; margin: 4px 0 2px; line-height: 1.2; }
 h2 { font-size: 14pt; margin: 28px 0 10px; padding-bottom: 4px; border-bottom: 2px solid #1f2328; break-after: avoid; }
 p { margin: 6px 0; }
 ul, ol { margin: 6px 0; padding-left: 20px; }
-.mono { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 9pt; word-break: break-all; }
+.mono { font-family: "Geist Mono", "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace; font-size: 9pt; word-break: break-all; }
 .muted { color: #59636e; }
 .eyebrow { text-transform: uppercase; letter-spacing: .08em; font-size: 9pt; color: #59636e; margin: 0; }
 .cover { padding-bottom: 14px; border-bottom: 1px solid #d1d9e0; }
@@ -22,6 +24,11 @@ ul, ol { margin: 6px 0; padding-left: 20px; }
 .meta, .grid { display: grid; grid-template-columns: max-content 1fr; gap: 3px 16px; margin: 8px 0; }
 .meta dt, .grid dt { color: #59636e; }
 .meta dd, .grid dd { margin: 0; }
+.figures { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0; }
+.figure { border: 1px solid #d1d9e0; border-radius: 6px; padding: 8px 10px; break-inside: avoid; }
+.figure dt { font-size: 8.5pt; color: #59636e; }
+.figure dd { margin: 0; font-size: 15pt; font-weight: 600; font-variant-numeric: tabular-nums; }
+.figure .change { display: block; margin-top: 2px; font-size: 8.5pt; line-height: 1.3; font-weight: 400; color: #59636e; }
 .counts { display: flex; gap: 8px; margin-top: 10px; }
 .pill { display: inline-block; border-radius: 999px; padding: 1px 8px; font-size: 8.5pt; font-weight: 600; border: 1px solid; white-space: nowrap; }
 .pill.critical { color: #a40e26; border-color: #f1a7b1; background: #ffebe9; }

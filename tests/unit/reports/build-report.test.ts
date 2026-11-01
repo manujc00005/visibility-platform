@@ -4,9 +4,10 @@ import { extractPage } from "@/modules/audits/html";
 import { emptyFieldData } from "@/modules/audits/crux";
 import { emptyResult } from "@/modules/audits/pagespeed";
 import { evaluateAudit, type AuditFacts } from "@/modules/audits/rules";
-import { buildReportHtml, TEMPLATE_VERSION, type ReportInput } from "@/modules/reports/build-report";
+import { buildReportHtml, TEMPLATE_VERSION, type ReportInput, type ReportSearch } from "@/modules/reports/build-report";
 
 const URL_ = "https://www.clinicagarcia.es/";
+const NOT_MEASURED: ReportSearch = { state: "not_measured", period: null, capturedAt: null, figures: [], clicks: null, impressions: null, goal: null };
 const HOSTILE = `<script>alert(1)</script><img src="http://127.0.0.1:9/x" onerror="alert(2)">`;
 
 const PAGE_HTML = `<!doctype html><html><head><title>${HOSTILE}</title></head><body><h2>${HOSTILE}</h2></body></html>`;
@@ -63,6 +64,7 @@ function input(auditFacts: AuditFacts = facts(), name = `Clínica ${HOSTILE}`): 
       fetchLog: [{ url: `${URL_}?q=<script>`, outcome: "ok", status: 200, bytes: 10, ms: 120, ip: "93.184.216.34", error: null }],
     },
     generatedAt: new Date("2026-10-26T09:00:00Z"),
+    search: NOT_MEASURED,
     geo: null,
   };
 }
@@ -73,12 +75,13 @@ describe("buildReportHtml", () => {
   it("contains every required section, the analysis date and the template version", () => {
     for (const heading of [
       "1. Resumen ejecutivo",
-      "2. Datos de la empresa",
-      "3. Resultados técnicos",
-      "4. Problemas identificados",
-      "5. Recomendaciones priorizadas",
-      "6. Evidencias y fuentes",
-      "7. Limitaciones de la medición",
+      "2. Resultados en buscadores",
+      "3. Datos de la empresa",
+      "4. Resultados técnicos",
+      "5. Problemas identificados",
+      "6. Recomendaciones priorizadas",
+      "7. Evidencias y fuentes",
+      "8. Limitaciones de la medición",
     ]) {
       expect(document).toContain(`<h2>${heading}</h2>`);
     }
@@ -110,7 +113,9 @@ describe("buildReportHtml", () => {
     const style = elements.find((e) => e.tagName === "style");
     const css = (style?.childNodes as { value?: string }[] | undefined)?.map((n) => n.value ?? "").join("") ?? "";
     expect(css.length).toBeGreaterThan(100);
-    expect(css).not.toMatch(/url\(|@import/i);
+    // The only url() are the two fonts embedded as data (feature 021, D003): nothing can reach the network.
+    expect(css.match(/url\(/g)).toHaveLength(2);
+    expect(css.replace(/url\(data:font\/woff2;base64,[A-Za-z0-9+/=]+\)/g, "")).not.toMatch(/url\(|@import|https?:/i);
   });
 
   it("shows hostile values as escaped text", () => {
@@ -205,11 +210,63 @@ describe("buildReportHtml", () => {
         },
       },
     });
-    expect(withGeo).toContain("<h2>7. Visibilidad en asistentes de IA (muestra)</h2>");
-    expect(withGeo).toContain("<h2>8. Limitaciones de la medición</h2>");
-    expect(withGeo).toContain("1 de 1 (100 %)");
-    expect(withGeo).toContain("0 de 1 (0 %)");
+    expect(withGeo).toContain("<h2>8. Visibilidad en asistentes de IA (muestra)</h2>");
+    expect(withGeo).toContain("<h2>9. Limitaciones de la medición</h2>");
+    // The rule of the interface (013, D004): one observation never reads as a percentage.
+    expect(withGeo).toContain("<td>1 de 1</td>");
+    expect(withGeo).toContain("<td>0 de 1</td>");
+    expect(withGeo).not.toContain("(100 %)");
     expect(withGeo).toContain("no equivalen a búsquedas reales");
     expect(withGeo).not.toMatch(/<script/i);
+  });
+});
+
+describe("results in search engines (feature 021)", () => {
+  const measured: ReportSearch = {
+    state: "measured",
+    period: { start: "27 sept 2026", end: "24 oct 2026" },
+    capturedAt: new Date("2026-10-27T10:00:00Z"),
+    figures: [
+      { label: "Clics", value: "12", change: "Antes: 8 clics (+50 %)" },
+      { label: "Impresiones", value: "400", change: null },
+    ],
+    clicks: "12 clics",
+    impressions: "400 impresiones",
+    goal: null,
+  };
+  const zero: ReportSearch = { ...measured, state: "no_impressions", figures: [], clicks: null, impressions: null };
+  const render = (search: ReportSearch) => buildReportHtml({ ...input(), search });
+  const LIMIT_PRIVATE = "No incluye datos privados del propietario";
+  const LIMIT_GOOGLE = "Las cifras de Google son las que registra Search Console";
+
+  it("shows the figures, their change, period and source, and says so in the summary (AC-001)", () => {
+    const doc = render(measured);
+    expect(doc).toContain("Google registró <strong>12 clics</strong> y <strong>400 impresiones</strong>");
+    expect(doc).toContain("<dt>Clics</dt><dd>12<span class=\"change\">Antes: 8 clics (+50 %)</span></dd>");
+    expect(doc).toContain("<dt>Impresiones</dt><dd>400</dd>");
+    expect(doc).toContain("Fuente: Google Search Console, del 27 sept 2026 al 24 oct 2026");
+    expect(doc).toContain(LIMIT_GOOGLE);
+    expect(doc).not.toContain(LIMIT_PRIVATE);
+  });
+
+  it("explains no impressions and not measured without figures (AC-001, AC-004)", () => {
+    const empty = render(zero);
+    expect(empty).toContain("no registra impresiones de esta web en este periodo");
+    expect(empty).not.toContain('class="figures"');
+    expect(empty).toContain(LIMIT_GOOGLE);
+    const none = render({ ...measured, state: "not_measured", period: null, capturedAt: null, figures: [], clicks: null, impressions: null });
+    expect(none).toContain("pendiente de medir");
+    expect(none).toContain("Lo que sigue describe la salud técnica de la portada, no su posición.");
+    expect(none).not.toContain("Fuente: Google Search Console");
+    expect(none).toContain(LIMIT_PRIVATE);
+  });
+
+  it("adds the goal with its notes and its limit only when there is one, as text (AC-003)", () => {
+    const withGoal = render({ ...measured, goal: { text: `Solicitud ${HOSTILE}: 2 desde buscadores.`, notes: ["Última recepción observada: 31 oct 2026, 22:31."] } });
+    expect(withGoal).toContain("<strong>Objetivo comercial.</strong>");
+    expect(withGoal).toContain("Última recepción observada: 31 oct 2026, 22:31.");
+    expect(withGoal).toContain("No equivale a clientes ni a ventas");
+    expect(withGoal).not.toContain("<script>");
+    expect(render(measured)).not.toContain("Objetivo comercial");
   });
 });

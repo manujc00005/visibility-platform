@@ -15,7 +15,7 @@ export interface RenderedPdf {
 
 // Static and trusted: Chromium substitutes pageNumber/totalPages. No report data here.
 const FOOTER = `<div style="width:100%;font:8px -apple-system,Helvetica,Arial,sans-serif;color:#59636e;padding:0 16mm;display:flex;justify-content:space-between">
-<span>Diagnóstico SEO técnico</span><span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>`;
+<span>Diagnóstico de visibilidad</span><span><span class="pageNumber"></span> / <span class="totalPages"></span></span></div>`;
 
 export async function renderPdf(documentHtml: string, options: { timeoutMs?: number } = {}): Promise<RenderedPdf> {
   const timeout = options.timeoutMs ?? 30_000;

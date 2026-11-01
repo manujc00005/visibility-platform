@@ -7,6 +7,7 @@ import { getLocale } from "@/i18n/server";
 import { geoProviderStatus } from "@/modules/geo/deps";
 import { renderPdf } from "@/modules/reports/render-pdf";
 import { createReport } from "@/modules/reports/service";
+import { searchConsoleConfig } from "@/modules/search-console/deps";
 
 /** Private operator only (no authentication until Phase 5, roadmap D-03). */
 
@@ -19,6 +20,7 @@ export async function generateReportAction(workspaceId: string, auditId: string)
   const result = await createReport(getDb(), workspaceId, auditId, {
     renderPdf,
     geoReportableProviders: geoProviderStatus().dataforseo.reportable ? ["manual", "dataforseo_chatgpt"] : ["manual"],
+    searchConsoleConfig: searchConsoleConfig(),
   });
   if (!result.ok) {
     const t = getMessages(await getLocale()).audits.reportErrors;

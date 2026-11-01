@@ -2,6 +2,7 @@ import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { renderPdf } from "@/modules/reports/render-pdf";
+import { REPORT_STYLES } from "@/modules/reports/report-styles";
 
 /** Counts every request the renderer might make to a host on the machine. */
 let server: Server;
@@ -21,6 +22,16 @@ beforeAll(async () => {
 afterAll(() => new Promise<void>((resolve) => server.close(() => resolve())));
 
 describe("renderPdf", () => {
+  it("embeds the report fonts without a single request (feature 021, AC-007)", async () => {
+    const { pdf, blockedRequests } = await renderPdf(
+      `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>t</title><style>${REPORT_STYLES.toString()}</style></head><body><p>Diagnóstico de visibilidad · ñ á « »</p><p class="mono">https://clinicagarcia.es/</p></body></html>`,
+    );
+    expect(blockedRequests).toEqual([]);
+    const raw = pdf.toString("latin1");
+    expect(raw).toMatch(/\/FontName\s*\/[A-Z]{6}\+Geist/);
+    expect(raw).toMatch(/\/FontName\s*\/[A-Z]{6}\+GeistMono/);
+  });
+
   it("produces a valid PDF from a self-contained document without any request", async () => {
     const { pdf, blockedRequests } = await renderPdf(
       `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>t</title><style>body{font-family:Helvetica}</style></head><body><h1>Diagnóstico</h1><p>Ñandú · €</p></body></html>`,

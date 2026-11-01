@@ -2,6 +2,7 @@ import type { FetchLogEntry } from "@/modules/audits/fetcher/safe-fetch";
 import { CATEGORY_LABELS, formatMs, OUTCOME_LABELS, SEVERITY_LABELS } from "@/modules/audits/presentation";
 import type { AuditFacts, Category, Severity } from "@/modules/audits/rules";
 import type { Fraction, GeoMetrics } from "@/modules/geo/metrics";
+import { fraction } from "@/modules/geo/presentation";
 import { html, join, type SafeHtml } from "@/modules/reports/html-template";
 import { REPORT_STYLES } from "@/modules/reports/report-styles";
 
@@ -11,7 +12,7 @@ import { REPORT_STYLES } from "@/modules/reports/report-styles";
  * Every value from the audited website goes through the escaping `html` template.
  * Deterministic: the same input always produces the same document.
  */
-export const TEMPLATE_VERSION = "2026-10-26.1";
+export const TEMPLATE_VERSION = "2026-11-01.1";
 
 export interface ReportFinding {
   ruleId: string;
@@ -42,8 +43,31 @@ export interface ReportInput {
     fetchLog: FetchLogEntry[];
   };
   generatedAt: Date;
+  /** What Google recorded, from the same summary as the overview (feature 021, D001). */
+  search: ReportSearch;
   /** Latest eligible AI-visibility measurement (Phase 4), or null. Metrics only, never answer texts. */
   geo: ReportGeo | null;
+}
+
+/** One figure already formatted by `summarizeSearchConsole`, with its comparison when there is one. */
+export interface ReportFigure {
+  label: string;
+  value: string;
+  change: string | null;
+}
+
+export interface ReportSearch {
+  /** Failures never get here: the owner reads «not measured», the operator sees why (D002). */
+  state: "measured" | "no_impressions" | "not_measured";
+  /** Formatted first and last day of the period. */
+  period: { start: string; end: string } | null;
+  capturedAt: Date | null;
+  figures: ReportFigure[];
+  /** Headline numbers for the executive summary, formatted with their units. */
+  clicks: string | null;
+  impressions: string | null;
+  /** Same sentence and notes as the overview, or null without a goal. */
+  goal: { text: string; notes: string[] } | null;
 }
 
 export interface ReportGeo {
@@ -179,7 +203,39 @@ function executiveSummary(input: ReportInput, counts: Record<Severity, number>):
       ? null
       : html`<p class="muted">La velocidad de carga no se midió en este análisis; no aparece ninguna cifra de rendimiento.</p>`;
 
-  return html`${intro}${access}${countsLine}${prioritiesBlock}${speed}`;
+  return html`${intro}${searchLine(input.search)}${access}${countsLine}${prioritiesBlock}${speed}`;
+}
+
+function searchLine(search: ReportSearch): SafeHtml {
+  if (search.state === "measured" && search.period) {
+    return html`<p>Del ${search.period.start} al ${search.period.end}, Google registró <strong>${search.clicks}</strong> y <strong>${search.impressions}</strong> de esta web.</p>`;
+  }
+  if (search.state === "no_impressions") return html`<p>Search Console no registra impresiones de esta web en el periodo revisado.</p>`;
+  return html`<p>Su posicionamiento en Google está pendiente de medir: todavía no hay datos de Search Console.</p>`;
+}
+
+function searchSection(search: ReportSearch, number: number): SafeHtml {
+  const body =
+    search.state === "measured"
+      ? html`<dl class="figures">${search.figures.map(
+          (f) => html`<div class="figure"><dt>${f.label}</dt><dd>${f.value}${f.change ? html`<span class="change">${f.change}</span>` : null}</dd></div>`,
+        )}</dl>`
+      : search.state === "no_impressions"
+        ? html`<p>Search Console no registra impresiones de esta web en este periodo ni en los 28 días anteriores. Si la propiedad es reciente, Google tarda unos días en acumular datos.</p>`
+        : html`<p>Todavía no hay datos de Search Console para esta web, así que no podemos decir cuántas veces aparece en Google ni cuántas personas entran desde sus resultados. Lo que sigue describe la salud técnica de la portada, no su posición.</p>`;
+  const source =
+    search.period && search.capturedAt
+      ? html`<p class="muted">Fuente: Google Search Console, del ${search.period.start} al ${search.period.end}, comparado con los 28 días anteriores. Consultado el ${dateOnly.format(search.capturedAt)}.</p>`
+      : null;
+  const goal = search.goal
+    ? html`<p><strong>Objetivo comercial.</strong> ${search.goal.text}</p>${search.goal.notes.map((note) => html`<p class="muted">${note}</p>`)}`
+    : null;
+  return html`<section id="buscadores">
+  <h2>${number}. Resultados en buscadores</h2>
+  ${body}
+  ${source}
+  ${goal}
+</section>`;
 }
 
 function evidenceSources(input: ReportInput): SafeHtml {
@@ -216,8 +272,9 @@ function evidenceSources(input: ReportInput): SafeHtml {
     </table>`;
 }
 
+/** The rule of the interface (013, D004): no percentage below three observations. */
 function frac(value: Fraction): string {
-  return value.n === 0 ? "sin datos" : `${value.k} de ${value.n} (${Math.round((value.k / value.n) * 100)} %)`;
+  return value.n === 0 ? "sin datos" : fraction(value, "es");
 }
 
 const INTENT_TEXT: Record<string, string> = {
@@ -258,13 +315,28 @@ function geoSection(geo: ReportGeo, number: number): SafeHtml {
 </section>`;
 }
 
-const LIMITATIONS = [
+const COMMON_LIMITATIONS = [
   "Se analiza la página principal, su robots.txt y un sitemap. No es un rastreo completo de la web: otras páginas pueden tener problemas distintos.",
-  "Los datos son públicos y se observaron en un momento concreto; la web puede cambiar después del análisis.",
-  "No incluye datos privados del propietario (Google Search Console, Analytics): no mide visitas, clics ni posiciones reales en Google.",
+  "Los datos técnicos son públicos y se observaron en un momento concreto; la web puede cambiar después del análisis.",
+];
+const SPEED_LIMITATIONS = [
   "La velocidad de laboratorio es una prueba en un móvil simulado. La experiencia real, si aparece, resume 28 días de visitantes con Chrome en el móvil; no incluye otros navegadores ni ordenadores.",
   "Las recomendaciones son orientativas y no garantizan una posición concreta en buscadores.",
 ];
+
+/** What each limit says depends on what this report contains (feature 021). */
+function limitationsOf(input: ReportInput): string[] {
+  const { search, geo } = input;
+  return [
+    ...COMMON_LIMITATIONS,
+    search.state === "not_measured"
+      ? "No incluye datos privados del propietario (Google Search Console, Analytics): no mide visitas, clics ni posiciones reales en Google."
+      : "Las cifras de Google son las que registra Search Console para el periodo indicado: omite las búsquedas poco frecuentes por privacidad, y la posición es una media, no un puesto fijo.",
+    ...(search.goal ? ["El objetivo comercial cuenta eventos clave de Google Analytics llegados desde buscadores. No equivale a clientes ni a ventas, y un cambio no demuestra su causa."] : []),
+    ...SPEED_LIMITATIONS,
+    ...(geo ? ["La visibilidad en IA es una muestra de respuestas de ChatGPT en una fecha y ubicación concretas; las respuestas cambian entre consultas y usuarios, y no equivalen a búsquedas reales."] : []),
+  ];
+}
 
 export function buildReportHtml(input: ReportInput): string {
   const { workspace, audit, generatedAt } = input;
@@ -274,24 +346,22 @@ export function buildReportHtml(input: ReportInput): string {
   const checks = technicalChecks(audit.facts, findings);
   const location = join([workspace.city, workspace.country].filter((v): v is string => Boolean(v)), ", ");
   const categoryLabel = (category: string) => CATEGORY_LABELS[category as Category] ?? category;
-  const limitations = input.geo
-    ? [
-        ...LIMITATIONS,
-        "La visibilidad en IA es una muestra de respuestas de ChatGPT en una fecha y ubicación concretas; las respuestas cambian entre consultas y usuarios, y no equivalen a búsquedas reales.",
-      ]
-    : LIMITATIONS;
+  const limitations = limitationsOf(input);
+  // Sections after the summary are numbered in order; the AI one is optional.
+  let next = 2;
+  const number = () => next++;
 
   const document = html`<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="robots" content="noindex, nofollow">
-<title>Diagnóstico SEO técnico · ${workspace.displayDomain}</title>
+<title>Diagnóstico de visibilidad · ${workspace.displayDomain}</title>
 <style>${REPORT_STYLES}</style>
 </head>
 <body>
 <header class="cover">
-  <p class="eyebrow">Diagnóstico SEO técnico</p>
+  <p class="eyebrow">Diagnóstico de visibilidad</p>
   <h1>${workspace.name}</h1>
   <p class="domain mono">${workspace.displayDomain}</p>
   <dl class="meta">
@@ -310,8 +380,10 @@ export function buildReportHtml(input: ReportInput): string {
   ${executiveSummary(input, counts)}
 </section>
 
+${searchSection(input.search, number())}
+
 <section id="empresa">
-  <h2>2. Datos de la empresa</h2>
+  <h2>${number()}. Datos de la empresa</h2>
   <dl class="grid">
     <dt>Nombre comercial</dt><dd>${workspace.name}</dd>
     <dt>Web analizada</dt><dd class="mono">${audit.finalUrl ?? audit.requestedUrl}</dd>
@@ -322,7 +394,7 @@ export function buildReportHtml(input: ReportInput): string {
 </section>
 
 <section id="resultados">
-  <h2>3. Resultados técnicos</h2>
+  <h2>${number()}. Resultados técnicos</h2>
   <table class="checks">
     <thead><tr><th>Comprobación</th><th>Estado</th><th>Detalle</th></tr></thead>
     <tbody>
@@ -335,7 +407,7 @@ export function buildReportHtml(input: ReportInput): string {
 </section>
 
 <section id="problemas">
-  <h2>4. Problemas identificados</h2>
+  <h2>${number()}. Problemas identificados</h2>
   ${
     findings.length === 0
       ? html`<p>No se identificaron problemas en las comprobaciones realizadas.</p>`
@@ -352,7 +424,7 @@ export function buildReportHtml(input: ReportInput): string {
 </section>
 
 <section id="recomendaciones">
-  <h2>5. Recomendaciones priorizadas</h2>
+  <h2>${number()}. Recomendaciones priorizadas</h2>
   ${
     findings.length === 0
       ? html`<p>Mantener la configuración actual y repetir el análisis periódicamente.</p>`
@@ -370,14 +442,14 @@ export function buildReportHtml(input: ReportInput): string {
 </section>
 
 <section id="evidencias">
-  <h2>6. Evidencias y fuentes</h2>
+  <h2>${number()}. Evidencias y fuentes</h2>
   ${evidenceSources(input)}
 </section>
 
-${input.geo ? geoSection(input.geo, 7) : null}
+${input.geo ? geoSection(input.geo, number()) : null}
 
 <section id="limitaciones">
-  <h2>${input.geo ? 8 : 7}. Limitaciones de la medición</h2>
+  <h2>${number()}. Limitaciones de la medición</h2>
   <ul>${limitations.map((text) => html`<li>${text}</li>`)}</ul>
 </section>
 

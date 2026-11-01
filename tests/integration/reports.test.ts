@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
-import { audits, geoRuns, providerSpend, reports, workspaces } from "@/db/schema";
+import { audits, geoRuns, providerSpend, reports, searchConsoleSnapshots, workspaces } from "@/db/schema";
+import { saveGoal } from "@/modules/goals/service";
 import { emptyResult } from "@/modules/audits/pagespeed";
 import type { DataForSeoClient } from "@/modules/geo/dataforseo";
 import { addPrompt, createGeoRun, getGeoRun, recordManualObservation, refreshGeoRun } from "@/modules/geo/service";
@@ -114,7 +115,51 @@ describe("report queries", () => {
         workspaceSnapshot: { name: "x", displayDomain: "bücher.de", sector: "x", country: "x", city: null, services: [] },
         createdAt: new Date("2026-10-26T10:00:00Z"),
       }),
-    ).toBe("diagnostico-seo-bucher.de-2026-10-26.pdf");
+    ).toBe("diagnostico-visibilidad-bucher.de-2026-10-26.pdf");
+  });
+});
+
+describe("results in search engines in the report (feature 021)", () => {
+  const totals = { clicks: 12, impressions: 400, ctr: 0.03, position: 9.4 };
+  const capture = (workspaceId: string) =>
+    db.insert(searchConsoleSnapshots).values({
+      workspaceId,
+      status: "completed",
+      property: "sc-domain:clinicagarcia.es",
+      currentStart: "2026-09-27",
+      currentEnd: "2026-10-24",
+      previousStart: "2026-08-30",
+      previousEnd: "2026-09-26",
+      totals,
+      previousTotals: { clicks: 8, impressions: 390, ctr: 0.02, position: 12.1 },
+    });
+  const htmlOf = async (workspaceId: string, auditId: string) => {
+    const report = await createReport(db, workspaceId, auditId, { renderPdf: fakeRender });
+    if (!report.ok) throw new Error("report");
+    return (await getReport(db, workspaceId, auditId, report.report.id))!.html;
+  };
+
+  it("uses the figures of the stored capture and the goal sentence of the overview (AC-001, AC-003)", async () => {
+    const { workspace, audit } = await completedAudit();
+    await capture(workspace.id);
+    await saveGoal(db, workspace.id, { kind: "request", label: "Solicitud de presupuesto", eventName: "generate_lead" });
+    const doc = await htmlOf(workspace.id, audit.id);
+    expect(doc).toContain("<strong>12 clics</strong>");
+    expect(doc).toContain("<strong>400 impresiones</strong>");
+    expect(doc).toContain("Antes: 8 clics (+50 %)");
+    expect(doc).toContain("Solicitud de presupuesto: pendiente de comprobar la medición.");
+    expect(doc).toContain("Conecta Google Analytics para comprobarlo.");
+  });
+
+  it("never shows a failed read or the service account to the client (AC-002)", async () => {
+    const { workspace, audit } = await completedAudit();
+    await db.insert(searchConsoleSnapshots).values({ workspaceId: workspace.id, status: "failed", errorKind: "no_access", errorMessage: "Sin acceso", accessibleProperties: 2 });
+    const report = await createReport(db, workspace.id, audit.id, { renderPdf: fakeRender, searchConsoleConfig: { state: "ready", clientEmail: "lector@proyecto.iam.gserviceaccount.com" } });
+    if (!report.ok) throw new Error("report");
+    const doc = (await getReport(db, workspace.id, audit.id, report.report.id))!.html;
+    expect(doc).not.toContain("lector@proyecto");
+    expect(doc).not.toContain("Usuarios y permisos");
+    expect(doc).toContain("pendiente de medir");
   });
 });
 
@@ -183,6 +228,6 @@ describe("AI visibility in reports (license gate, M01)", () => {
     if (!report.ok) throw new Error("report");
     const stored = await getReport(db, workspace.id, audit.id, report.report.id);
     expect(stored!.html).not.toContain("Visibilidad en asistentes de IA");
-    expect(stored!.html).toContain("7. Limitaciones de la medición");
+    expect(stored!.html).toContain("8. Limitaciones de la medición");
   });
 });
