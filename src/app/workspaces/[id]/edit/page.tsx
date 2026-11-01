@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import { GoalForm } from "@/components/workspaces/goal-form";
 import { SourcesPanel } from "@/components/workspaces/sources-panel";
 import { WorkspaceForm } from "@/components/workspaces/workspace-form";
 import { getDb } from "@/db/client";
@@ -15,6 +16,7 @@ import { bingWebmasterConfig } from "@/modules/bing-webmaster/deps";
 import { latestBingWebmaster } from "@/modules/bing-webmaster/service";
 import { summarizeBingWebmaster } from "@/modules/bing-webmaster/summary";
 import { geoProviderStatus } from "@/modules/geo/deps";
+import { getGoal } from "@/modules/goals/service";
 import { listGeoRuns, listPrompts } from "@/modules/geo/service";
 import { summarizeAi, summarizePerformance } from "@/modules/overview";
 import { searchConsoleConfig } from "@/modules/search-console/deps";
@@ -25,6 +27,7 @@ import { formValuesOf } from "@/modules/workspaces/presentation";
 import { getWorkspace } from "@/modules/workspaces/service";
 import { countryOptions } from "@/modules/workspaces/validation";
 import { updateWorkspaceAction } from "../../actions";
+import { removeGoalAction, saveGoalAction } from "../goal/actions";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: getMessages(await getLocale()).workspaces.edit.title };
@@ -36,33 +39,64 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 export const instant = false;
 
-export default async function EditWorkspacePage({ params }: PageProps<"/workspaces/[id]/edit">) {
+export default async function EditWorkspacePage({
+  params,
+}: PageProps<"/workspaces/[id]/edit">) {
   await connection();
   const { id } = await params;
   const locale = await getLocale();
   const db = getDb();
   const workspace = await getWorkspace(db, id);
   if (!workspace) notFound();
-  const { workspaces } = getMessages(locale);
+  const { workspaces, goals } = getMessages(locale);
 
   // Stored data only (feature 015, D002): the panel maps what each source already summarizes.
-  const [gscStored, bingStored, analyticsStored, audits, runs, prompts] = await Promise.all([
-    latestSearchConsole(db, workspace.id),
-    latestBingWebmaster(db, workspace.id),
-    latestAnalytics(db, workspace.id),
-    listAudits(db, workspace.id),
-    listGeoRuns(db, workspace.id),
-    listPrompts(db, workspace.id),
-  ]);
+  const [gscStored, bingStored, analyticsStored, audits, runs, prompts, goal] =
+    await Promise.all([
+      latestSearchConsole(db, workspace.id),
+      latestBingWebmaster(db, workspace.id),
+      latestAnalytics(db, workspace.id),
+      listAudits(db, workspace.id),
+      listGeoRuns(db, workspace.id),
+      listPrompts(db, workspace.id),
+      getGoal(db, workspace.id),
+    ]);
+  // The key events GA4 returned in the latest good capture are the options of the goal event (feature 016).
+  const configuredEvents =
+    analyticsStored.latestCompleted?.keyEvents?.configured ?? [];
   const now = new Date();
   const rows = summarizeSources(
     {
       workspaceId: workspace.id,
-      searchConsole: { summary: summarizeSearchConsole(gscStored, searchConsoleConfig(), workspace.domain, locale) },
-      bing: { summary: summarizeBingWebmaster(bingStored, bingWebmasterConfig(), workspace.domain, locale) },
-      analytics: { summary: summarizeAnalytics(analyticsStored, analyticsConfig(), workspace.domain, locale) },
+      searchConsole: {
+        summary: summarizeSearchConsole(
+          gscStored,
+          searchConsoleConfig(),
+          workspace.domain,
+          locale,
+        ),
+      },
+      bing: {
+        summary: summarizeBingWebmaster(
+          bingStored,
+          bingWebmasterConfig(),
+          workspace.domain,
+          locale,
+        ),
+      },
+      analytics: {
+        summary: summarizeAnalytics(
+          analyticsStored,
+          analyticsConfig(),
+          workspace.domain,
+          locale,
+        ),
+      },
       // The top speed finding is not shown here, so the findings of the result audit are not loaded.
-      pagespeed: { performance: summarizePerformance(audits, [], now, locale), config: auditProviderConfig() },
+      pagespeed: {
+        performance: summarizePerformance(audits, [], now, locale),
+        config: auditProviderConfig(),
+      },
       ai: {
         summary: summarizeAi(
           runs.map(({ run, metrics }) => ({
@@ -89,7 +123,9 @@ export default async function EditWorkspacePage({ params }: PageProps<"/workspac
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{workspaces.edit.title}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {workspaces.edit.title}
+          </h1>
           <p className="text-sm text-muted-foreground">{workspace.name}</p>
         </div>
         {/* Remount on language change: the form state (values and messages) belongs to one language (SPEC, límite conocido). */}
@@ -103,6 +139,16 @@ export default async function EditWorkspacePage({ params }: PageProps<"/workspac
           cancelHref={`/workspaces/${workspace.id}`}
         />
       </div>
+      <GoalForm
+        key={`goal-${locale}`}
+        goal={goal}
+        currentText={goal ? goals.current(goals.kinds[goal.kind], goal.label, goal.eventName) : null}
+        configuredEvents={configuredEvents}
+        save={saveGoalAction.bind(null, workspace.id)}
+        remove={removeGoalAction.bind(null, workspace.id)}
+        labels={goals.form}
+        kinds={goals.kinds}
+      />
       <SourcesPanel rows={rows} locale={locale} />
     </div>
   );

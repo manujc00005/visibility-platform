@@ -11,3 +11,4 @@ export * from "@/modules/search-console/schema";
 export * from "@/modules/bing-webmaster/schema";
 export * from "@/modules/analytics/schema";
 export * from "@/modules/competitor-comparison/schema";
+export * from "@/modules/goals/schema";

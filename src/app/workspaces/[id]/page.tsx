@@ -15,6 +15,7 @@ import {
   type Notice,
 } from "@/components/overview/overview-card";
 import { PageHeader } from "@/components/overview/page-header";
+import { GoalLine } from "@/components/workspaces/goal-line";
 import { WorkspaceNav } from "@/components/overview/workspace-nav";
 import { buttonVariants } from "@/components/ui/button";
 import { getDb } from "@/db/client";
@@ -24,6 +25,9 @@ import { getLocale } from "@/i18n/server";
 import type { Tone } from "@/modules/audits/status";
 import { getAudit, listAudits } from "@/modules/audits/service";
 import { listGeoRuns, listPrompts } from "@/modules/geo/service";
+import { getGoal, goalEvidence } from "@/modules/goals/service";
+import { summarizeGoal } from "@/modules/goals/summary";
+import { latestAnalytics } from "@/modules/analytics/service";
 import { searchConsoleConfig } from "@/modules/search-console/deps";
 import { latestSearchConsole } from "@/modules/search-console/service";
 import { summarizeSearchConsole } from "@/modules/search-console/summary";
@@ -154,7 +158,11 @@ function PerformanceCard({
       <ChangeLine change={s.change} note={s.comparisonNote} />
       {s.topIssue ? (
         <p className="text-sm">
-          <span className="text-muted-foreground">{s.state === "ok" && s.tone === "good" ? c.topIssueGood : c.topIssue} </span>
+          <span className="text-muted-foreground">
+            {s.state === "ok" && s.tone === "good"
+              ? c.topIssueGood
+              : c.topIssue}{" "}
+          </span>
           <span lang={s.topIssueOriginal ? DEFAULT_LOCALE : undefined}>
             {s.topIssue}
           </span>
@@ -237,7 +245,9 @@ function SeoCard({
           </p>
         ) : null}
         {/* With counts the verdict is already in the pill; the sentence explains only why there are none. */}
-        {h.counts ? null : <p className="text-xs text-muted-foreground">{h.headline}</p>}
+        {h.counts ? null : (
+          <p className="text-xs text-muted-foreground">{h.headline}</p>
+        )}
         {h.reason ? (
           <p className="text-xs text-muted-foreground">{h.reason}</p>
         ) : null}
@@ -383,12 +393,23 @@ export default async function WorkspacePage({
   const t = m.overview;
 
   // Stored data only: nothing on this page calls PageSpeed, CrUX, Search Console, a website or an AI provider.
-  const [audits, runs, prompts, gscStored] = await Promise.all([
-    listAudits(db, workspace.id),
-    listGeoRuns(db, workspace.id),
-    listPrompts(db, workspace.id),
-    latestSearchConsole(db, workspace.id),
-  ]);
+  const [audits, runs, prompts, gscStored, analyticsStored, goal] =
+    await Promise.all([
+      listAudits(db, workspace.id),
+      listGeoRuns(db, workspace.id),
+      listPrompts(db, workspace.id),
+      latestSearchConsole(db, workspace.id),
+      latestAnalytics(db, workspace.id),
+      getGoal(db, workspace.id),
+    ]);
+  // Verified from the stored GA4 captures, never from a stored flag (feature 016, D002).
+  const evidence = goal
+    ? await goalEvidence(db, workspace.id, goal.eventName)
+    : null;
+  const goalView = summarizeGoal(
+    { goal, analytics: analyticsStored, evidence },
+    locale,
+  );
   const { result, previous } = splitAudits(audits);
   const loaded = await Promise.all(
     [result, previous]
@@ -484,6 +505,8 @@ export default async function WorkspacePage({
           locale={locale}
         />
       </div>
+
+      <GoalLine view={goalView} workspaceId={workspace.id} locale={locale} />
 
       <OpportunityLead list={opportunities} locale={locale} />
 

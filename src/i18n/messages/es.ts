@@ -58,6 +58,51 @@ export const es = {
       ],
     },
   },
+  /** The commercial goal of a company (feature 016). */
+  goals: {
+    kinds: { request: "Solicitud", booking: "Reserva", purchase: "Compra", other: "Otro" },
+    states: { none: "Sin definir", pending: "Pendiente", verified: "Medido" },
+    line: {
+      label: "Objetivo comercial",
+      none: "Objetivo comercial sin definir.",
+      define: "Definirlo",
+      edit: "Editar",
+      verified: (label: string, n: number, start: string, end: string) =>
+        `${label}: ${n} desde buscadores en los últimos 28 días (Google Analytics, del ${start} al ${end}).`,
+      verifiedNoCapture: (label: string) => `${label}: medido desde buscadores en una captura anterior; la última captura no trae eventos clave.`,
+      observed: (when: string) => `Última recepción observada: ${when}.`,
+      pending: (label: string) => `${label}: pendiente de comprobar la medición. Google Analytics no ha registrado todavía ninguna recepción desde buscadores de este evento.`,
+      notConfigured: "El evento no está marcado como evento clave en Google Analytics.",
+      connect: "Conecta Google Analytics para comprobarlo.",
+      event: (event: string) => `Evento de Google Analytics: ${event}`,
+    },
+    /** Serializable fragment: the client form receives it by props. */
+    form: {
+      title: "Objetivo comercial",
+      description: "Qué resultado cuenta para esta empresa y qué evento clave de Google Analytics lo mide. El resumen lo mostrará como contactos desde buscadores cuando la medición esté comprobada.",
+      kind: "Tipo de resultado",
+      label: "Nombre para el propietario",
+      labelPlaceholder: "Solicitud de presupuesto",
+      event: "Evento clave de Google Analytics",
+      eventHint: "Eventos clave que Google Analytics devolvió en la última captura.",
+      eventFreeHint: "Google Analytics aún no ha devuelto eventos clave para esta empresa: escribe el nombre exacto del evento (distingue mayúsculas).",
+      submit: "Guardar objetivo",
+      saving: "Guardando…",
+      remove: "Quitar objetivo",
+      removing: "Quitando…",
+      saved: "Objetivo guardado.",
+      removed: "Objetivo quitado.",
+    },
+    validation: {
+      kindInvalid: "Tipo de resultado no válido.",
+      labelRequired: "Indica el nombre del objetivo.",
+      labelMax: "El nombre admite como máximo 80 caracteres.",
+      eventRequired: "Indica el evento de Google Analytics.",
+      eventMax: "El evento admite como máximo 200 caracteres.",
+    },
+    errors: { not_found: "La empresa ya no existe.", validation: "Revisa los datos.", saveFailed: "No se pudo guardar." },
+    current: (kind: string, label: string, event: string) => `Objetivo actual: ${label} (${kind.toLowerCase()}), medido por el evento ${event}.`,
+  },
   /** Per-company panel of data sources (feature 015): labels only; states come from each source. */
   sources: {
     title: "Fuentes de datos",

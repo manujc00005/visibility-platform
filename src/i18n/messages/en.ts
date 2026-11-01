@@ -50,6 +50,51 @@ export const en = {
       ],
     },
   },
+  /** The commercial goal of a company (feature 016). */
+  goals: {
+    kinds: { request: "Request", booking: "Booking", purchase: "Purchase", other: "Other" },
+    states: { none: "Not defined", pending: "Pending", verified: "Measured" },
+    line: {
+      label: "Commercial goal",
+      none: "Commercial goal not defined.",
+      define: "Define it",
+      edit: "Edit",
+      verified: (label: string, n: number, start: string, end: string) =>
+        `${label}: ${n} from search engines in the last 28 days (Google Analytics, from ${start} to ${end}).`,
+      verifiedNoCapture: (label: string) => `${label}: measured from search engines in an earlier capture; the latest capture carries no key events.`,
+      observed: (when: string) => `Last reception observed: ${when}.`,
+      pending: (label: string) => `${label}: measurement still to be verified. Google Analytics has not recorded any reception of this event from search engines yet.`,
+      notConfigured: "The event is not marked as a key event in Google Analytics.",
+      connect: "Connect Google Analytics to verify it.",
+      event: (event: string) => `Google Analytics event: ${event}`,
+    },
+    /** Serializable fragment: the client form receives it by props. */
+    form: {
+      title: "Commercial goal",
+      description: "Which result counts for this company and which Google Analytics key event measures it. The overview shows it as contacts from search engines once the measurement is verified.",
+      kind: "Kind of result",
+      label: "Name for the owner",
+      labelPlaceholder: "Quote request",
+      event: "Google Analytics key event",
+      eventHint: "Key events Google Analytics returned in the latest capture.",
+      eventFreeHint: "Google Analytics has not returned key events for this company yet: type the exact event name (case sensitive).",
+      submit: "Save goal",
+      saving: "Saving…",
+      remove: "Remove goal",
+      removing: "Removing…",
+      saved: "Goal saved.",
+      removed: "Goal removed.",
+    },
+    validation: {
+      kindInvalid: "Invalid kind of result.",
+      labelRequired: "Enter the goal name.",
+      labelMax: "The name takes at most 80 characters.",
+      eventRequired: "Enter the Google Analytics event.",
+      eventMax: "The event takes at most 200 characters.",
+    },
+    errors: { not_found: "This company no longer exists.", validation: "Check the details.", saveFailed: "Could not save." },
+    current: (kind: string, label: string, event: string) => `Current goal: ${label} (${kind.toLowerCase()}), measured by the event ${event}.`,
+  },
   /** Per-company panel of data sources (feature 015): labels only; states come from each source. */
   sources: {
     title: "Data sources",

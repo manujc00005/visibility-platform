@@ -127,6 +127,13 @@
       "when": 1793540397081,
       "tag": "0017_geo_run_origin",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793550516372,
+      "tag": "0018_workspace_goals",
+      "breakpoints": true
     }
   ]
 }
