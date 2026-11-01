@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { RunAuditButton } from "@/components/audits/run-audit-button";
-import { Opportunities } from "@/components/overview/opportunities";
+import { Opportunities, OpportunityLead } from "@/components/overview/opportunities";
 import { ChangeLine, OverviewCard, type Notice } from "@/components/overview/overview-card";
 import { PageHeader } from "@/components/overview/page-header";
 import { WorkspaceNav } from "@/components/overview/workspace-nav";
@@ -72,7 +72,7 @@ function PerformanceCard({ workspaceId, s, locale, t }: { workspaceId: string; s
   // Without a score the measurement simply did not happen: "No medida", not "Parcial".
   const status =
     s.state === "ok"
-      ? { tone: s.tone, label: s.verdict }
+      ? { tone: s.tone, label: t.verdict[s.tone] }
       : s.state === "partial"
         ? { tone: STATE_TONE.not_configured, label: t.states.not_configured }
         : { tone: STATE_TONE[s.state], label: t.states[s.state] };
@@ -134,9 +134,9 @@ function SeoCard({
   // A partial check keeps the severity it did find: "Mal (parcial)", never a neutral grey over critical problems.
   const status =
     s.state === "ok"
-      ? { tone: s.tone, label: t.seoVerdict[s.tone] }
+      ? { tone: s.tone, label: t.verdict[s.tone] }
       : s.state === "partial" && s.tone !== "neutral"
-        ? { tone: s.tone, label: t.partial(t.seoVerdict[s.tone]) }
+        ? { tone: s.tone, label: t.partial(t.verdict[s.tone]) }
         : { tone: STATE_TONE[s.state], label: t.states[s.state] };
   const measured = s.headline !== null;
   return (
@@ -175,7 +175,8 @@ function SeoCard({
   );
 }
 
-const AI_TONE = { ok: "neutral", partial: "fair", analyzing: "neutral", error: "bad", not_configured: "neutral", no_data: "neutral" } as const satisfies Record<AiSummary["state"], Tone>;
+// An incomplete measurement is a fact about the capture, not a verdict on the result: it stays neutral.
+const AI_TONE = { ok: "neutral", partial: "neutral", analyzing: "neutral", error: "bad", not_configured: "neutral", no_data: "neutral" } as const satisfies Record<AiSummary["state"], Tone>;
 
 /** What the headline leaves out, in one small line: capture, unanswered and branded questions. */
 function AiFootnote({ s, t }: { s: AiSummary; t: OverviewTexts["cards"]["ai"]["footnote"] }) {
@@ -307,6 +308,8 @@ export default async function WorkspacePage({ params }: PageProps<"/workspaces/[
         />
         <WorkspaceNav workspaceId={workspace.id} current="overview" locale={locale} />
       </div>
+
+      <OpportunityLead list={opportunities} locale={locale} />
 
       <section aria-label={t.sectionLabel} className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <PerformanceCard workspaceId={workspace.id} s={performance} locale={locale} t={t} />
