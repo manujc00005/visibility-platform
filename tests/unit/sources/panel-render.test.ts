@@ -34,7 +34,11 @@ describe("SourcesPanel", () => {
     // A note is data: escaped, never markup.
     expect(html).not.toContain("<script>");
     expect(html).toContain("&lt;script&gt;");
-    expect(html).not.toContain("GSC_SERVICE_ACCOUNT_JSON");
+    // The mobile fix: the scrolling wrapper is positioned so the sr-only heading is clipped inside it.
+    expect(html).toContain('class="relative overflow-x-auto');
+    expect(html.split('scope="col"').length - 1).toBe(6);
+    expect(html).toContain('aria-labelledby="sources-title"');
+    expect(html.split(">—</td>").length - 1).toBe(3);
   });
 
   it("renders the English headings", () => {

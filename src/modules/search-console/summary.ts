@@ -70,6 +70,8 @@ export interface SearchConsoleSummary {
   segments: SegmentsView | null;
   /** Set when the newest attempt failed after (or without) a good capture. */
   lastFailure: { text: string; at: Date } | null;
+  /** Stored data stays visible when the credential is later removed or broken; this says so (feature 015, as Bing and GA4). */
+  configWarning: string | null;
 }
 
 type Texts = Messages["searchConsole"];
@@ -229,8 +231,10 @@ export function summarizeSearchConsole(
     pages: [],
     segments: null,
     lastFailure: null,
+    configWarning: null,
   };
   const failed = latest && latest.status === "failed" ? { text: failureText(latest, config, domain, t), at: latest.createdAt } : null;
+  const configReason = config.state === "not_configured" ? t.reasons.notConfigured : config.state === "invalid" ? t.reasons.invalidConfig[config.reason] : null;
 
   if (latestCompleted?.totals && latestCompleted.previousTotals && latestCompleted.currentStart && latestCompleted.currentEnd) {
     const totals = latestCompleted.totals;
@@ -250,6 +254,7 @@ export function summarizeSearchConsole(
       pages: latestCompleted.pages,
       segments: segments ? segmentsOf(segments, totals, latestCompleted.previousTotals, t, f) : null,
       lastFailure: failed,
+      configWarning: configReason ? `${configReason} ${t.reasons.storedData}` : null,
     };
   }
 

@@ -9,9 +9,8 @@ export interface HeaderNavItem {
   label: string;
 }
 
-/** The root item is active only at the root; any other item is active on its own path and the paths below it. */
+/** An item is active on its own path and the paths below it. The root only redirects (feature 015), so it is never an item. */
 export function isActivePath(pathname: string, href: string): boolean {
-  if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 

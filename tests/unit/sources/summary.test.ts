@@ -9,7 +9,6 @@ import { summarizeSources, type SourcesInput } from "@/modules/sources/summary";
 /** The sources panel maps what each source already summarizes (feature 015, D002): no state is recalculated here. */
 
 const AT = new Date("2026-10-30T18:38:00Z");
-const READY = { state: "ready" as const, clientEmail: "visibility@demo.iam.gserviceaccount.com" };
 
 const gsc = (over: Partial<SearchConsoleSummary> = {}): SearchConsoleSummary => ({
   state: "no_data",
@@ -23,6 +22,7 @@ const gsc = (over: Partial<SearchConsoleSummary> = {}): SearchConsoleSummary => 
   pages: [],
   segments: null,
   lastFailure: null,
+  configWarning: null,
   ...over,
 });
 const bing = (over: Partial<BingWebmasterSummary> = {}): BingWebmasterSummary => ({
@@ -101,9 +101,9 @@ const ai = (over: Partial<AiSummary> = {}): AiSummary => ({
 function input(over: Partial<SourcesInput> = {}): SourcesInput {
   return {
     workspaceId: "w1",
-    searchConsole: { summary: gsc(), config: READY },
-    bing: { summary: bing(), config: { state: "ready" } },
-    analytics: { summary: analytics(), config: READY },
+    searchConsole: { summary: gsc() },
+    bing: { summary: bing() },
+    analytics: { summary: analytics() },
     pagespeed: { performance: performance(), config: { pageSpeed: true, crux: false } },
     ai: { summary: ai(), providers: { dataforseo: { available: false, reason: "La medición automática (DataForSEO) no está disponible en este entorno.", budgetMicros: null, reportable: false } } },
     ...over,
@@ -128,9 +128,9 @@ describe("summarizeSources", () => {
   it("uses the section labels and tones of Search Console, Bing and GA4, with the property and the last good read (AC-002)", () => {
     const rows = summarizeSources(
       input({
-        searchConsole: { summary: gsc({ state: "empty", reason: "Search Console no registra impresiones…", property: "sc-domain:olessium.com", capturedAt: AT }), config: READY },
-        bing: { summary: bing({ state: "processing", reason: "Bing todavía no tiene datos…", siteUrl: "https://olessium.com/", capturedAt: AT }), config: { state: "ready" } },
-        analytics: { summary: analytics({ state: "ok", reason: null, property: "properties/123", propertyName: "Olessium web", capturedAt: AT }), config: READY },
+        searchConsole: { summary: gsc({ state: "empty", reason: "Search Console no registra impresiones…", property: "sc-domain:olessium.com", capturedAt: AT }) },
+        bing: { summary: bing({ state: "processing", reason: "Bing todavía no tiene datos…", siteUrl: "https://olessium.com/", capturedAt: AT }) },
+        analytics: { summary: analytics({ state: "ok", reason: null, property: "properties/123", propertyName: "Olessium web", capturedAt: AT }) },
       }),
     );
     expect(rows[0]!.status).toEqual({ tone: "neutral", label: "Sin impresiones" });
@@ -147,9 +147,9 @@ describe("summarizeSources", () => {
   it("puts the last failure first, then the configuration warning, then the reason (AC-003)", () => {
     const rows = summarizeSources(
       input({
-        searchConsole: { summary: gsc({ state: "ok", reason: null, property: "sc-domain:x.es", capturedAt: AT, lastFailure: { text: "La cuota de la API de Search Console está agotada.", at: AT } }), config: READY },
-        analytics: { summary: analytics({ state: "empty", reason: "Google Analytics no tiene visitas…", capturedAt: AT, configWarning: "GSC_SERVICE_ACCOUNT_JSON no es un JSON válido. Se muestran los datos guardados." }), config: { state: "invalid", reason: "not_json" } },
-        bing: { summary: bing({ state: "error", reason: "Bing rechazó la clave.", lastFailure: { text: "Bing rechazó la clave.", at: AT } }), config: { state: "ready" } },
+        searchConsole: { summary: gsc({ state: "ok", reason: null, property: "sc-domain:x.es", capturedAt: AT, lastFailure: { text: "La cuota de la API de Search Console está agotada.", at: AT } }) },
+        analytics: { summary: analytics({ state: "empty", reason: "Google Analytics no tiene visitas…", capturedAt: AT, configWarning: "GSC_SERVICE_ACCOUNT_JSON no es un JSON válido. Se muestran los datos guardados." }) },
+        bing: { summary: bing({ state: "error", reason: "Bing rechazó la clave.", lastFailure: { text: "Bing rechazó la clave.", at: AT } }) },
       }),
     );
     expect(rows[0]!.note).toBe("La cuota de la API de Search Console está agotada.");
@@ -160,13 +160,21 @@ describe("summarizeSources", () => {
     expect(rows[1]!.note).toBe("Bing rechazó la clave.");
   });
 
+  it("keeps a stored Search Console capture visible with its configuration warning when the credential is gone (review DOM-001)", () => {
+    const row = summarizeSources(input({ searchConsole: { summary: gsc({ state: "ok", reason: null, property: "sc-domain:x.es", capturedAt: AT, configWarning: "Search Console no está configurado en la plataforma. Se muestran los datos de la última consulta guardada." }) } }))[0]!;
+    expect(row.status).toEqual({ tone: "good", label: "Conectado" });
+    expect(row.note).toBe("Search Console no está configurado en la plataforma. Se muestran los datos de la última consulta guardada.");
+    const ga = summarizeSources(input({ analytics: { summary: analytics({ state: "ok", reason: null, property: "properties/123", propertyName: null, capturedAt: AT }) } }))[2]!;
+    expect(ga.target).toBe("properties/123");
+  });
+
   it("explains the credential states of Search Console", () => {
-    const notConfigured = summarizeSources(input({ searchConsole: { summary: gsc({ state: "not_configured", reason: "Search Console no está configurado en la plataforma." }), config: { state: "not_configured" } } }))[0]!;
+    const notConfigured = summarizeSources(input({ searchConsole: { summary: gsc({ state: "not_configured", reason: "Search Console no está configurado en la plataforma." }) } }))[0]!;
     expect(notConfigured.status).toEqual({ tone: "neutral", label: "Sin configurar" });
     expect(notConfigured.note).toBe("Search Console no está configurado en la plataforma.");
-    const invalid = summarizeSources(input({ searchConsole: { summary: gsc({ state: "invalid_config", reason: "GSC_SERVICE_ACCOUNT_JSON no es un JSON válido, ni en crudo ni en base64." }), config: { state: "invalid", reason: "not_json" } } }))[0]!;
+    const invalid = summarizeSources(input({ searchConsole: { summary: gsc({ state: "invalid_config", reason: "GSC_SERVICE_ACCOUNT_JSON no es un JSON válido, ni en crudo ni en base64." }) } }))[0]!;
     expect(invalid.status).toEqual({ tone: "bad", label: "Configuración no válida" });
-    const error = summarizeSources(input({ searchConsole: { summary: gsc({ state: "error", reason: "Añade visibility@… como usuario…", lastFailure: { text: "Añade visibility@… como usuario…", at: AT } }), config: READY } }))[0]!;
+    const error = summarizeSources(input({ searchConsole: { summary: gsc({ state: "error", reason: "Añade visibility@… como usuario…", lastFailure: { text: "Añade visibility@… como usuario…", at: AT } }) } }))[0]!;
     expect(error.status).toEqual({ tone: "bad", label: "Error" });
     expect(error.note).toBe("Añade visibility@… como usuario…");
   });
@@ -181,9 +189,13 @@ describe("summarizeSources", () => {
     expect(measured.target).toBe("Claves de PageSpeed Insights y de Chrome UX Report");
     expect(measured.lastGood).toEqual(AT);
     expect(measured.note).toBeNull();
-    const partial = summarizeSources(input({ pagespeed: { performance: performance({ state: "partial", reason: "La cuota diaria de PageSpeed Insights se agotó en esta auditoría." }), config: { pageSpeed: true, crux: false } } }))[3]!;
+    // A partial audit keeps its date in the summary; speed was not read then, so there is no successful read (review DOM-002).
+    const partial = summarizeSources(input({ pagespeed: { performance: performance({ state: "partial", measuredAt: AT, reason: "La cuota diaria de PageSpeed Insights se agotó en esta auditoría." }), config: { pageSpeed: true, crux: false } } }))[3]!;
     expect(partial.status).toEqual({ tone: "neutral", label: "No medida" });
+    expect(partial.lastGood).toBeNull();
     expect(partial.note).toBe("La cuota diaria de PageSpeed Insights se agotó en esta auditoría.");
+    const failedAudit = summarizeSources(input({ pagespeed: { performance: performance({ state: "error", reason: "La auditoría no terminó." }), config: { pageSpeed: true, crux: false } } }))[3]!;
+    expect(failedAudit.status).toEqual({ tone: "bad", label: "Error" });
     const analysing = summarizeSources(input({ pagespeed: { performance: performance({ state: "analyzing", reason: "Estamos midiendo la web." }), config: { pageSpeed: true, crux: false } } }))[3]!;
     expect(analysing.status).toEqual({ tone: "neutral", label: "Analizando" });
   });
@@ -206,10 +218,15 @@ describe("summarizeSources", () => {
     expect(measured.note).toBeNull();
     const collecting = summarizeSources(input({ ai: { ...input().ai, summary: ai({ state: "analyzing", reason: "Recogiendo respuestas de la primera medición." }) } }))[4]!;
     expect(collecting.status.label).toBe("Recogiendo respuestas");
+    // Measured with the automatic provider unavailable: availability lives in the target, nothing is left to do (review DOM-003).
+    const manualOnly = summarizeSources(input({ ai: { ...input().ai, summary: ai({ state: "ok", reason: null, measuredAt: AT, provider: "Captura asistida (ChatGPT web)", coverage: { k: 1, n: 2 } }) } }))[4]!;
+    expect(manualOnly.status).toEqual({ tone: "good", label: "Medido" });
+    expect(manualOnly.target).toBe("Captura asistida (ChatGPT web)");
+    expect(manualOnly.note).toBeNull();
   });
 
   it("translates names, labels and links into English", () => {
-    const rows = summarizeSources(input({ searchConsole: { summary: gsc({ state: "empty", reason: "Search Console records no impressions…", property: "sc-domain:x.es", capturedAt: AT }), config: READY } }), "en");
+    const rows = summarizeSources(input({ searchConsole: { summary: gsc({ state: "empty", reason: "Search Console records no impressions…", property: "sc-domain:x.es", capturedAt: AT }) } }), "en");
     expect(rows.map((r) => r.name)).toEqual(["Google Search Console", "Bing Webmaster Tools", "Google Analytics 4", "PageSpeed Insights and Chrome UX Report", "ChatGPT measurement"]);
     expect(rows[0]!.status.label).toBe("No impressions");
     expect(rows[3]!.status.label).toBe("No data");

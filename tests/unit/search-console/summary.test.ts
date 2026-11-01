@@ -95,6 +95,16 @@ describe("summarizeSearchConsole", () => {
     expect(s.metrics?.position.change).toBeNull();
   });
 
+  it("warns about a removed or broken credential while keeping the stored capture (feature 015)", () => {
+    const s = summarizeSearchConsole({ latest: completed(), latestCompleted: completed() }, { state: "not_configured" }, "olessium.com");
+    expect(s.state).toBe("ok");
+    expect(s.configWarning).toBe("Search Console no está configurado en la plataforma. Se muestran los datos de la última consulta guardada.");
+    const invalid = summarizeSearchConsole({ latest: completed(), latestCompleted: completed() }, { state: "invalid", reason: "not_json" }, "olessium.com", "en");
+    expect(invalid.configWarning).toBe("GSC_SERVICE_ACCOUNT_JSON is not valid JSON, either raw or base64. Showing the data from the last saved query.");
+    expect(summarizeSearchConsole({ latest: completed(), latestCompleted: completed() }, READY, "olessium.com").configWarning).toBeNull();
+    expect(summarizeSearchConsole({ latest: null, latestCompleted: null }, { state: "not_configured" }, "olessium.com").configWarning).toBeNull();
+  });
+
   it("is an explained empty state only when both periods have no impressions (feature 014, AC-001)", () => {
     const zero = { clicks: 0, impressions: 0, ctr: 0, position: 0 };
     const both = completed({ totals: zero, previousTotals: zero });

@@ -86,3 +86,16 @@ describe("GEO labels and formats", () => {
     expect(getMessages("es").geo.run.nonReal.demo).toMatch(/^Medición de demostración: sus datos son inventados/);
   });
 });
+
+describe("provider status texts (feature 015, AC-005)", () => {
+  it("explains an unavailable automatic measurement without naming environment variables", () => {
+    for (const locale of ["es", "en"] as const) {
+      const t = getMessages(locale).geo.providerStatus;
+      for (const text of [t.missingCredentials, t.missingBudget]) {
+        expect(text).not.toMatch(/DATAFORSEO_|GEO_MONTHLY_BUDGET|[A-Z]{3,}_[A-Z_]+/);
+      }
+    }
+    expect(getMessages("es").geo.providerStatus.missingCredentials).toBe("La medición automática (DataForSEO) no está disponible en este entorno.");
+    expect(getMessages("en").geo.providerStatus.missingBudget).toBe("Automatic measurement is not available: a monthly budget has to be set first.");
+  });
+});

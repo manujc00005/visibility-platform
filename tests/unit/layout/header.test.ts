@@ -22,15 +22,13 @@ function tags(html: string, name: string): string[] {
   return html.match(new RegExp(`<${name}\\b[^>]*>`, "g")) ?? [];
 }
 
-describe("isActivePath (SPEC §5: root only at the root, /workspaces for everything below it)", () => {
+describe("isActivePath (/workspaces for everything below it; the root is no item since feature 015)", () => {
   it.each([
-    ["/", "/", true],
     ["/", "/workspaces", false],
-    ["/workspaces", "/", false],
     ["/workspaces", "/workspaces", true],
     ["/workspaces/new", "/workspaces", true],
     ["/workspaces/4f2c/geo", "/workspaces", true],
-    ["/workspaces/4f2c/geo", "/", false],
+    ["/admin/status", "/workspaces", false],
   ])("pathname %s, href %s → %s", (pathname, href, expected) => {
     expect(isActivePath(pathname, href)).toBe(expected);
   });

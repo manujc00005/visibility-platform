@@ -1,21 +1,20 @@
 import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
 import { getMessages } from "@/i18n/messages";
-import type { AnalyticsConfig } from "@/modules/analytics/deps";
 import type { AnalyticsState, AnalyticsSummary } from "@/modules/analytics/summary";
 import type { AuditProviderConfig } from "@/modules/audits/deps";
 import type { Tone } from "@/modules/audits/status";
-import type { BingWebmasterConfig } from "@/modules/bing-webmaster/deps";
 import type { BingWebmasterState, BingWebmasterSummary } from "@/modules/bing-webmaster/summary";
 import type { GeoProviderStatus } from "@/modules/geo/deps";
 import type { AiSummary } from "@/modules/overview/ai";
 import type { PerformanceSummary } from "@/modules/overview/performance";
-import type { SearchConsoleConfig } from "@/modules/search-console/deps";
 import type { SearchConsoleState, SearchConsoleSummary } from "@/modules/search-console/summary";
 
 /**
  * The «Fuentes de datos» panel of a company (feature 015, D002): one row per source, built
  * only from the summaries each source already computes. It maps states to labels, tones,
  * dates and a "what to do" text; it never recalculates a state or contacts a provider.
+ * Tones describe whether the source works (`good` = connected and read), not the quality
+ * of what it measured: the overview cards keep their own verdict tones.
  */
 export type SourceKey = "search_console" | "bing" | "analytics" | "pagespeed" | "ai";
 
@@ -34,9 +33,10 @@ export interface SourceRow {
 
 export interface SourcesInput {
   workspaceId: string;
-  searchConsole: { summary: SearchConsoleSummary; config: SearchConsoleConfig };
-  bing: { summary: BingWebmasterSummary; config: BingWebmasterConfig };
-  analytics: { summary: AnalyticsSummary; config: AnalyticsConfig };
+  /** The three Google/Bing summaries already fold their credential state into `state`, `reason` and `configWarning`. */
+  searchConsole: { summary: SearchConsoleSummary };
+  bing: { summary: BingWebmasterSummary };
+  analytics: { summary: AnalyticsSummary };
   pagespeed: { performance: PerformanceSummary; config: AuditProviderConfig };
   ai: { summary: AiSummary; providers: GeoProviderStatus };
 }
@@ -63,7 +63,7 @@ export function summarizeSources(input: SourcesInput, locale: Locale = DEFAULT_L
     status: { tone: SEARCH_CONSOLE_TONE[gsc.state], label: m.searchConsole.status[gsc.state] },
     target: gsc.property,
     lastGood: gsc.capturedAt,
-    note: noteOf([gsc.lastFailure?.text, gsc.reason]),
+    note: noteOf([gsc.lastFailure?.text, gsc.configWarning, gsc.reason]),
     action: { label: t.open.seo, href: `${base}/seo#ranking-title` },
   };
 
@@ -105,7 +105,8 @@ export function summarizeSources(input: SourcesInput, locale: Locale = DEFAULT_L
     name: t.names.pagespeed,
     status: pagespeedStatus,
     target: !keys.pageSpeed ? null : keys.crux ? t.pagespeed.keyAndCrux : t.pagespeed.keyOnly,
-    lastGood: p.measuredAt,
+    // A partial audit keeps its date in the summary, but speed was not read then.
+    lastGood: p.state === "ok" ? p.measuredAt : null,
     note: !keys.pageSpeed ? m.overview.performance.notMeasured.not_configured : noteOf([p.attempt?.text, p.reason]),
     action: { label: t.open.performance, href: `${base}/performance` },
   };
@@ -119,7 +120,8 @@ export function summarizeSources(input: SourcesInput, locale: Locale = DEFAULT_L
     status: { tone: s.state === "ok" ? "good" : s.state === "error" ? "bad" : "neutral", label: aiLabel },
     target: t.ai.providers(m.geo.labels.provider.manual, paid.available ? m.geo.labels.provider.dataforseo_chatgpt : null),
     lastGood: s.measuredAt,
-    note: noteOf([s.attempt?.text, s.reason, paid.reason]),
+    // The automatic provider is availability, shown in `target`; it is not something to do for this company.
+    note: noteOf([s.attempt?.text, s.reason]),
     action: { label: t.open.ai, href: `${base}/geo/setup` },
   };
 

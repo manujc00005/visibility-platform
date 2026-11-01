@@ -12,11 +12,11 @@ export async function generateMetadata(): Promise<Metadata> {
 /** Operator-only: database, migrations and the roadmap. Not linked from the header (feature 015); same perimeter as the rest (D-03). */
 export default async function AdminStatusPage() {
   const locale = await getLocale();
-  const { common, home } = getMessages(locale);
+  const { home } = getMessages(locale);
   return (
     <div className="flex flex-col gap-8">
       <section className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">{common.brand}</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">{home.systemStatus.title}</h1>
         <p className="max-w-2xl text-muted-foreground">{home.description}</p>
       </section>
 

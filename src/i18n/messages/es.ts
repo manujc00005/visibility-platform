@@ -900,6 +900,7 @@ export const es = {
     reasons: {
       notConfigured: "Search Console no está configurado en la plataforma.",
       noData: (button: string) => `Pulsa «${button}» para ver cómo te encuentran en Google.`,
+      storedData: "Se muestran los datos de la última consulta guardada.",
       empty: "Search Console no registra impresiones de esta web en los últimos 56 días. Si la propiedad es reciente, Google tarda unos días en acumular datos.",
       invalidConfig: {
         not_json: "GSC_SERVICE_ACCOUNT_JSON no es un JSON válido, ni en crudo ni en base64.",

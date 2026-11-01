@@ -58,9 +58,9 @@ export default async function EditWorkspacePage({ params }: PageProps<"/workspac
   const rows = summarizeSources(
     {
       workspaceId: workspace.id,
-      searchConsole: { summary: summarizeSearchConsole(gscStored, searchConsoleConfig(), workspace.domain, locale), config: searchConsoleConfig() },
-      bing: { summary: summarizeBingWebmaster(bingStored, bingWebmasterConfig(), workspace.domain, locale), config: bingWebmasterConfig() },
-      analytics: { summary: summarizeAnalytics(analyticsStored, analyticsConfig(), workspace.domain, locale), config: analyticsConfig() },
+      searchConsole: { summary: summarizeSearchConsole(gscStored, searchConsoleConfig(), workspace.domain, locale) },
+      bing: { summary: summarizeBingWebmaster(bingStored, bingWebmasterConfig(), workspace.domain, locale) },
+      analytics: { summary: summarizeAnalytics(analyticsStored, analyticsConfig(), workspace.domain, locale) },
       // The top speed finding is not shown here, so the findings of the result audit are not loaded.
       pagespeed: { performance: summarizePerformance(audits, [], now, locale), config: auditProviderConfig() },
       ai: {
