@@ -20,6 +20,45 @@ function Empty({ title, children, action }: { title: string; children: ReactNode
   );
 }
 
+/** Spanish lowercases after a colon; an acronym at the start ("HTTPS…") keeps its case. */
+function afterColon(title: string): string {
+  return title.length > 1 && title[1] === title[1].toLowerCase() ? title[0].toLowerCase() + title.slice(1) : title;
+}
+
+/**
+ * The first opportunity in one line under the header, linked to its card further down.
+ * Renders nothing without opportunities: the section below already explains why.
+ */
+export function OpportunityLead({ list, locale }: { list: OpportunityList; locale: Locale }) {
+  const first = list.items[0];
+  if (!first) return null;
+  const m = getMessages(locale);
+  const t = m.overview.lead;
+  const rest = list.items.length - 1;
+  return (
+    <section aria-label={t.label} className="flex flex-col items-start gap-2 sm:flex-row sm:items-baseline sm:gap-3">
+      <StatusPill tone={PRIORITY_TONE[first.priority]} className="sm:translate-y-[-1px]">
+        {m.overview.priority[first.priority]}
+      </StatusPill>
+      <p className="text-base text-pretty">
+        <span className="text-muted-foreground">{t.first} </span>
+        <span className="font-semibold" lang={first.original ? DEFAULT_LOCALE : undefined}>
+          {afterColon(first.title)}
+        </span>
+        {rest > 0 ? <span className="text-muted-foreground"> {t.more(rest)}</span> : null}
+        {". "}
+        <a
+          href={`#opportunity-${first.kind}`}
+          className="inline-flex items-center gap-0.5 rounded-sm font-medium whitespace-nowrap text-brand hover:underline focus-visible:ring-2 focus-visible:ring-foreground/60 focus-visible:outline-none"
+        >
+          {t.link}
+          <ChevronRight aria-hidden="true" className="size-4" />
+        </a>
+      </p>
+    </section>
+  );
+}
+
 /**
  * "Tus próximas oportunidades". Never fills the list: zero items is a valid answer, with
  * one of three messages depending on how much was measured (AC-006). Stored evidence lines
@@ -54,7 +93,7 @@ export function Opportunities({
       ) : (
         <>
           {list.evidence === "partial" ? (
-            <div className="flex items-start gap-2.5 rounded-xl border border-brand/15 bg-brand-soft/60 px-4 py-3 text-sm">
+            <div className="flex items-start gap-2.5 rounded-xl border border-border/80 bg-muted/60 px-4 py-3 text-sm">
               <ToneIcon tone="neutral" className="mt-0.5 size-4" />
               <div className="flex flex-col gap-0.5">
                 <p className="font-medium">{t.partialTitle}</p>

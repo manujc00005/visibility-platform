@@ -314,7 +314,8 @@ export const es = {
     sectionLabel: "Estado de tu presencia digital",
     nav: { label: "Secciones de la empresa", overview: "Resumen", performance: "Rendimiento", seo: "Google", geo: "Presencia en IA", geoShort: "IA" },
     states: { not_configured: "No medida", no_data: "Sin datos", analyzing: "Analizando", partial: "Parcial", error: "Error" },
-    seoVerdict: { good: "Bien", fair: "Regular", bad: "Mal", info: "Mejorable", neutral: "Parcial" },
+    /** One verdict scale for the three cards: the same word always means the same tone. */
+    verdict: { good: "Bien", fair: "Mejorable", bad: "Mal", info: "Con mejoras", neutral: "Parcial" },
     partial: (verdict: string) => `${verdict} (parcial)`,
     viewReport: "Ver informe",
     cards: {
@@ -332,15 +333,15 @@ export const es = {
         notMeasuredShort: "sin medir",
       },
       seo: {
-        title: "Visibilidad en Google",
-        description: "Descubre si los clientes encuentran tu empresa cuando buscan tus servicios.",
+        title: "Tu web, vista por Google",
+        description: "Comprueba si Google puede leer y entender tu web sin problemas técnicos.",
         critical: (n: number): string => (n === 1 ? "crítico" : "críticos"),
         warning: (n: number): string => (n === 1 ? "importante" : "importantes"),
         analyzing: "Analizando…",
         noResult: "Sin resultado",
         noAudit: "Sin auditoría",
         searchConsole:
-          "Posicionamiento todavía no medido: falta conectar Google Search Console. Esto es la salud técnica de tu portada, no tu posición en Google.",
+          "Posicionamiento todavía no medido: falta conectar Google Search Console.",
         source: (when: string) => `Auditoría técnica de la portada · ${when}`,
         noResultShort: "sin resultado",
         notAuditedShort: "sin auditar",
@@ -375,6 +376,13 @@ export const es = {
     /** `{link}` is replaced by the link to the AI setup, in the view. */
     emptyAction: "Pulsa «Ejecutar auditoría» arriba o {link}.",
     emptyActionLink: "configura las preguntas de IA",
+    /** One line under the header with the first opportunity, so the action is not left for the end. */
+    lead: {
+      label: "Lo más importante",
+      first: "Lo primero que recomendamos:",
+      more: (n: number) => (n === 1 ? "y 1 cosa más" : `y ${n} cosas más`),
+      link: "Ver qué hacer",
+    },
     opportunities: {
       title: "Tus próximas oportunidades",
       description: "Lo primero que conviene mejorar, según lo que hemos medido.",

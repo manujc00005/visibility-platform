@@ -312,7 +312,7 @@ export const en = {
     sectionLabel: "Status of your online presence",
     nav: { label: "Company sections", overview: "Overview", performance: "Performance", seo: "Google", geo: "AI presence", geoShort: "AI" },
     states: { not_configured: "Not measured", no_data: "No data", analyzing: "Analysing", partial: "Partial", error: "Error" },
-    seoVerdict: { good: "Good", fair: "Fair", bad: "Poor", info: "Could improve", neutral: "Partial" },
+    verdict: { good: "Good", fair: "Needs improvement", bad: "Poor", info: "Minor fixes", neutral: "Partial" },
     partial: (verdict: string) => `${verdict} (partial)`,
     viewReport: "View report",
     cards: {
@@ -330,15 +330,15 @@ export const en = {
         notMeasuredShort: "not measured",
       },
       seo: {
-        title: "Visibility on Google",
-        description: "Find out whether customers find your company when they search for your services.",
+        title: "Your site, as Google sees it",
+        description: "Checks whether Google can read and understand your site without technical problems.",
         critical: (n: number) => (n === 1 ? "critical" : "critical"),
         warning: (n: number) => (n === 1 ? "important" : "important"),
         analyzing: "Analysing…",
         noResult: "No result",
         noAudit: "No audit",
         searchConsole:
-          "Rankings not measured yet: Google Search Console is not connected. This is the technical health of your home page, not your position on Google.",
+          "Rankings not measured yet: Google Search Console is not connected.",
         source: (when: string) => `Technical audit of the home page · ${when}`,
         noResultShort: "no result",
         notAuditedShort: "not audited",
@@ -372,6 +372,12 @@ export const en = {
     },
     emptyAction: "Press “Run audit” above or {link}.",
     emptyActionLink: "set up the AI questions",
+    lead: {
+      label: "Most important",
+      first: "What we recommend first:",
+      more: (n: number) => `and ${n} more`,
+      link: "See what to do",
+    },
     opportunities: {
       title: "Your next opportunities",
       description: "The first things worth improving, according to what we measured.",
