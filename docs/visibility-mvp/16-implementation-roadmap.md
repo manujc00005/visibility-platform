@@ -1,6 +1,6 @@
 # 16 — Roadmap de implementación (referencia operativa)
 
-**Última actualización:** 2026-11-01: objetivo comercial por empresa (spec 016) cerrada; inicio y panel de fuentes (spec 015) cerrada; tarjeta «Visibilidad en Google» (spec 014) cerrada, D-31 resuelto; origen y estados de la medición en IA (spec 013) cerrada, D-23 resuelto (§6, §8); el orden de trabajo del cierre del MVP está en `19-cierre-mvp-fases.md`. Antes: 2026-10-29: conectores de Search Console, Bing y GA4 cerrados; búsquedas con marca y sin marca (spec 007) y conversiones desde buscadores en GA4 (spec 008) cerradas (§8); 2026-10-30: cambios de posición por búsqueda (spec 009) cerrada (§8); seguimientos y backlog (§6, §9).
+**Última actualización:** 2026-11-01: página «Google», acciones y tarjetas (spec 017) cerrada; objetivo comercial por empresa (spec 016) cerrada; inicio y panel de fuentes (spec 015) cerrada; tarjeta «Visibilidad en Google» (spec 014) cerrada, D-31 resuelto; origen y estados de la medición en IA (spec 013) cerrada, D-23 resuelto (§6, §8); el orden de trabajo del cierre del MVP está en `19-cierre-mvp-fases.md`. Antes: 2026-10-29: conectores de Search Console, Bing y GA4 cerrados; búsquedas con marca y sin marca (spec 007) y conversiones desde buscadores en GA4 (spec 008) cerradas (§8); 2026-10-30: cambios de posición por búsqueda (spec 009) cerrada (§8); seguimientos y backlog (§6, §9).
 **Estado del diseño:** `00`–`12` siguen siendo referencia arquitectónica (versión 1, PROPUESTA). `13-codex-review.md` (REQUEST CHANGES) sigue siendo el registro de riesgos. **Este documento manda sobre el orden de trabajo y sobre las decisiones técnicas de construcción.** Donde contradiga a `00`–`12`, prevalece este y la contradicción se lista en §7.
 
 Nota: `14-architecture-sync.md` no llegó a escribirse; el cambio de estrategia lo sustituyó por este documento antes de redactarlo. Los hallazgos de Codex se gestionan aquí de forma progresiva (§4).
@@ -511,7 +511,7 @@ Los tres conectores siguen el mismo patrón: credencial del operador en el entor
 
 **Verificación:** unitarias (`google.test.ts` nuevo, `summary` y `section-render` ampliados), lint, typecheck, build e integración; Olessium, la clínica y 375 px en navegador (TASKS › Evidence).
 
-**Seguimiento:** cierra D-31. Las secciones de Bing y GA4 conservan sus etiquetas («Procesando», «Sin visitas») hasta la reorganización de la página «Google» (spec 017).
+**Seguimiento:** cierra D-31. Las secciones de Bing y GA4 conservan sus etiquetas («Procesando», «Sin visitas»): la unificación que se dejó para la 017 se canceló allí (D004 de la 017).
 
 ### Inicio y panel de fuentes de datos (spec `specs/features/015-home-and-data-sources`) — 2026-11-01, hecha
 
@@ -532,6 +532,16 @@ Los tres conectores siguen el mismo patrón: credencial del operador en el entor
 **Verificación:** unitarias (`tests/unit/goals`), integración (`tests/integration/goals.test.ts`), lint, typecheck y build; alta, resumen y baja del objetivo en Olessium y la clínica en navegador, 375 px (TASKS › Evidence).
 
 **Seguimiento:** solo el desglose orgánico de GA4 verifica (D003 de la 016); recepciones por otros canales quedan para cuando la 008 guarde totales por evento. La captura de la 008 guarda los 10 eventos orgánicos principales: un objetivo fuera de ellos nunca verifica y cuenta 0; ampliar cuando una empresa real lo necesite. Olessium queda con el objetivo «Solicitud de contacto» sobre `close_convert_lead` en `dev`.
+
+### Página «Google», acciones y tarjetas (spec `specs/features/017-google-page-and-cards`) — 2026-11-01, hecha
+
+**Alcance:** tercera spec de la fase B del cierre del MVP (`19-cierre-mvp-fases.md`), hallazgos 7, 8, 9 y 13 de Codex. La página «Google» se organiza en cuatro bloques con índice (resultados, consultas y páginas, salud técnica, competidores); cada botón dice qué actualiza; la comparativa muestra cinco columnas y deja las once a un clic; las tarjetas del resumen se quedan en estado, cifra, una frase, fecha y enlace. La pestaña «Configuración» apunta a `/edit`, que reúne ficha, objetivo, competidores y fuentes.
+
+**Commits:** `2a52f77` (spec), `d9d3550`, `7afd7cf`, `da29a8c` y el de cierre. **Migraciones:** ninguna.
+
+**Verificación:** 1.204 unitarias, 275 de integración, lint, typecheck y build; `/seo`, resumen y Configuración en navegador a 1280 y 375 px, y el recorrido de competidores con alta, baja, extracción, aceptación y descarte desde Configuración (TASKS › Evidence).
+
+**Seguimiento:** queda de la fase B la comprobación humana de la 002 (AC-018), que necesita dos personas ajenas: no se puede simular.
 
 ## 9. Backlog (aparcado por decisión del owner, 2026-10-26)
 

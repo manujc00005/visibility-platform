@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready (2026-11-01). Tercera spec de la fase B del cierre del MVP (`docs/visibility-mvp/19-cierre-mvp-fases.md`), hallazgos 7, 8, 9 y 13 de la auditoría de Codex del 2026-11-01.
+Done (2026-11-01). T001–T009 hechas; revisiones de conformidad y de frontend/QA aplicadas (D005); AC-001, AC-005, AC-006, AC-007 y AC-009 verificados en navegador sobre `dev`; suite completa en verde en solitario. Tercera spec de la fase B del cierre del MVP (`docs/visibility-mvp/19-cierre-mvp-fases.md`), hallazgos 7, 8, 9 y 13 de la auditoría de Codex del 2026-11-01.
 
 ## Problem
 
@@ -14,7 +14,8 @@ La página «Google» se organiza en cuatro bloques por pregunta (resultados, co
 
 ## Non-goals
 
-- Cambiar qué se mide, los resúmenes de cada fuente ni sus estados (`summarize*` no cambia).
+- Cambiar qué se mide ni los estados de cada fuente. `summarize*` no cambia salvo retirar lo que esta spec deja sin lector (`PerformanceSummary.field`).
+- Unificar las etiquetas de Bing y GA4 con las de las tarjetas, que la 014 dejó para aquí: se cancela (D004).
 - Renombrar la pestaña «Google» a «Buscadores».
 - Cambiar la ruta `/edit`: la pestaña «Configuración» apunta a ella.
 - Un botón general que actualice todas las fuentes.
@@ -39,7 +40,7 @@ La página «Google» se organiza en cuatro bloques por pregunta (resultados, co
 
 1. **Cuatro bloques en `/seo`.** Índice de saltos bajo las pestañas y, en este orden, cuatro `h2`:
    - «Resultados en buscadores»: cifras de Search Console; Bing y Google Analytics como apartados `h3` debajo (conservan `#ranking-title`, `#bing-title`, `#analytics-title`, porque el panel de fuentes enlaza a ellos).
-   - «Consultas y páginas»: marca y sin marca, búsquedas seguidas, tablas de búsquedas y páginas, nota de privacidad.
+   - «Consultas y páginas»: marca y sin marca, tablas de búsquedas y páginas, nota de privacidad, y al final búsquedas seguidas.
    - «Salud técnica»: resumen, estado por área y problemas abiertos; Lighthouse e histórico en un `<details>` cerrado.
    - «Competidores»: comparativa.
 2. **Acciones con alcance.** «Analizar portada» (antes «Ejecutar auditoría»); «Sincronizar Search Console», «Sincronizar Bing», «Sincronizar Google Analytics» (antes «Actualizar datos»); «Comparar (consume PageSpeed)» y «Volver a comparar (consume PageSpeed)»; «Medir preguntas en IA» (antes «Iniciar medición»). «Traer datos de…» se conserva para la primera lectura.
@@ -54,10 +55,10 @@ La página «Google» se organiza en cuatro bloques por pregunta (resultados, co
 - FR-002 `Section` de `/seo` acepta nivel de encabezado (`h2`, `h3`). Índice `nav` con cuatro enlaces de ancla a `#results-title`, `#queries-title`, `#health-title`, `#competitors-title`.
 - FR-003 Catálogo: `seoPage.blocks.{results,queries,health,competitors}` y `seoPage.jump`, `seoPage.technicalDetail`; `audits.runButton.run`/`running`, `searchConsole.button.update`, `bingWebmaster.button.update`, `analytics.button.update`, `competitorComparison.button.run`/`rerun`, `geo.forms.run.submit`/`pending`, `overview.emptyAction`.
 - FR-004 `ComparisonSection`: `KEY_COLUMNS` de cinco métricas; `Cells` recibe la lista y agrupa las ausencias solo entre columnas contiguas de la misma fuente; `Row` pinta el detalle por fila solo en la tabla principal. Tabla completa en `<details>`, con su propia etiqueta.
-- FR-005 `OverviewCard`: `description` opcional; las tres tarjetas dejan de pasarla. `overview.cards.{performance,seo,ai}.description` se retiran junto con lo que quede sin uso (`AiFootnote`, `topOpportunity`, `notMentioned`, `fieldSource`, `footnote`).
+- FR-005 `OverviewCard` pierde `description`: ninguna tarjeta la usa. `overview.cards.{performance,seo,ai}.description` se retiran junto con lo que quede sin uso (`AiFootnote`, `topOpportunity`, `notMentioned`, `fieldSource`, `footnote`, y `PerformanceSummary.field` con sus textos de `overview.performance`).
 - FR-006 `WorkspaceSection` añade `settings`; `/edit` usa `PageHeader` y `WorkspaceNav`. `overview.nav.settings`.
 - FR-007 Componente de servidor `CompetitorsPanel` con la lista, alta, perfil y sugerencias, con los datos que hoy carga `/geo/setup`. `/geo/setup` deja de cargarlos salvo lo que usen las preguntas sugeridas. `revalidateGeo` añade `/edit`.
-- FR-008 Enlaces: `manageHref` a `/edit#competitors`; `/geo/setup` enlaza a `/edit#competitors`.
+- FR-008 Enlaces: `manageHref` a `/edit#competitors`; `/geo/setup` enlaza a `/edit#competitors` y nombra los competidores que usará una medición nueva; `/geo` enlaza a Configuración cuando una medición no tuvo competidores.
 - FR-009 Spec 002: nota de sustitución en Desired behavior 2 y 4, AC-012 y AC-022. Spec 015: D001 se cumple con la pestaña; nota en DECISIONS de la 017.
 - FR-010 Textos en `es` y `en`.
 
@@ -69,7 +70,7 @@ La página «Google» se organiza en cuatro bloques por pregunta (resultados, co
 
 ## API / Interface changes
 
-- `SearchConsoleQueries`, `CompetitorsPanel` y `KEY_COLUMNS` nuevos. `OverviewCard.description` opcional. `WorkspaceSection` amplía.
+- `SearchConsoleQueries`, `CompetitorsPanel` y `KEY_COLUMNS` nuevos. `OverviewCard.description` retirada. `WorkspaceSection` amplía. `LighthouseCategoryCard.headingLevel` opcional. `revalidateGeo` incluye `/edit` y `/seo`.
 
 ## Data model changes
 
@@ -101,7 +102,7 @@ Ninguno.
 
 - Unit: `section-render.test.ts` (reparto entre los dos componentes), `comparison` `section-render.test.ts`, `header`/nav, catálogos.
 - Integration: sin cambios de datos; regresión.
-- Manual: AC-001, AC-005, AC-007, AC-009.
+- Manual: AC-001, AC-005, AC-006, AC-007, AC-009.
 
 ## Assumptions
 
