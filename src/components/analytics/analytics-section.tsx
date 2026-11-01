@@ -67,9 +67,9 @@ function KeyEventsBlock({ v, t, button }: { v: KeyEventsView; t: Texts; button: 
   const note = "max-w-3xl text-xs text-muted-foreground";
   return (
     <section aria-labelledby="ga4-key-events" className="flex flex-col gap-3 border-t border-border/60 pt-4">
-      <h3 id="ga4-key-events" className="text-sm font-semibold">
+      <h4 id="ga4-key-events" className="text-sm font-semibold">
         {k.title}
-      </h3>
+      </h4>
       <p className={note}>{k.scope}</p>
       {v.state === "none_configured" ? (
         <p className="max-w-3xl text-sm text-muted-foreground">{k.noneConfigured(button)}</p>

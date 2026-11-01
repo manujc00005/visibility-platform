@@ -127,7 +127,7 @@ export const en = {
       submit: "Create company",
     },
     edit: {
-      title: "Edit company",
+      title: "Settings",
       submit: "Save changes",
     },
     notFound: {
@@ -370,7 +370,7 @@ export const en = {
     metaTitle: "Overview",
     edit: "Edit",
     sectionLabel: "Status of your online presence",
-    nav: { label: "Company sections", overview: "Overview", performance: "Performance", seo: "Google", geo: "AI presence", geoShort: "AI" },
+    nav: { label: "Company sections", overview: "Overview", performance: "Performance", seo: "Google", geo: "AI presence", geoShort: "AI", settings: "Settings" },
     /** One state vocabulary for the three cards (feature 014, D004); only the verdicts below carry a tone. */
     states: { not_configured: "Not set up", no_data: "No data", analyzing: "Analysing", partial: "Partial", error: "Error", ok: "Measured", not_measured: "Not measured" },
     verdict: { good: "Good", fair: "Needs improvement", bad: "Poor", info: "Minor fixes", neutral: "Partial" },
@@ -1467,6 +1467,7 @@ export const en = {
       context: { aliases: (list: string) => `aliases: ${list}`, services: (list: string) => `services: ${list}` },
       brand: { title: "Brand", description: (name: string, domain: string) => `We detect “${name}”, its domain ${domain} and these other names.` },
       competitors: {
+        movedBefore: "Managed in ", movedLink: "Settings", movedAfter: ": the comparison and the AI measurement use the same list.",
         title: "Confirmed competitors",
         description: (max: number) => `Up to ${max}. Only the ones you confirm appear in the comparison.`,
         remove: "Remove",

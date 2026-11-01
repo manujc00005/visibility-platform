@@ -13,23 +13,27 @@ export function LighthouseCategoryCard({
   locale,
   auditedAt,
   version,
+  headingLevel = 3,
 }: {
   view: LighthouseView;
   locale: Locale;
   auditedAt: Date | null;
   version: string | null;
+  /** 4 when it sits under a third-level section. */
+  headingLevel?: 3 | 4;
 }) {
   const t = getMessages(locale).lighthouse;
   const copy = t.categories[view.category];
   const headingId = `lighthouse-${view.category}`;
+  const Heading = `h${headingLevel}` as const;
   const hidden = view.failingTotal - view.failing.length;
   return (
     <section aria-labelledby={headingId} className="flex flex-col gap-4 rounded-2xl border border-border/80 bg-card p-5 shadow-card">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h3 id={headingId} className="text-base font-semibold tracking-tight">
+          <Heading id={headingId} className="text-base font-semibold tracking-tight">
             {copy.title}
-          </h3>
+          </Heading>
           <p className="max-w-2xl text-sm text-muted-foreground">{copy.description}</p>
         </div>
         <StatusPill tone={view.tone}>{view.verdict}</StatusPill>

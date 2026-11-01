@@ -464,12 +464,12 @@ export default async function SeoPage({
                           {L.category[f.category as Category] ?? f.category}
                         </span>
                       </div>
-                      <h3
+                      <h4
                         className="text-base font-semibold tracking-tight"
                         lang={text.fallback ? DEFAULT_LOCALE : undefined}
                       >
                         {text.title}
-                      </h3>
+                      </h4>
                       <p
                         className="text-sm"
                         lang={text.fallback ? DEFAULT_LOCALE : undefined}
@@ -528,6 +528,7 @@ export default async function SeoPage({
                 locale={locale}
                 auditedAt={result?.startedAt ?? null}
                 version={result?.facts?.performance?.lighthouseVersion ?? null}
+                headingLevel={4}
               />
             </Section>
 

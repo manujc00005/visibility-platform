@@ -135,7 +135,7 @@ export const es = {
       submit: "Crear empresa",
     },
     edit: {
-      title: "Editar empresa",
+      title: "Configuración",
       submit: "Guardar cambios",
     },
     notFound: {
@@ -372,7 +372,7 @@ export const es = {
     metaTitle: "Resumen",
     edit: "Editar",
     sectionLabel: "Estado de tu presencia digital",
-    nav: { label: "Secciones de la empresa", overview: "Resumen", performance: "Rendimiento", seo: "Google", geo: "Presencia en IA", geoShort: "IA" },
+    nav: { label: "Secciones de la empresa", overview: "Resumen", performance: "Rendimiento", seo: "Google", geo: "Presencia en IA", geoShort: "IA", settings: "Configuración" },
     /** One state vocabulary for the three cards (feature 014, D004); only the verdicts below carry a tone. */
     states: { not_configured: "Sin configurar", no_data: "Sin datos", analyzing: "Analizando", partial: "Parcial", error: "Error", ok: "Medido", not_measured: "No medida" },
     /** One verdict scale for the three cards: the same word always means the same tone. */
@@ -1478,6 +1478,7 @@ export const es = {
       context: { aliases: (list: string) => `alias: ${list}`, services: (list: string) => `servicios: ${list}` },
       brand: { title: "Marca", description: (name: string, domain: string) => `Se detecta «${name}», su dominio ${domain} y estos otros nombres.` },
       competitors: {
+        movedBefore: "Se gestionan en ", movedLink: "Configuración", movedAfter: ": la comparativa y la medición en IA usan la misma lista.",
         title: "Competidores confirmados",
         description: (max: number) => `Hasta ${max}. Solo los que confirmes aparecen en la comparación.`,
         remove: "Quitar",

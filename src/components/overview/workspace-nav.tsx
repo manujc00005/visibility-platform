@@ -3,13 +3,14 @@ import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
 import { getMessages } from "@/i18n/messages";
 import { cn } from "@/lib/utils";
 
-export type WorkspaceSection = "overview" | "performance" | "seo" | "geo";
+export type WorkspaceSection = "overview" | "performance" | "seo" | "geo" | "settings";
 
 const ITEMS: { key: WorkspaceSection; path: string }[] = [
   { key: "overview", path: "" },
   { key: "performance", path: "/performance" },
   { key: "seo", path: "/seo" },
   { key: "geo", path: "/geo" },
+  { key: "settings", path: "/edit" },
 ];
 
 /** Section tabs of a workspace. Same order and labels everywhere; the current one is marked for assistive tech. */

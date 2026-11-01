@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
+import { PageHeader } from "@/components/overview/page-header";
+import { WorkspaceNav } from "@/components/overview/workspace-nav";
+import { CompetitorsPanel } from "@/components/workspaces/competitors-panel";
 import { GoalForm } from "@/components/workspaces/goal-form";
 import { SourcesPanel } from "@/components/workspaces/sources-panel";
 import { WorkspaceForm } from "@/components/workspaces/workspace-form";
@@ -122,12 +125,19 @@ export default async function EditWorkspacePage({
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {workspaces.edit.title}
-          </h1>
-          <p className="text-sm text-muted-foreground">{workspace.name}</p>
-        </div>
+        <PageHeader
+          locale={locale}
+          breadcrumbs={[
+            { href: "/workspaces", label: workspaces.list.title },
+            { href: `/workspaces/${workspace.id}`, label: workspace.name },
+          ]}
+          title={workspaces.edit.title}
+        />
+        <WorkspaceNav
+          workspaceId={workspace.id}
+          current="settings"
+          locale={locale}
+        />
         {/* Remount on language change: the form state (values and messages) belongs to one language (SPEC, límite conocido). */}
         <WorkspaceForm
           key={locale}
@@ -142,13 +152,18 @@ export default async function EditWorkspacePage({
       <GoalForm
         key={`goal-${locale}`}
         goal={goal}
-        currentText={goal ? goals.current(goals.kinds[goal.kind], goal.label, goal.eventName) : null}
+        currentText={
+          goal
+            ? goals.current(goals.kinds[goal.kind], goal.label, goal.eventName)
+            : null
+        }
         configuredEvents={configuredEvents}
         save={saveGoalAction.bind(null, workspace.id)}
         remove={removeGoalAction.bind(null, workspace.id)}
         labels={goals.form}
         kinds={goals.kinds}
       />
+      <CompetitorsPanel workspace={workspace} locale={locale} />
       <SourcesPanel rows={rows} locale={locale} />
     </div>
   );
