@@ -1,6 +1,6 @@
 # 16 — Roadmap de implementación (referencia operativa)
 
-**Última actualización:** 2026-11-01: inicio y panel de fuentes (spec 015) cerrada; tarjeta «Visibilidad en Google» (spec 014) cerrada, D-31 resuelto; origen y estados de la medición en IA (spec 013) cerrada, D-23 resuelto (§6, §8); el orden de trabajo del cierre del MVP está en `19-cierre-mvp-fases.md`. Antes: 2026-10-29: conectores de Search Console, Bing y GA4 cerrados; búsquedas con marca y sin marca (spec 007) y conversiones desde buscadores en GA4 (spec 008) cerradas (§8); 2026-10-30: cambios de posición por búsqueda (spec 009) cerrada (§8); seguimientos y backlog (§6, §9).
+**Última actualización:** 2026-11-01: objetivo comercial por empresa (spec 016) cerrada; inicio y panel de fuentes (spec 015) cerrada; tarjeta «Visibilidad en Google» (spec 014) cerrada, D-31 resuelto; origen y estados de la medición en IA (spec 013) cerrada, D-23 resuelto (§6, §8); el orden de trabajo del cierre del MVP está en `19-cierre-mvp-fases.md`. Antes: 2026-10-29: conectores de Search Console, Bing y GA4 cerrados; búsquedas con marca y sin marca (spec 007) y conversiones desde buscadores en GA4 (spec 008) cerradas (§8); 2026-10-30: cambios de posición por búsqueda (spec 009) cerrada (§8); seguimientos y backlog (§6, §9).
 **Estado del diseño:** `00`–`12` siguen siendo referencia arquitectónica (versión 1, PROPUESTA). `13-codex-review.md` (REQUEST CHANGES) sigue siendo el registro de riesgos. **Este documento manda sobre el orden de trabajo y sobre las decisiones técnicas de construcción.** Donde contradiga a `00`–`12`, prevalece este y la contradicción se lista en §7.
 
 Nota: `14-architecture-sync.md` no llegó a escribirse; el cambio de estrategia lo sustituyó por este documento antes de redactarlo. Los hallazgos de Codex se gestionan aquí de forma progresiva (§4).
@@ -522,6 +522,16 @@ Los tres conectores siguen el mismo patrón: credencial del operador en el entor
 **Verificación:** unitarias (`tests/unit/sources`), lint, typecheck, build e integración; `/`, `/admin/status`, la edición de Olessium y de la clínica, y 375 px en navegador (TASKS › Evidence).
 
 **Seguimiento:** el panel se moverá a «Configuración» cuando exista (017). `/admin/status` queda en el mismo perímetro que el resto (D-03, BL-07).
+
+### Objetivo comercial por empresa (spec `specs/features/016-commercial-goal`) — 2026-11-01, hecha
+
+**Alcance:** segunda spec de la fase B del cierre del MVP (`19-cierre-mvp-fases.md`), hallazgo 14 de Codex. Cada empresa puede declarar un objetivo (solicitud, reserva, compra u otro), su nombre para el propietario y el evento clave de GA4 que lo mide, elegido entre los que GA4 devolvió. El resumen lo muestra con los contactos desde buscadores de los últimos 28 días cuando alguna captura guardada vio el evento por encima de cero, y «pendiente de comprobar la medición» mientras no; la verificación se deriva de las capturas, nunca se guarda. Nunca suma eventos distintos ni habla de clientes o ventas.
+
+**Commits:** `ac2a79a` (spec), `be6ce03` (código) y los de evidencia. **Migraciones:** `0018_workspace_goals` (tabla con `CHECK`, aditiva, aplicada en `dev`).
+
+**Verificación:** unitarias (`tests/unit/goals`), integración (`tests/integration/goals.test.ts`), lint, typecheck y build; alta, resumen y baja del objetivo en Olessium y la clínica en navegador, 375 px (TASKS › Evidence).
+
+**Seguimiento:** solo el desglose orgánico de GA4 verifica (D003 de la 016); recepciones por otros canales quedan para cuando la 008 guarde totales por evento. La captura de la 008 guarda los 10 eventos orgánicos principales: un objetivo fuera de ellos nunca verifica y cuenta 0; ampliar cuando una empresa real lo necesite. Olessium queda con el objetivo «Solicitud de contacto» sobre `close_convert_lead` en `dev`.
 
 ## 9. Backlog (aparcado por decisión del owner, 2026-10-26)
 

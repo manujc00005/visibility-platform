@@ -2,7 +2,7 @@
 
 ## Status
 
-Ready (2026-11-01). Segunda spec de la fase B del cierre del MVP (`docs/visibility-mvp/19-cierre-mvp-fases.md`), hallazgo 14 de la auditoría de Codex del 2026-11-01 y recomendación 01 de su contraste de fuentes.
+Done (2026-11-01). T001–T007 hechas; revisiones de conformidad («Pass con menores») y de base de datos/frontend («Reject» por un medio, sin altos) aplicadas (D004) sobre `be6ce03`/`1650853`; AC-006 verificado en navegador sobre `dev`; suite completa en verde salvo la prueba intermitente D-24, que pasa en solitario. Segunda spec de la fase B del cierre del MVP (`docs/visibility-mvp/19-cierre-mvp-fases.md`), hallazgo 14 de la auditoría de Codex del 2026-11-01 y recomendación 01 de su contraste de fuentes.
 
 ## Problem
 
@@ -35,18 +35,19 @@ Cada empresa puede declarar un objetivo comercial: qué tipo de resultado es (so
 ## Desired behavior
 
 1. **Declarar el objetivo.** En `/workspaces/[id]/edit`, debajo del formulario y encima de «Fuentes de datos», la sección «Objetivo comercial»: tipo (solicitud, reserva, compra, otro), nombre para el propietario («Solicitud de presupuesto») y evento de GA4, elegido entre los eventos clave configurados en la última captura buena; si no hay captura o la lista está vacía, un campo de texto con el nombre exacto del evento y una nota. Guardar, y quitar el objetivo.
-2. **Verificación derivada, no declarada.** El objetivo está verificado si alguna captura buena guardada contiene el evento en `organicByEvent` con valor mayor que cero. Se guarda la fecha de esa captura y el fin de su periodo como «última recepción observada». No se guarda ningún estado de verificación: se calcula de lo capturado.
+2. **Verificación derivada, no declarada.** El objetivo está verificado si alguna captura buena guardada contiene el evento en `organicByEvent` con valor mayor que cero. La fecha de esa captura es la «última recepción observada». No se guarda ningún estado de verificación: se calcula de lo capturado.
 3. **Resumen.** Una línea bajo la cabecera, antes de «Lo más importante»:
    - sin objetivo: «Objetivo comercial sin definir» con enlace a definirlo (solo texto; el operador lo define en la edición);
    - verificado: «Solicitud de presupuesto: N desde buscadores en los últimos 28 días (Google Analytics, del X al Y)», con N = eventos clave orgánicos del evento en la última captura buena, 0 incluido; «Última recepción observada: fecha»;
-   - pendiente: «Solicitud de presupuesto: pendiente de comprobar la medición. Google Analytics no ha registrado todavía ninguna recepción desde buscadores de este evento.»; si además el evento no figura entre los eventos clave configurados en la última captura, se añade «El evento no está marcado como evento clave en Google Analytics.»; sin ninguna captura de GA4, «Conecta Google Analytics para comprobarlo.»
+   - pendiente: «Solicitud de presupuesto: pendiente de comprobar la medición. Google Analytics no ha registrado todavía ninguna recepción desde buscadores de este evento.»; si además el evento no figura entre los eventos clave configurados en la última captura (y GA4 no indicó que hubiera más de los devueltos), se añade «El evento no está marcado como evento clave en Google Analytics.»; sin ninguna captura de GA4, «Conecta Google Analytics para comprobarlo.»;
+   - verificado cuya última captura buena no trae eventos clave (anterior a la 008): «Solicitud de presupuesto: medido desde buscadores en una captura anterior; la última captura no trae eventos clave.», con la última recepción observada; un objetivo verificado cuyo evento dejó de estar configurado conserva el estado y añade la nota de evento no configurado.
 4. **Honestidad de las cifras.** El texto siempre dice «desde buscadores», «eventos clave» y el periodo; nunca «clientes», «ventas» ni «leads». Un objetivo cuyo tipo es `otro` se describe solo por su nombre.
 5. **Panel de fuentes (015)** no cambia.
 
 ## Functional requirements
 
 - FR-001 Tabla `workspace_goals`: `workspace_id` PK y FK en cascada, `kind` en (`request`, `booking`, `purchase`, `other`), `label` 1–80 caracteres, `event_name` 1–200 caracteres sin espacios en los extremos, `created_at`, `updated_at`. `CHECK` de enumeración y longitudes. Migración aditiva `0018_workspace_goals`.
-- FR-002 Módulo `src/modules/goals/`: `schema.ts`; `service.ts` con `getGoal`, `saveGoal` (upsert bajo el bloqueo de empresa, validación con mensajes en `es`/`en`), `removeGoal` y `goalEvidence(db, workspaceId, eventName)` que devuelve la captura buena más reciente cuyo `organicByEvent` contiene el evento con `keyEvents > 0` (`{ observedAt, periodEnd }`) o `null`, con una consulta `jsonb_path_exists` acotada por empresa.
+- FR-002 Módulo `src/modules/goals/`: `schema.ts`; `service.ts` con `getGoal`, `saveGoal` (upsert bajo el bloqueo de empresa, validación con mensajes en `es`/`en`), `removeGoal` y `goalEvidence(db, workspaceId, eventName)` que devuelve la captura buena más reciente cuyo `organicByEvent` contiene el evento con `keyEvents > 0` (`{ observedAt }`, la última recepción observada) o `null`, con una consulta `jsonb_path_exists` acotada por empresa. `removeGoal` también toma el bloqueo de empresa.
 - FR-003 Función pura `summarizeGoal({ goal, analytics: LatestAnalytics, evidence }, locale)` → `GoalView { state: "none" | "pending" | "verified"; kind; label; event; count: number | null; period; observedAt; notes: string[]; text }` según «Desired behavior» 3.
 - FR-004 Componente cliente `GoalForm` (selección de evento entre `configured`, o texto libre con nota cuando no hay) con `GoalFormState` y acciones `saveGoalAction`/`removeGoalAction` en `src/app/workspaces/[id]/goal/actions.ts`; revalidan el resumen y la edición.
 - FR-005 Componente servidor `GoalLine` en el resumen, con pill (verificado: `good` «Medido»; pendiente: neutro «Pendiente»; sin objetivo: neutro «Sin definir») y el texto de «Desired behavior» 3; enlace a la edición.
@@ -82,7 +83,7 @@ Cada empresa puede declarar un objetivo comercial: qué tipo de resultado es (so
 - AC-002 `saveGoal` crea y actualiza (misma fila), recorta `event_name`, rechaza `validation` sin escribir y `not_found` para empresa desconocida; `removeGoal` elimina y es idempotente.
 - AC-003 `goalEvidence` devuelve la captura más reciente con el evento mayor que cero, ignora capturas fallidas, capturas sin `keyEvents`, eventos a cero y otras empresas.
 - AC-004 `summarizeGoal`: sin objetivo → `none`; objetivo sin evidencia y sin capturas → `pending` con la nota de conectar; con captura buena sin el evento configurado → `pending` con la nota de evento no configurado; con evidencia → `verified` con `count` de la última captura (0 si el evento no aparece), periodo y `observedAt`. En `es` y `en`, con los textos de «Desired behavior» 3 y sin las palabras «clientes», «ventas» ni «leads».
-- AC-005 `GoalForm` muestra los eventos configurados como opciones y el campo de texto cuando no hay; conserva lo escrito tras un error; `GoalLine` renderiza los tres estados con pill y enlace.
+- AC-005 `GoalForm` muestra los eventos configurados como opciones y el campo de texto cuando no hay; conserva lo escrito tras un error (por diseño: `values` del estado y remonte por `attempt`, el mismo mecanismo probado en los formularios de la 012; no hay prueba de render con estado de error porque `renderToStaticMarkup` no puede fijarlo); `GoalLine` renderiza los tres estados con pill y enlace.
 - AC-006 En navegador sobre `dev`: Olessium con objetivo «Solicitud de contacto» sobre `close_convert_lead` muestra «pendiente de comprobar la medición» (GA4 no ha registrado eventos orgánicos); la clínica sin GA4 muestra la nota de conectar; quitar el objetivo devuelve «sin definir». A 375 px sin desbordamiento.
 - AC-007 Lint, typecheck, unitarias, integración y build en verde.
 
