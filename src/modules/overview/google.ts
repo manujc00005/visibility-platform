@@ -7,10 +7,10 @@ import { displayDay, type SearchConsoleState, type SearchConsoleSummary } from "
 import { displayDate } from "@/modules/workspaces/presentation";
 
 /**
- * The «Visibilidad en Google» card (feature 014, D001): what Search Console measured comes
- * first and decides the status; the technical health of the home page is a labelled block
- * apart, with the verdict scale of the audit. Pure over the two summaries the overview
- * already builds. Texts come from the catalog of `locale`, Spanish by default (D007).
+ * The two Google cards of the overview (feature 023, D001, which replaces 014 D001): what Search
+ * Console measured, with no verdict (014 D002), and the technical health of the home page, with
+ * the verdict scale of the audit. Pure over the summaries the overview already builds. Texts come
+ * from the catalog of `locale`, Spanish by default (D007).
  */
 export interface CardStatus {
   tone: Tone;
@@ -26,26 +26,27 @@ export type RankingHeadline =
   | { kind: "figures"; clicks: string; clicksUnit: string; impressions: string; impressionsUnit: string }
   | { kind: "text"; text: string };
 
-export interface GoogleCardSummary {
-  ranking: {
-    state: SearchConsoleState;
-    status: CardStatus;
-    headline: RankingHeadline;
-    /** Clicks against the previous 28 days (D002: the only directional signal). */
-    change: Change | null;
-    changeNote: string | null;
-    line: string | null;
-  };
-  technical: {
-    title: string;
-    status: CardStatus;
-    counts: { critical: number; warning: number } | null;
-    /** The audit verdict, or why there is none. */
-    headline: string;
-    change: Change | null;
-    comparisonNote: string | null;
-    reason: string | null;
-  };
+export interface RankingCardSummary {
+  state: SearchConsoleState;
+  status: CardStatus;
+  headline: RankingHeadline;
+  /** Clicks against the previous 28 days (014 D002: the only directional signal). */
+  change: Change | null;
+  changeNote: string | null;
+  line: string | null;
+  notices: CardNotice[];
+  source: string;
+}
+
+export interface TechnicalCardSummary {
+  state: SeoSummary["state"];
+  status: CardStatus;
+  counts: { critical: number; warning: number } | null;
+  /** The audit verdict, or why there is none. */
+  headline: string;
+  change: Change | null;
+  comparisonNote: string | null;
+  reason: string | null;
   notices: CardNotice[];
   source: string;
 }
@@ -54,14 +55,14 @@ export interface GoogleCardSummary {
 const RANKING_TONE: Record<SearchConsoleState, Tone> = { ok: "neutral", empty: "neutral", no_data: "neutral", not_configured: "neutral", invalid_config: "neutral", error: "bad" };
 const SEO_STATE_TONE: Record<Exclude<SeoSummary["state"], "ok">, Tone> = { not_configured: "neutral", no_data: "neutral", analyzing: "neutral", partial: "neutral", error: "bad" };
 
-export function summarizeGoogleCard(gsc: SearchConsoleSummary, seo: SeoSummary, now: Date, locale: Locale = DEFAULT_LOCALE): GoogleCardSummary {
+export function summarizeRankingCard(gsc: SearchConsoleSummary, now: Date, locale: Locale = DEFAULT_LOCALE): RankingCardSummary {
   const t = getMessages(locale).overview;
   const c = t.cards.seo;
   const period = gsc.period ? c.period(displayDay(gsc.period.start, locale), displayDay(gsc.period.end, locale)) : null;
   const status = (label: string): CardStatus => ({ tone: RANKING_TONE[gsc.state], label });
   const text = (value: string): RankingHeadline => ({ kind: "text", text: value });
 
-  let ranking: GoogleCardSummary["ranking"];
+  let ranking: Omit<RankingCardSummary, "notices" | "source">;
   if (gsc.state === "ok" && gsc.metrics && gsc.totals) {
     const m = gsc.metrics;
     ranking = {
@@ -89,31 +90,38 @@ export function summarizeGoogleCard(gsc: SearchConsoleSummary, seo: SeoSummary, 
     ranking = { state: gsc.state, status: status(t.states.not_configured), headline: text(c.pending), change: null, changeNote: null, line: c.notConnected };
   }
 
+  const notices: CardNotice[] = [];
+  if ((gsc.state === "ok" || gsc.state === "empty") && gsc.lastFailure) notices.push({ kind: "failed", text: c.lastAttemptFailed });
+  const stale = staleInfo(gsc.capturedAt, now, locale);
+  if (stale) notices.push({ kind: "stale", text: stale.text });
+  const when = gsc.capturedAt ? displayDate(gsc.capturedAt, locale) : gsc.state === "error" ? c.noResultShort : c.notMeasuredShort;
+  return { ...ranking, notices, source: c.source(when) };
+}
+
+export function summarizeTechnicalCard(seo: SeoSummary, locale: Locale = DEFAULT_LOCALE): TechnicalCardSummary {
+  const t = getMessages(locale).overview;
+  const c = t.cards.seo.technical;
   // A partial check keeps the severity it did find: "Mal (parcial)", never a neutral grey over critical problems.
-  const technicalStatus: CardStatus =
+  const status: CardStatus =
     seo.state === "ok"
       ? { tone: seo.tone, label: t.verdict[seo.tone] }
       : seo.state === "partial" && seo.tone !== "neutral"
         ? { tone: seo.tone, label: t.partial(t.verdict[seo.tone]) }
         : { tone: SEO_STATE_TONE[seo.state], label: t.states[seo.state] };
-  const technical: GoogleCardSummary["technical"] = {
-    title: c.technical.title,
-    status: technicalStatus,
+
+  const notices: CardNotice[] = [];
+  if (seo.attempt) notices.push({ kind: seo.attempt.status === "running" ? "running" : "failed", text: seo.attempt.text });
+  if (seo.stale) notices.push({ kind: "stale", text: seo.stale.text });
+  const when = seo.auditedAt ? displayDate(seo.auditedAt, locale) : seo.state === "error" || seo.state === "analyzing" ? c.noResultShort : c.notAuditedShort;
+  return {
+    state: seo.state,
+    status,
     counts: seo.headline ? { critical: seo.counts.critical, warning: seo.counts.warning } : null,
-    headline: seo.headline?.title ?? (seo.state === "analyzing" ? c.technical.analyzing : seo.state === "error" ? c.technical.noResult : c.technical.noAudit),
+    headline: seo.headline?.title ?? (seo.state === "analyzing" ? c.analyzing : seo.state === "error" ? c.noResult : c.noAudit),
     change: seo.change,
     comparisonNote: seo.comparisonNote,
     reason: seo.reason,
+    notices,
+    source: c.source(when),
   };
-
-  const notices: CardNotice[] = [];
-  if ((gsc.state === "ok" || gsc.state === "empty") && gsc.lastFailure) notices.push({ kind: "failed", text: c.lastAttemptFailed });
-  const rankingStale = staleInfo(gsc.capturedAt, now, locale);
-  if (rankingStale) notices.push({ kind: "stale", text: c.staleRanking(rankingStale.days) });
-  if (seo.attempt) notices.push({ kind: seo.attempt.status === "running" ? "running" : "failed", text: c.technical.prefix(seo.attempt.text) });
-  if (seo.stale) notices.push({ kind: "stale", text: c.technical.stale(seo.stale.days) });
-
-  const rankingPart = gsc.capturedAt ? displayDate(gsc.capturedAt, locale) : gsc.state === "error" ? c.noResultShort : c.notMeasuredShort;
-  const technicalPart = seo.auditedAt ? displayDate(seo.auditedAt, locale) : seo.state === "error" || seo.state === "analyzing" ? c.noResultShort : c.notAuditedShort;
-  return { ranking, technical, notices, source: c.source(rankingPart, technicalPart) };
 }

@@ -370,7 +370,6 @@ export const es = {
   },
   overview: {
     metaTitle: "Resumen",
-    edit: "Editar",
     sectionLabel: "Estado de tu presencia digital",
     nav: { label: "Secciones de la empresa", overview: "Resumen", performance: "Rendimiento", seo: "Google", geo: "Presencia en IA", geoShort: "IA", settings: "Configuración" },
     /** One state vocabulary for the three cards (feature 014, D004); only the verdicts below carry a tone. */
@@ -381,7 +380,7 @@ export const es = {
     viewReport: "Ver informe",
     cards: {
       performance: {
-        title: "Rendimiento de tu web",
+        title: "¿Cómo funciona tu web?",
         analyzing: "Analizando…",
         noResult: "Sin resultado",
         notMeasured: "No medida",
@@ -394,7 +393,7 @@ export const es = {
         notMeasuredShort: "sin medir",
       },
       seo: {
-        title: "Visibilidad en Google",
+        title: "¿Te encuentran en Google?",
         pending: "Posicionamiento pendiente de medir",
         noImpressions: "Sin impresiones registradas en este periodo",
         noImpressionsLabel: "Sin impresiones",
@@ -406,26 +405,25 @@ export const es = {
         noFetch: "Todavía no se han traído datos de Search Console.",
         notConnected: "Falta conectar Google Search Console.",
         fetchFailed: "No se pudieron leer los datos de Search Console.",
-        lastAttemptFailed: "Posicionamiento · el último intento de actualización falló; se muestra la captura anterior.",
-        staleRanking: (days: number) => `Posicionamiento · datos de hace ${days} ${days === 1 ? "día" : "días"}`,
-        /** The technical health of the home page, apart from the figures (D001). */
+        lastAttemptFailed: "El último intento de actualización falló; se muestra la captura anterior.",
+        /** The technical health of the home page, its own card since feature 023 (D001). */
         technical: {
-          title: "Tu web, vista por Google",
+          title: "¿Puede Google leer tu portada?",
           critical: (n: number): string => (n === 1 ? "crítico" : "críticos"),
           warning: (n: number): string => (n === 1 ? "importante" : "importantes"),
           analyzing: "Analizando…",
           noResult: "Sin resultado",
           noAudit: "Sin auditoría",
-          prefix: (text: string) => `Salud técnica · ${text}`,
-          stale: (days: number) => `Salud técnica · datos de hace ${days} ${days === 1 ? "día" : "días"}`,
+          source: (when: string) => `Auditoría técnica de la portada · ${when}`,
+          noResultShort: "sin resultado",
+          notAuditedShort: "sin auditar",
         },
-        source: (ranking: string, technical: string) => `Search Console · ${ranking} · Auditoría técnica · ${technical}`,
+        source: (when: string) => `Search Console · ${when}`,
         notMeasuredShort: "sin medir",
         noResultShort: "sin resultado",
-        notAuditedShort: "sin auditar",
       },
       ai: {
-        title: "Presencia en IA",
+        title: "¿Apareces en las respuestas de IA?",
         /** The two states whose word differs from the shared vocabulary (D004); the rest come from `overview.states`. */
         status: { analyzing: "Recogiendo respuestas", no_data: "Sin mediciones" },
         ofQuestions: (n: number) => `de ${n} ${n === 1 ? "pregunta" : "preguntas"}`,
@@ -439,12 +437,56 @@ export const es = {
         source: (detail: string) => `Medición en ChatGPT · ${detail}`,
         noResultShort: "sin resultado",
         noMeasurementsShort: "sin mediciones",
-        configure: "Configurar",
       },
     },
-    /** `{link}` is replaced by the link to the AI setup, in the view. */
-    emptyAction: "Pulsa «Analizar portada» arriba o {link}.",
-    emptyActionLink: "configura las preguntas de IA",
+    /** One line above the cards (feature 023): one fragment per area, taken from that card's state (D003). Never figures, never a word that adds areas up. */
+    situation: {
+      label: "Dónde estás",
+      stale: (text: string, days: number) => `${text} (datos de hace ${days} ${days === 1 ? "día" : "días"})`,
+      performance: {
+        good: "Tu web carga bien en móvil",
+        fair: "Tu web carga con lentitud en móvil",
+        bad: "Tu web carga muy despacio en móvil",
+        notMeasured: "La velocidad de tu web aún no se ha medido",
+        analyzing: "Estamos midiendo la velocidad de tu web",
+        error: "No se pudo medir la velocidad de tu web",
+      },
+      technical: {
+        good: "Google puede leer tu portada sin problemas importantes",
+        fair: "Tu portada tiene aspectos que dificultan que Google la lea",
+        bad: "Tu portada tiene problemas que impiden o dificultan que Google la muestre",
+        partialBad: "La revisión de tu portada fue parcial y ya encontró problemas graves",
+        partialFair: "La revisión de tu portada fue parcial y encontró aspectos que corregir",
+        partial: "Solo pudimos revisar tu portada en parte",
+        none: "Aún no hemos revisado tu portada",
+        analyzing: "Estamos revisando tu portada",
+        error: "No se pudo revisar tu portada",
+      },
+      ranking: {
+        shown: "Google te muestra en sus resultados",
+        notShownRecently: "Google ha dejado de mostrarte en sus resultados",
+        notYet: "Google aún no te muestra en sus resultados",
+        notMeasured: "Aún no hemos medido si Google te muestra",
+        error: "No se pudieron leer tus datos de Google",
+      },
+      ai: {
+        all: "ChatGPT te menciona en todas las preguntas medidas",
+        some: "ChatGPT te menciona en algunas de las preguntas medidas",
+        none: "ChatGPT no te mencionó en las preguntas medidas",
+        partial: "La medición en IA quedó incompleta",
+        notMeasured: "En IA aún no hemos medido",
+        analyzing: "Estamos midiendo tu presencia en IA",
+        error: "No se pudo medir tu presencia en IA",
+      },
+    },
+    /** Areas without a result, as rows instead of cards (feature 023): the reason in the owner's voice, no actions. */
+    pending: {
+      title: "Pendiente de medir",
+      performance: { waiting: "Aún no hemos medido la velocidad de tu web.", analyzing: "La estamos midiendo ahora.", error: "El último intento de medirla no terminó." },
+      technical: { waiting: "Aún no hemos revisado tu portada.", analyzing: "La estamos revisando ahora.", error: "El último intento de revisarla no terminó." },
+      ranking: { waiting: "Aún no hemos conectado los datos de Google de tu web.", noData: "Aún no hemos traído los datos de Google de tu web.", error: "No se pudieron leer los datos de Google de tu web." },
+      ai: { waiting: "Aún no hemos medido si las respuestas de IA te mencionan.", analyzing: "Estamos recogiendo las respuestas ahora.", error: "El último intento de medirlo no terminó." },
+    },
     /** One line under the header with the first opportunity, so the action is not left for the end. */
     lead: {
       label: "Lo más importante",
@@ -459,11 +501,14 @@ export const es = {
       noneBody: "Necesitamos al menos una auditoría o una medición en IA para basar las recomendaciones en datos reales.",
       partialTitle: "Las recomendaciones se basan en los datos disponibles.",
       completeEmptyTitle: "No hemos detectado problemas prioritarios en las mediciones disponibles",
-      completeEmptyBody: "Repite el análisis tras cualquier cambio importante en la web.",
+      completeEmptyBody: "Conviene repetir la revisión tras cualquier cambio importante en la web.",
       partialEmpty: "Con los datos disponibles no hemos encontrado acciones prioritarias.",
       what: "Qué ocurre",
       why: "Por qué importa",
-      action: "Qué recomendamos",
+      who: "Quién puede hacerlo",
+      /** No assumption that the business has a web provider, and no promise of a service that does not exist yet (Módulo F). */
+      whoText: "Esto lo hace quien mantenga tu web, o un técnico si no tienes a nadie.",
+      action: "Qué tiene que hacer",
       evidence: "Evidencia",
       detail: "Ver el detalle",
       covers: (n: number) => `Agrupa ${n} problemas detectados`,

@@ -84,7 +84,7 @@ Ninguno.
 
 - Ninguna medición: sin línea, cuatro filas compactas y el estado vacío de oportunidades.
 - Una sola tarjeta completa: ocupa las dos columnas.
-- Search Console `ok` con cero impresiones en el periodo actual pero no en el anterior: «no te ha mostrado en los últimos 28 días», nunca «aún no te muestra».
+- Search Console `ok` con cero impresiones en el periodo actual pero no en el anterior: «ha dejado de mostrarte», nunca «aún no te muestra».
 - Auditoría parcial con críticos: fragmento negativo; parcial sin severidad: «revisión parcial», nunca positivo.
 - Intento en curso o fallido con resultado anterior: la tarjeta sigue completa con su aviso (002 D011); el fragmento describe el resultado y, si tiene más de 30 días, lo dice.
 - Inglés: fragmentos y motivos traducidos; las evidencias originales siguen con `lang="es"`.
