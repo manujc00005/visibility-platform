@@ -99,3 +99,17 @@
 **Reasoning:** es un problema de entorno, no de la tarjeta; arreglarlo es una tarea propia.
 
 **Consequences:** la evidencia de AC-009 cita la pasada hecha en solitario.
+
+### D008 - D001 queda sustituida por la 023
+
+**Date:** 2026-11-02
+
+**Status:** Accepted
+
+**Context:** Tres críticas del resumen señalaron que, con D001, el «Mal (parcial)» técnico quedaba dentro de la tarjeta bajo el estado gris de Search Console. Un «peor veredicto conocido» en la pastilla sería una puntuación compuesta.
+
+**Decision:** la 023 (D001) parte la tarjeta en dos: «¿Puede Google leer tu portada?» con el veredicto técnico y «¿Te encuentran en Google?» con Search Console. D001 se conserva como registro; D002–D004 siguen vigentes.
+
+**Reasoning:** cada pregunta con su pastilla y su cifra; nada escondido y nada agregado.
+
+**Consequences:** `summarizeGoogleCard` se sustituye por `summarizeRankingCard` y `summarizeTechnicalCard`; los avisos ya no llevan prefijo de fuente porque cada tarjeta tiene la suya.

@@ -12,7 +12,7 @@ Que el propietario de una pyme, sin conocimientos de SEO, GEO o AEO, responda al
 
 | Ruta | Contenido |
 |---|---|
-| `/workspaces/[id]` | **Resumen.** Cabecera (nombre, dominio, sector, ciudad; «Ejecutar auditoría», «Editar»), pestañas, tres tarjetas y «Tus próximas oportunidades». Nada más |
+| `/workspaces/[id]` | **Resumen.** Cabecera (nombre, dominio, sector, ciudad; «Ejecutar auditoría», «Editar»), pestañas, tres tarjetas y «Tus próximas oportunidades». Nada más. *(Desde la 023, 2026-11-02: cabecera sin acciones, línea de situación, franja de la primera acción, línea del objetivo, hasta cuatro tarjetas en 2×2 solo para áreas con resultado, lista «Pendiente de medir» y oportunidades.)* |
 | `/workspaces/[id]/performance` | **Rendimiento.** Móvil y escritorio (no disponible), prueba de laboratorio (LCP, FCP, TBT, CLS), visitantes reales (LCP, INP, CLS solo con datos de campo), problemas de velocidad, histórico |
 | `/workspaces/[id]/seo` | **Google.** Posicionamiento (Search Console no disponible, sin enlace), salud técnica, seis áreas, problemas con evidencia, histórico de SEO |
 | `/workspaces/[id]/geo` | **Presencia en IA.** Resumen de la medición, visibilidad y menciones (GEO) con «Comparación de menciones» por marca, preguntas y oportunidades de contenido (AEO), histórico de mediciones |
@@ -34,6 +34,8 @@ Navegación: pestañas Resumen · Rendimiento · Google · Presencia en IA (en m
 - **Solo lo observado (D021).** Los textos describen lo que se preguntó, respondió o midió; las acciones de contenido se plantean como revisión, sin diagnosticar carencias no analizadas.
 
 ### Tarjetas del resumen
+
+*Nota 2026-11-02 (spec 023, D001): la tabla describe el diseño original de tres tarjetas. Hoy son cuatro, con título en pregunta: «¿Cómo funciona tu web?», «¿Puede Google leer tu portada?» (auditoría técnica, con veredicto), «¿Te encuentran en Google?» (Search Console, sin veredicto, 014 D002) y «¿Apareces en las respuestas de IA?». Un área sin resultado va a la lista «Pendiente de medir».*
 
 | Tarjeta | Valor principal | Además |
 |---|---|---|
