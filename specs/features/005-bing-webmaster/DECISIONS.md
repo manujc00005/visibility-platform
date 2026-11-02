@@ -134,3 +134,14 @@
 
 **Consequences:** Si `GetPageStats` llega con otra forma, la captura fallará con «Respuesta de GetPageStats con un formato inesperado en <campo>» y quedará guardada como fallo, sin datos incorrectos. Entonces se corrige el esquema con ese mensaje como guía.
 
+### D012 - Aviso cuando las cifras quedan lejos de la captura
+
+**Date:** 2026-11-02 · **Status:** Accepted
+
+**Context:** El periodo acaba en el último día con clics o impresiones (D004). Guinda, añadida a Bing el 2026-11-02, devolvió datos hasta el 25 de abril: la tarjeta enseñaba «+2955 %» y estado «Conectado», y solo las fechas de la línea de fuente delataban que eran de hace seis meses.
+
+**Decision:** Si el periodo termina más de 14 días antes de la captura, el resumen lleva `staleNotice`. Se muestra como aviso en la sección y como nota en el panel de fuentes. Las cifras se mantienen y el estado sigue siendo `ok`, porque la conexión funciona.
+
+**Reasoning:** Bing no documenta su retraso y actualiza las búsquedas cada semana; dos semanas ya no son retraso de proceso. Se compara con la captura y no con hoy para que el resumen siga siendo puro; que una captura envejezca ya se ve en «consultado».
+
+**Consequences:** Sigue sin distinguirse si Bing no tiene datos recientes o aún no ha cargado los de un sitio recién añadido; el texto dice solo lo que se sabe. El umbral no se ha contrastado con más sitios reales.

@@ -3,7 +3,7 @@ import { getMessages, type Messages } from "@/i18n/messages";
 import type { PageRow, Period, QueryRow, Totals } from "@/modules/bing-webmaster/collect";
 import type { BingWebmasterConfig } from "@/modules/bing-webmaster/deps";
 import type { LatestBingWebmaster } from "@/modules/bing-webmaster/service";
-import { countChange, ctrChange, formatters, type MetricView } from "@/modules/search-console/summary";
+import { countChange, ctrChange, displayDay, formatters, type MetricView } from "@/modules/search-console/summary";
 
 /**
  * What the SEO page shows about Bing Webmaster Tools. Pure: it reads stored captures and the
@@ -11,6 +11,11 @@ import { countChange, ctrChange, formatters, type MetricView } from "@/modules/s
  * both sections keep the same Spanish format (D008). Failures are explained from their kind;
  * the stored message stays as a diagnostic.
  */
+
+/** Bing does not document its delay and updates searches weekly: two weeks behind the capture is no longer a delay (D012). */
+export const STALE_AFTER_DAYS = 14;
+
+const DAY_MS = 86_400_000;
 
 export type BingWebmasterState = "not_configured" | "invalid_config" | "no_data" | "processing" | "error" | "ok";
 
@@ -32,6 +37,8 @@ export interface BingWebmasterSummary {
   lastFailure: { text: string; at: Date } | null;
   /** Stored data stays visible when the key is later removed or broken; this says so (D009). */
   configWarning: string | null;
+  /** Set when the period ended long before the capture, because Bing has nothing newer (D012). */
+  staleNotice: string | null;
 }
 
 type Texts = Messages["bingWebmaster"];
@@ -99,6 +106,7 @@ export function summarizeBingWebmaster(
     pages: [],
     lastFailure: null,
     configWarning: null,
+    staleNotice: null,
   };
   const configReason =
     config.state === "not_configured" ? t.reasons.notConfigured : config.state === "invalid" ? t.reasons.invalidConfig[config.reason] : null;
@@ -118,9 +126,11 @@ export function summarizeBingWebmaster(
       configWarning: configReason ? `${configReason} ${t.reasons.storedData}` : null,
     };
     if (hasTraffic) {
+      const daysBehind = Math.floor((c.createdAt.getTime() - Date.parse(`${c.currentEnd}T00:00:00Z`)) / DAY_MS);
       return {
         ...captured,
         state: "ok",
+        staleNotice: daysBehind > STALE_AFTER_DAYS ? t.reasons.stale(displayDay(c.currentEnd!, locale)) : null,
         period: { start: c.currentStart!, end: c.currentEnd! },
         previousPeriod: c.previousStart && c.previousEnd ? { start: c.previousStart, end: c.previousEnd } : null,
         metrics: metricsOf(c.totals!, c.previousTotals!, messages.searchConsole, locale),

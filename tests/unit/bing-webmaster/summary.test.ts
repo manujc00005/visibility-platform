@@ -147,4 +147,30 @@ describe("summarizeBingWebmaster", () => {
       reason: "Pulsa «Traer datos de Bing» para ver cómo te encuentran en Bing.",
     });
   });
+
+  describe("stale figures (D012)", () => {
+    const behind = (createdAt: string) => summarizeBingWebmaster({ latest: completed({ createdAt: at(createdAt) }), latestCompleted: completed({ createdAt: at(createdAt) }) }, READY, "olessium.com");
+
+    it("stays quiet up to two weeks behind the capture", () => {
+      expect(behind("2026-10-28T10:00:00Z").staleNotice).toBeNull();
+      expect(behind("2026-11-09T23:00:00Z").staleNotice).toBeNull();
+    });
+
+    it("warns from the day after, naming the last day with data, and keeps the figures", () => {
+      const s = behind("2026-11-10T00:00:00Z");
+      expect(s.staleNotice).toBe("Bing no registra clics ni impresiones de este sitio desde el 26 oct 2026. Estas cifras son de esa fecha, no de ahora.");
+      expect(s.state).toBe("ok");
+      expect(s.metrics?.clicks.value).toBe("12");
+    });
+
+    it("does not apply without daily traffic", () => {
+      const stored = completed({ ...EMPTY, createdAt: at("2026-12-28T10:00:00Z") });
+      expect(summarizeBingWebmaster({ latest: stored, latestCompleted: stored }, READY, "olessium.com").staleNotice).toBeNull();
+    });
+
+    it("speaks English", () => {
+      const stored = completed({ createdAt: at("2026-12-28T10:00:00Z") });
+      expect(summarizeBingWebmaster({ latest: stored, latestCompleted: stored }, READY, "olessium.com", "en").staleNotice).toContain("Bing has recorded no clicks or impressions for this site since");
+    });
+  });
 });

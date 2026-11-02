@@ -73,6 +73,14 @@ describe("BingWebmasterSection", () => {
     expect(html).not.toContain(t.setup.verify);
   });
 
+  it("warns when the figures are months behind the capture (D012)", () => {
+    const old = completed({ createdAt: new Date("2027-04-28T10:00:00Z") });
+    const { s, html } = render(old, READY);
+    expect(s.staleNotice).not.toBeNull();
+    expect(html).toContain(s.staleNotice);
+    expect(render(completed(), READY).html).not.toContain("Estas cifras son de esa fecha");
+  });
+
   it("explains a partial success table by table", () => {
     const { html } = render(completed({ pages: [] }), READY);
     expect(html).toContain("ropa trail");

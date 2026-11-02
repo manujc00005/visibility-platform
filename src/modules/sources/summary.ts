@@ -74,7 +74,7 @@ export function summarizeSources(input: SourcesInput, locale: Locale = DEFAULT_L
     status: { tone: BING_TONE[b.state], label: m.bingWebmaster.status[b.state] },
     target: b.siteUrl,
     lastGood: b.capturedAt,
-    note: noteOf([b.lastFailure?.text, b.configWarning, b.reason]),
+    note: noteOf([b.lastFailure?.text, b.configWarning, b.reason, b.staleNotice]),
     action: { label: t.open.seo, href: `${base}/seo#bing-title` },
   };
 

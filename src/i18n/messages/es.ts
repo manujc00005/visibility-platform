@@ -853,6 +853,7 @@ export const es = {
       processing: "Bing todavía no tiene datos de este sitio. Tras verificarlo tarda hasta 48 horas en mostrarlos; vuelve a intentarlo más tarde.",
       noTraffic: "Bing todavía no tiene clics ni impresiones diarias de este sitio. Abajo están las búsquedas y páginas que ya tiene.",
       storedData: "Se muestran los datos de la última consulta guardada.",
+      stale: (end: string) => `Bing no registra clics ni impresiones de este sitio desde el ${end}. Estas cifras son de esa fecha, no de ahora.`,
     },
     failures: {
       no_access: (domain: string) =>

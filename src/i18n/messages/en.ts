@@ -846,6 +846,7 @@ export const en = {
       processing: "Bing has no data for this site yet. After verification it takes up to 48 hours to show it; try again later.",
       noTraffic: "Bing has no daily clicks or impressions for this site yet. The searches and pages it already has are below.",
       storedData: "Showing the data from the last stored check.",
+      stale: (end: string) => `Bing has recorded no clicks or impressions for this site since ${end}. These figures are from then, not from now.`,
     },
     failures: {
       no_access: (domain: string) =>

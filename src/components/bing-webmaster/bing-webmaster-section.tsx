@@ -1,6 +1,6 @@
 import { Search } from "lucide-react";
 import { StatusPill } from "@/components/audits/status-ui";
-import { ChangeLine, NoticeList } from "@/components/overview/overview-card";
+import { ChangeLine, NoticeList, type Notice } from "@/components/overview/overview-card";
 import { RefreshSearchConsoleButton } from "@/components/search-console/refresh-button";
 import { formatNumber } from "@/i18n/format";
 import type { Locale } from "@/i18n/locale";
@@ -106,10 +106,12 @@ export function BingWebmasterSection({
   // Without a usable key the action calls nothing, so the button is only offered when ready (D009).
   const canRun = config.state === "ready";
   const hasData = s.state === "ok";
-  const notices =
-    (hasData || s.state === "processing") && s.lastFailure
+  const notices: Notice[] = [
+    ...((hasData || s.state === "processing") && s.lastFailure
       ? [{ kind: "failed" as const, text: t.failures.lastAttempt(displayDate(s.lastFailure.at, locale), s.lastFailure.text) }]
-      : [];
+      : []),
+    ...(s.staleNotice ? [{ kind: "stale" as const, text: s.staleNotice }] : []),
+  ];
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-4 rounded-2xl border border-border/80 bg-card p-5 shadow-card">

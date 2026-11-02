@@ -93,6 +93,7 @@ const FUNCTION_CALLS: Record<string, unknown[][]> = {
   "analytics.keyEvents.noneConfigured": [["Actualizar datos"]],
   "bingWebmaster.setup.run": [["Traer datos de Bing"]],
   "bingWebmaster.reasons.noData": [["Traer datos de Bing"]],
+  "bingWebmaster.reasons.stale": [["25 abr 2026"]],
   "bingWebmaster.failures.no_access": [["olessium.com"]],
   "bingWebmaster.failures.verifiedSites": [[0], [1], [3]],
   "bingWebmaster.failures.not_verified": [["https://olessium.com/"]],

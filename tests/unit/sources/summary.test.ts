@@ -38,6 +38,7 @@ const bing = (over: Partial<BingWebmasterSummary> = {}): BingWebmasterSummary =>
   pages: [],
   lastFailure: null,
   configWarning: null,
+  staleNotice: null,
   ...over,
 });
 const analytics = (over: Partial<AnalyticsSummary> = {}): AnalyticsSummary => ({
@@ -141,6 +142,13 @@ describe("summarizeSources", () => {
     expect(rows[2]!.status).toEqual({ tone: "good", label: "Conectado" });
     expect(rows[2]!.target).toBe("Olessium web");
     expect(rows[2]!.note).toBeNull();
+  });
+
+  it("tells when Bing's figures are old, after anything else pending (D012 of 005)", () => {
+    const stale = "Bing no registra clics ni impresiones de este sitio desde el 25 abr 2026. Estas cifras son de esa fecha, no de ahora.";
+    const row = (over: Partial<BingWebmasterSummary>) => summarizeSources(input({ bing: { summary: bing({ state: "ok", reason: null, capturedAt: AT, staleNotice: stale, ...over }) } }))[1]!;
+    expect(row({}).note).toBe(stale);
+    expect(row({ lastFailure: { text: "Bing rechazó la clave.", at: AT } }).note).toBe("Bing rechazó la clave.");
   });
 
   it("puts the last failure first, then the configuration warning, then the reason (AC-003)", () => {
