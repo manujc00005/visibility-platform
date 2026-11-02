@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress (2026-11-02).
+Done (2026-11-02). T001–T007 hechas; revisiones de conformidad y de frontend/accesibilidad aplicadas (D005); AC-012 verificado en navegador sobre `dev` (Olessium, la clínica y la demo; 1280 y 375 px; `es` y `en`); unitarias 1229, integración 283 en solitario, lint, typecheck y build en verde.
 
 ## Problem
 
