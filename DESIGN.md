@@ -162,7 +162,7 @@ Una paleta casi monocroma de neutros fríos, con un acento violeta de identidad 
 
 ### Semáforo (estados)
 - **Bien** (`good`, `good-soft`, `good-line`), **Mejorable** (`fair`, …), **Mal** (`bad`, …) e **Información** (`info`, …). Cada tono tiene tres usos: texto e icono, fondo suave y línea o acento. Los tonos de texto mantienen un contraste de al menos 4,5:1 sobre su fondo suave y sobre blanco. El estado neutro («Sin datos», «No comprobado») usa Tinta Apagada sobre Niebla.
-- **Escala de veredictos.** El resumen usa una sola escala en las tres tarjetas: **Bien** (verde), **Mejorable** (ámbar), **Mal** (rojo), **Con mejoras** (información) y **Parcial** (neutro); la misma palabra siempre lleva el mismo tono. Las métricas de velocidad de las páginas de detalle conservan la terminología de Google (Bueno / Mejorable / Malo).
+- **Escala de veredictos.** El resumen usa una sola escala en sus tarjetas: **Bien** (verde), **Mejorable** (ámbar), **Mal** (rojo), **Con mejoras** (información) y **Parcial** (neutro); la misma palabra siempre lleva el mismo tono. Las métricas de velocidad de las páginas de detalle conservan la terminología de Google (Bueno / Mejorable / Malo).
 
 **La regla de la medición incompleta.** Que una medición esté incompleta es un dato sobre la captura, no un veredicto: «Parcial» va en neutro y nunca en ámbar. Solo hereda tono cuando lo que sí se midió ya tiene severidad («Mal (parcial)»).
 - **Destructivo** (`destructive`): solo para acciones que borran o invalidan, nunca para el estado de una métrica.
@@ -198,7 +198,7 @@ Una paleta casi monocroma de neutros fríos, con un acento violeta de identidad 
 
 Columna única centrada de `max-w-5xl` (64 rem), con márgenes laterales de 16 px en móvil y 24 px desde `sm`, y 32 px de aire vertical. La cabecera es fija, de 3,5 rem (`--header-height`), y `scroll-padding-top` evita que tape los destinos de ancla y el foco.
 
-El ritmo usa la escala de 4 px de Tailwind: 8–12 px dentro de los componentes, 16 px entre bloques relacionados, 24–32 px entre secciones. El resumen coloca las tres tarjetas en rejilla (una columna en móvil, tres en escritorio) con la misma altura; las páginas de detalle apilan secciones.
+El ritmo usa la escala de 4 px de Tailwind: 8–12 px dentro de los componentes, 16 px entre bloques relacionados, 24–32 px entre secciones. El resumen coloca hasta cuatro tarjetas en rejilla 2×2 en escritorio y una columna en móvil, con la misma altura por fila; con un número impar, la última ocupa las dos columnas para que ninguna quede sola. Solo las áreas con resultado tienen tarjeta; las demás van en la lista «Pendiente de medir» debajo. Las páginas de detalle apilan secciones.
 
 En móvil, las pestañas de la empresa se desplazan en horizontal sin barra visible, «Presencia en IA» se abrevia a «IA», el nombre de marca de la cabecera queda solo para lectores de pantalla y las acciones de la cabecera de página pasan debajo del título.
 
@@ -249,7 +249,13 @@ La pieza básica del semáforo: pastilla redonda con borde de línea, fondo suav
 - **Migas de pan:** texto pequeño en Tinta Apagada, separado por chevrones de 14 px.
 
 ### Overview card (componente propio)
-La tarjeta del resumen es un único enlace sin controles dentro. Arriba lleva el icono en un cuadrado Iris Velado de 36 px, el título y la pastilla de estado. Debajo, una frase que explica qué mide, la cifra en Display y las líneas de apoyo. Al final, un pie a sangre en Niebla con la fuente y la fecha a la izquierda y «Ver informe ›» en Iris a la derecha. Los cambios frente a la medición anterior se escriben con flecha y texto en el tono del semáforo; los avisos (actualizando, intento fallido, datos antiguos) van en Label con su icono.
+La tarjeta del resumen es un único enlace sin controles dentro. Arriba lleva el icono en un cuadrado Iris Velado de 36 px, el título y la pastilla de estado. Los títulos son preguntas del propietario («¿Cómo funciona tu web?», «¿Puede Google leer tu portada?», «¿Te encuentran en Google?», «¿Apareces en las respuestas de IA?»). Debajo, la cifra en Display y las líneas de apoyo. Al final, un pie a sangre en Niebla con la fuente y la fecha a la izquierda y «Ver informe ›» en Iris a la derecha. Los cambios frente a la medición anterior se escriben con flecha y texto en el tono del semáforo; los avisos (actualizando, intento fallido, datos antiguos) van en Label con su icono.
+
+### Situation line (componente propio)
+Una línea de texto bajo las pestañas del resumen: un fragmento por área, en el orden de las tarjetas, separados por un punto medio en escritorio y uno por línea en móvil. Tamaño Body a 1 rem, en Tinta. Sin pastillas, sin cifras y sin palabras que sumen áreas: cada fragmento repite en palabras el estado de su tarjeta. Sin ninguna área medida, no aparece.
+
+### Pending list (componente propio)
+La lista «Pendiente de medir»: un contenedor de 14 px de radio con fondo Blanco de Tarjeta al 60 %, filas separadas por filetes y, en cada una, el círculo discontinuo del estado neutro, la pregunta de la tarjeta en peso 500 y el motivo en Tinta Apagada. Es texto: no lleva enlaces, porque no hay informe detrás.
 
 ### Metric tile (componente propio)
 Tesela de 10 px de radio con acento izquierdo de 4 px en el tono del semáforo. Contiene la etiqueta en Label, el valor a 1,25 rem en semibold tabular, la pastilla con el veredicto y la referencia de lo que es «bueno».
@@ -265,6 +271,8 @@ Tesela de 10 px de radio con acento izquierdo de 4 px en el tono del semáforo. 
 - **Do** mostrar el foco visible en todo elemento interactivo (halo de 2–3 px).
 
 ### Don't:
+- **Don't** dar tarjeta completa a un área sin resultado: va a la lista «Pendiente de medir».
+- **Don't** poner acciones de operador en el resumen («Analizar portada», «Configurar»): viven en Configuración y en las páginas de detalle.
 - **Don't** usar Iris ni Tinta Iris para indicar que algo va bien o mal.
 - **Don't** usar bordes de color por métrica en las tarjetas del resumen; el color de estado vive en la pastilla y en el texto.
 - **Don't** mostrar una puntuación compuesta ni un cero sin denominador.

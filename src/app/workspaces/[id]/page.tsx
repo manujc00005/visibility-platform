@@ -1,10 +1,7 @@
-import { Gauge, Search, Sparkles } from "lucide-react";
+import { Gauge, ScanSearch, Search, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
-import { RunAuditButton } from "@/components/audits/run-audit-button";
-import { StatusPill } from "@/components/audits/status-ui";
 import {
   Opportunities,
   OpportunityLead,
@@ -15,9 +12,10 @@ import {
   type Notice,
 } from "@/components/overview/overview-card";
 import { PageHeader } from "@/components/overview/page-header";
+import { PendingList } from "@/components/overview/pending-list";
+import { SituationLine } from "@/components/overview/situation-line";
 import { GoalLine } from "@/components/workspaces/goal-line";
 import { WorkspaceNav } from "@/components/overview/workspace-nav";
-import { buttonVariants } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
 import { getMessages, type Messages } from "@/i18n/messages";
@@ -35,20 +33,28 @@ import {
   buildOpportunities,
   overviewOriginalText,
   splitAudits,
+  AREAS,
+  hasResult,
+  isEvaluated,
+  isScored,
+  pendingRows,
+  situationLine,
   summarizeAi,
-  summarizeGoogleCard,
   summarizePerformance,
+  summarizeRankingCard,
   summarizeSeo,
+  summarizeTechnicalCard,
   type AiSummary,
+  type AreaSummaries,
   type Attempt,
   type FindingsByAudit,
-  type GoogleCardSummary,
   type PerformanceSummary,
+  type RankingCardSummary,
   type Stale,
+  type TechnicalCardSummary,
 } from "@/modules/overview";
 import { displayDate, displayDomain } from "@/modules/workspaces/presentation";
 import { getWorkspace } from "@/modules/workspaces/service";
-import { runAuditAction } from "./audits/actions";
 
 export async function generateMetadata(): Promise<Metadata> {
   return { title: getMessages(await getLocale()).overview.metaTitle };
@@ -61,14 +67,6 @@ export async function generateMetadata(): Promise<Metadata> {
 export const instant = false;
 
 type OverviewTexts = Messages["overview"];
-
-const STATE_TONE = {
-  not_configured: "neutral",
-  no_data: "neutral",
-  analyzing: "neutral",
-  partial: "neutral",
-  error: "bad",
-} as const;
 
 function notices(
   attempt: Attempt | { status: "running" | "failed"; text: string } | null,
@@ -86,9 +84,10 @@ function notices(
   return list;
 }
 
+/** A text headline. Block-level with its own leading: inside the Display wrapper a wrapped line would inherit its 36px strut. */
 function Muted({ children }: { children: React.ReactNode }) {
   return (
-    <span className="text-xl font-medium text-muted-foreground">
+    <span className="block text-xl leading-snug font-medium text-muted-foreground">
       {children}
     </span>
   );
@@ -98,6 +97,7 @@ function Line({ children }: { children: React.ReactNode }) {
   return <p className="text-sm text-muted-foreground">{children}</p>;
 }
 
+/** Rendered only with a score (023 FR-003); without one the area is a row of the pending list. */
 function PerformanceCard({
   workspaceId,
   s,
@@ -105,62 +105,38 @@ function PerformanceCard({
   t,
 }: {
   workspaceId: string;
-  s: PerformanceSummary;
+  s: PerformanceSummary & { score: number };
   locale: Locale;
   t: OverviewTexts;
 }) {
   const c = t.cards.performance;
-  // Without a score the measurement simply did not happen: "No medida", not "Parcial" nor "Sin configurar" (014, D004).
-  const status =
-    s.state === "ok"
-      ? { tone: s.tone, label: t.verdict[s.tone] }
-      : s.state === "partial" || s.state === "not_configured"
-        ? { tone: STATE_TONE.not_configured, label: t.states.not_measured }
-        : { tone: STATE_TONE[s.state], label: t.states[s.state] };
   return (
     <OverviewCard
       id="card-performance"
       href={`/workspaces/${workspaceId}/performance`}
       icon={Gauge}
       title={c.title}
-      status={status}
+      status={{ tone: s.tone, label: t.verdict[s.tone] }}
       headline={
-        s.score !== null ? (
-          <>
-            {s.score}
-            <span className="text-base font-normal text-muted-foreground">
-              /100
-            </span>
-          </>
-        ) : (
-          <Muted>
-            {s.state === "analyzing"
-              ? c.analyzing
-              : s.state === "error"
-                ? c.noResult
-                : c.notMeasured}
-          </Muted>
-        )
+        <>
+          {s.score}
+          <span className="text-base font-normal text-muted-foreground">
+            /100
+          </span>
+        </>
       }
       notices={notices(s.attempt, s.stale)}
       source={c.source(
-        s.measuredAt
-          ? displayDate(s.measuredAt, locale)
-          : s.state === "error" || s.state === "analyzing"
-            ? c.noResultShort
-            : c.notMeasuredShort,
+        s.measuredAt ? displayDate(s.measuredAt, locale) : c.noResultShort,
       )}
       cta={t.viewReport}
     >
-      {s.score !== null ? <Line>{c.labNote}</Line> : null}
-      {s.reason ? <Line>{s.reason}</Line> : null}
+      <Line>{c.labNote}</Line>
       <ChangeLine change={s.change} note={s.comparisonNote} />
       {s.topIssue ? (
         <p className="text-sm">
           <span className="text-muted-foreground">
-            {s.state === "ok" && s.tone === "good"
-              ? c.topIssueGood
-              : c.topIssue}{" "}
+            {s.tone === "good" ? c.topIssueGood : c.topIssue}{" "}
           </span>
           <span lang={s.topIssueOriginal ? DEFAULT_LOCALE : undefined}>
             {s.topIssue}
@@ -171,22 +147,62 @@ function PerformanceCard({
   );
 }
 
-/** Search Console first; the technical health of the home page as a labelled block apart (014, D001). */
-function SeoCard({
+/** «¿Puede Google leer tu portada?»: the audit verdict, with critical problems as the one figure (023 D001). */
+function TechnicalCard({
   workspaceId,
-  g,
+  h,
   t,
 }: {
   workspaceId: string;
-  g: GoogleCardSummary;
+  h: TechnicalCardSummary & { counts: NonNullable<TechnicalCardSummary["counts"]> };
+  t: OverviewTexts;
+}) {
+  const c = t.cards.seo.technical;
+  return (
+    <OverviewCard
+      id="card-technical"
+      href={`/workspaces/${workspaceId}/seo#health-title`}
+      icon={ScanSearch}
+      title={c.title}
+      status={h.status}
+      headline={
+        <>
+          {h.counts.critical}
+          {/* A real space, so assistive tech reads "2 críticos", not "2críticos". */}
+          <span className="ml-1 text-base font-normal text-muted-foreground">
+            {" "}
+            {c.critical(h.counts.critical)}
+          </span>
+        </>
+      }
+      notices={h.notices}
+      source={h.source}
+      cta={t.viewReport}
+    >
+      <p className="text-sm text-muted-foreground tabular-nums">
+        {h.counts.warning} {c.warning(h.counts.warning)}
+      </p>
+      {h.reason ? <Line>{h.reason}</Line> : null}
+      <ChangeLine change={h.change} note={h.comparisonNote} />
+    </OverviewCard>
+  );
+}
+
+/** «¿Te encuentran en Google?»: Search Console figures, never a verdict (014 D002). */
+function RankingCard({
+  workspaceId,
+  r,
+  t,
+}: {
+  workspaceId: string;
+  r: RankingCardSummary;
   t: OverviewTexts;
 }) {
   const c = t.cards.seo;
-  const { ranking: r, technical: h } = g;
   return (
     <OverviewCard
-      id="card-seo"
-      href={`/workspaces/${workspaceId}/seo`}
+      id="card-ranking"
+      href={`/workspaces/${workspaceId}/seo#results-title`}
       icon={Search}
       title={c.title}
       status={r.status}
@@ -213,38 +229,12 @@ function SeoCard({
           <Muted>{r.headline.text}</Muted>
         )
       }
-      notices={g.notices}
-      source={g.source}
+      notices={r.notices}
+      source={r.source}
       cta={t.viewReport}
     >
       <ChangeLine change={r.change} note={r.changeNote} />
       {r.line ? <Line>{r.line}</Line> : null}
-      <div className="mt-1 flex flex-col gap-1 rounded-lg bg-muted/50 p-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-xs font-semibold">{h.title}</span>
-          <StatusPill tone={h.status.tone}>{h.status.label}</StatusPill>
-        </div>
-        {h.counts ? (
-          <p className="text-sm tabular-nums">
-            <span className="font-semibold">{h.counts.critical}</span>{" "}
-            {c.technical.critical(h.counts.critical)} ·{" "}
-            <span className="font-semibold">{h.counts.warning}</span>{" "}
-            {c.technical.warning(h.counts.warning)}
-          </p>
-        ) : null}
-        {/* With counts the verdict is already in the pill; the sentence explains only why there are none. */}
-        {h.counts ? null : (
-          <p className="text-xs text-muted-foreground">{h.headline}</p>
-        )}
-        {h.reason ? (
-          <p className="text-xs text-muted-foreground">{h.reason}</p>
-        ) : null}
-        <ChangeLine
-          change={h.change}
-          note={h.comparisonNote}
-          className="text-xs"
-        />
-      </div>
     </OverviewCard>
   );
 }
@@ -259,6 +249,7 @@ const AI_TONE = {
   no_data: "neutral",
 } as const satisfies Record<AiSummary["state"], Tone>;
 
+/** Rendered only with evaluated questions (023 FR-003). */
 function AiCard({
   workspaceId,
   s,
@@ -266,18 +257,15 @@ function AiCard({
   t,
 }: {
   workspaceId: string;
-  s: AiSummary;
+  s: AiSummary & { coverage: NonNullable<AiSummary["coverage"]> };
   locale: Locale;
   t: OverviewTexts;
 }) {
   const c = t.cards.ai;
-  const toSetup =
-    s.coverage === null &&
-    (s.state === "not_configured" || s.state === "no_data");
   return (
     <OverviewCard
       id="card-ai"
-      href={`/workspaces/${workspaceId}/geo${toSetup ? "/setup" : ""}`}
+      href={`/workspaces/${workspaceId}/geo`}
       icon={Sparkles}
       title={c.title}
       status={{
@@ -288,43 +276,23 @@ function AiCard({
             : t.states[s.state],
       }}
       headline={
-        s.coverage && s.coverage.n > 0 ? (
-          <>
-            {s.coverage.k}
-            <span className="text-base font-normal text-muted-foreground">
-              {" "}
-              {c.ofQuestions(s.coverage.n)}
-            </span>
-          </>
-        ) : (
-          <Muted>
-            {s.coverage
-              ? c.noData
-              : s.state === "analyzing"
-                ? c.collecting
-                : s.state === "error"
-                  ? c.noResult
-                  : s.state === "not_configured"
-                    ? c.noQuestions
-                    : c.pending}
-          </Muted>
-        )
+        <>
+          {s.coverage.k}
+          <span className="text-base font-normal text-muted-foreground">
+            {" "}
+            {c.ofQuestions(s.coverage.n)}
+          </span>
+        </>
       }
       notices={notices(s.attempt, s.stale, s.setupNotice)}
       source={c.source(
         s.measuredAt && s.provider
           ? `${s.provider} · ${displayDate(s.measuredAt, locale)}`
-          : s.state === "error" || s.state === "analyzing"
-            ? c.noResultShort
-            : c.noMeasurementsShort,
+          : c.noResultShort,
       )}
-      cta={toSetup ? c.configure : t.viewReport}
+      cta={t.viewReport}
     >
-      {s.coverage && s.coverage.n > 0 ? (
-        <Line>{c.sampleNote}</Line>
-      ) : s.reason ? (
-        <Line>{s.reason}</Line>
-      ) : null}
+      <Line>{c.sampleNote}</Line>
       {s.citing && s.citing.n > 0 ? (
         <Line>{c.cited(s.citing.k, s.citing.n)}</Line>
       ) : null}
@@ -406,7 +374,11 @@ export default async function WorkspacePage({
     workspace.domain,
     locale,
   );
-  const google = summarizeGoogleCard(gsc, seo, now, locale);
+  const ranking = summarizeRankingCard(gsc, now, locale);
+  const technical = summarizeTechnicalCard(seo, locale);
+  const areas: AreaSummaries = { performance, seo, gsc, ai };
+  const situation = situationLine(areas, now, locale);
+  const pending = pendingRows(areas, locale);
   const opportunities = buildOpportunities(
     { findings: latestFindings, seo, performance, ai, context },
     locale,
@@ -423,7 +395,6 @@ export default async function WorkspacePage({
           .join(" ")
       : null;
   const domain = displayDomain(workspace.domain);
-  const [emptyBefore, emptyAfter] = t.emptyAction.split("{link}");
 
   return (
     <div className="flex flex-col gap-8">
@@ -440,21 +411,6 @@ export default async function WorkspacePage({
               {workspace.city ? ` · ${workspace.city}` : ""}
             </>
           }
-          actions={
-            <>
-              <RunAuditButton
-                workspaceId={workspace.id}
-                action={runAuditAction.bind(null, workspace.id)}
-                labels={m.audits.runButton}
-              />
-              <Link
-                href={`/workspaces/${workspace.id}/edit`}
-                className={buttonVariants({ variant: "outline" })}
-              >
-                {t.edit}
-              </Link>
-            </>
-          }
         />
         <WorkspaceNav
           workspaceId={workspace.id}
@@ -463,23 +419,44 @@ export default async function WorkspacePage({
         />
       </div>
 
-      <GoalLine view={goalView} workspaceId={workspace.id} locale={locale} />
+      <SituationLine fragments={situation} locale={locale} />
 
       <OpportunityLead list={opportunities} locale={locale} />
 
-      <section
-        aria-label={t.sectionLabel}
-        className="grid grid-cols-1 gap-4 lg:grid-cols-3"
-      >
-        <PerformanceCard
-          workspaceId={workspace.id}
-          s={performance}
-          locale={locale}
-          t={t}
-        />
-        <SeoCard workspaceId={workspace.id} g={google} t={t} />
-        <AiCard workspaceId={workspace.id} s={ai} locale={locale} t={t} />
-      </section>
+      <GoalLine view={goalView} workspaceId={workspace.id} locale={locale} />
+
+      {/* Full cards only for areas with a result; with an odd count the last one spans both columns, so none is left alone. */}
+      {AREAS.some((area) => hasResult(area, areas)) ? (
+        <section
+          aria-label={t.sectionLabel}
+          className="grid grid-cols-1 gap-4 md:grid-cols-2 md:[&>*:last-child:nth-child(odd)]:col-span-2"
+        >
+          {/* The same guards `hasResult` uses (D003), so a card and its pending row can never both show. */}
+          {isScored(performance) ? (
+            <PerformanceCard
+              workspaceId={workspace.id}
+              s={performance}
+              locale={locale}
+              t={t}
+            />
+          ) : null}
+          {hasResult("technical", areas) && technical.counts ? (
+            <TechnicalCard
+              workspaceId={workspace.id}
+              h={{ ...technical, counts: technical.counts }}
+              t={t}
+            />
+          ) : null}
+          {hasResult("ranking", areas) ? (
+            <RankingCard workspaceId={workspace.id} r={ranking} t={t} />
+          ) : null}
+          {isEvaluated(ai) ? (
+            <AiCard workspaceId={workspace.id} s={ai} locale={locale} t={t} />
+          ) : null}
+        </section>
+      ) : null}
+
+      <PendingList rows={pending} locale={locale} />
 
       {notice ? (
         <p
@@ -494,18 +471,6 @@ export default async function WorkspacePage({
         workspaceId={workspace.id}
         list={opportunities}
         locale={locale}
-        emptyAction={
-          <p className="text-sm text-muted-foreground">
-            {emptyBefore}
-            <Link
-              href={`/workspaces/${workspace.id}/geo/setup`}
-              className="font-medium text-foreground underline underline-offset-4"
-            >
-              {t.emptyActionLink}
-            </Link>
-            {emptyAfter}
-          </p>
-        }
       />
     </div>
   );

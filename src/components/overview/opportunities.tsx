@@ -10,12 +10,11 @@ import { displayDate } from "@/modules/workspaces/presentation";
 
 const PRIORITY_TONE: Record<Priority, Tone> = { high: "bad", medium: "fair", low: "info" };
 
-function Empty({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
+function Empty({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="flex flex-col items-start gap-3 rounded-2xl border border-dashed bg-card/60 p-6">
       <p className="font-medium">{title}</p>
       <p className="max-w-2xl text-sm text-muted-foreground">{children}</p>
-      {action}
     </div>
   );
 }
@@ -67,12 +66,10 @@ export function OpportunityLead({ list, locale }: { list: OpportunityList; local
 export function Opportunities({
   workspaceId,
   list,
-  emptyAction,
   locale,
 }: {
   workspaceId: string;
   list: OpportunityList;
-  emptyAction?: ReactNode;
   locale: Locale;
 }) {
   const m = getMessages(locale);
@@ -87,9 +84,7 @@ export function Opportunities({
       </div>
 
       {list.evidence === "none" ? (
-        <Empty title={t.noneTitle} action={emptyAction}>
-          {t.noneBody}
-        </Empty>
+        <Empty title={t.noneTitle}>{t.noneBody}</Empty>
       ) : (
         <>
           {list.evidence === "partial" ? (
@@ -126,7 +121,7 @@ export function Opportunities({
                     <h3 id={`opportunity-${o.kind}`} tabIndex={-1} className="text-base font-semibold tracking-tight outline-none">
                       {o.title}
                     </h3>
-                    <dl className="grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
+                    <dl className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
                       <div className="flex flex-col gap-0.5">
                         <dt className="text-xs font-medium text-muted-foreground">{t.what}</dt>
                         <dd className="break-words" lang={o.original ? DEFAULT_LOCALE : undefined}>
@@ -136,6 +131,11 @@ export function Opportunities({
                       <div className="flex flex-col gap-0.5">
                         <dt className="text-xs font-medium text-muted-foreground">{t.why}</dt>
                         <dd>{o.why}</dd>
+                      </div>
+                      {/* Who first, then what that person has to do: the owner may not be the one doing it (023). */}
+                      <div className="flex flex-col gap-0.5">
+                        <dt className="text-xs font-medium text-muted-foreground">{t.who}</dt>
+                        <dd>{t.whoText}</dd>
                       </div>
                       <div className="flex flex-col gap-0.5">
                         <dt className="text-xs font-medium text-muted-foreground">{t.action}</dt>
@@ -156,6 +156,7 @@ export function Opportunities({
                       <span>
                         {o.sourceLabel} · {displayDate(o.measuredAt, locale)}
                       </span>
+                      {/* Reserved: «Pedir propuesta de mejora» goes here, next to the detail link, once Módulo F exists (doc 03). Not rendered before. */}
                       <Link
                         href={`/workspaces/${workspaceId}${o.href}`}
                         className="inline-flex items-center gap-0.5 rounded-sm font-medium text-brand hover:underline focus-visible:ring-2 focus-visible:ring-foreground/60 focus-visible:outline-none"
