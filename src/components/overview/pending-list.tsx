@@ -1,13 +1,7 @@
 import { CircleDashed } from "lucide-react";
 import type { Locale } from "@/i18n/locale";
 import { getMessages } from "@/i18n/messages";
-
-export interface PendingRow {
-  /** The card's question, so the row reads as the same area. */
-  title: string;
-  /** Why there is no result yet, in the owner's voice. */
-  reason: string;
-}
+import type { PendingRow } from "@/modules/overview";
 
 /**
  * Areas without a result (feature 023): one compact row each instead of a card. Text only, no
@@ -21,9 +15,10 @@ export function PendingList({ rows, locale }: { rows: PendingRow[]; locale: Loca
       <h2 id="pending-title" className="text-sm font-semibold tracking-tight text-muted-foreground">
         {t.title}
       </h2>
-      <ul className="flex flex-col divide-y divide-border/70 rounded-xl border border-border/80 bg-card/60">
+      {/* `role="list"`: WebKit drops list semantics from a list without bullets. */}
+      <ul role="list" className="flex flex-col divide-y divide-border/70 rounded-xl border border-border/80 bg-card/60">
         {rows.map((row) => (
-          <li key={row.title} className="flex items-start gap-2.5 px-4 py-3 text-sm">
+          <li key={row.area} className="flex items-start gap-2.5 px-4 py-3 text-sm">
             <CircleDashed aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <p>
               <span className="font-medium">{row.title}</span> <span className="text-muted-foreground">{row.reason}</span>

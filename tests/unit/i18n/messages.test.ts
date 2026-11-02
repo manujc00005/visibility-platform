@@ -46,7 +46,7 @@ const FUNCTION_CALLS: Record<string, unknown[][]> = {
   "overview.cards.seo.technical.warning": [[1], [2]],
   "overview.cards.seo.technical.source": [["28 oct 2026, 10:27"]],
   "overview.cards.seo.source": [["27 oct 2026, 13:34"]],
-  "overview.situation.stale": [["Tu web carga bien en móvil", 1], ["Tu web carga bien en móvil", 31]],
+  "overview.situation.stale": [["En la prueba de Google en móvil, tu web va bien"]],
   "overview.cards.ai.ofQuestions": [[1], [3]],
   "overview.cards.ai.cited": [[1, 1], [2, 5]],
   "overview.cards.ai.source": [["Captura asistida · 27 oct 2026, 13:34"]],

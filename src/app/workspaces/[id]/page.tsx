@@ -12,7 +12,7 @@ import {
   type Notice,
 } from "@/components/overview/overview-card";
 import { PageHeader } from "@/components/overview/page-header";
-import { PendingList, type PendingRow } from "@/components/overview/pending-list";
+import { PendingList } from "@/components/overview/pending-list";
 import { SituationLine } from "@/components/overview/situation-line";
 import { GoalLine } from "@/components/workspaces/goal-line";
 import { WorkspaceNav } from "@/components/overview/workspace-nav";
@@ -35,6 +35,9 @@ import {
   splitAudits,
   AREAS,
   hasResult,
+  isEvaluated,
+  isScored,
+  pendingRows,
   situationLine,
   summarizeAi,
   summarizePerformance,
@@ -42,7 +45,6 @@ import {
   summarizeSeo,
   summarizeTechnicalCard,
   type AiSummary,
-  type Area,
   type AreaSummaries,
   type Attempt,
   type FindingsByAudit,
@@ -299,29 +301,6 @@ function AiCard({
   );
 }
 
-/** Why an area has no result yet, from the same state as its card would use (023 D003). */
-function pendingRow(area: Area, s: AreaSummaries, t: OverviewTexts): PendingRow {
-  const p = t.pending;
-  switch (area) {
-    case "performance": {
-      const r = p.performance;
-      return { title: t.cards.performance.title, reason: s.performance.state === "analyzing" ? r.analyzing : s.performance.state === "error" ? r.error : r.waiting };
-    }
-    case "technical": {
-      const r = p.technical;
-      return { title: t.cards.seo.technical.title, reason: s.seo.state === "analyzing" ? r.analyzing : s.seo.state === "error" ? r.error : r.waiting };
-    }
-    case "ranking": {
-      const r = p.ranking;
-      return { title: t.cards.seo.title, reason: s.gsc.state === "error" ? r.error : s.gsc.state === "no_data" ? r.noData : r.waiting };
-    }
-    case "ai": {
-      const r = p.ai;
-      return { title: t.cards.ai.title, reason: s.ai.state === "analyzing" ? r.analyzing : s.ai.state === "error" ? r.error : r.waiting };
-    }
-  }
-}
-
 export default async function WorkspacePage({
   params,
 }: PageProps<"/workspaces/[id]">) {
@@ -399,7 +378,7 @@ export default async function WorkspacePage({
   const technical = summarizeTechnicalCard(seo, locale);
   const areas: AreaSummaries = { performance, seo, gsc, ai };
   const situation = situationLine(areas, now, locale);
-  const pending = AREAS.filter((area) => !hasResult(area, areas)).map((area) => pendingRow(area, areas, t));
+  const pending = pendingRows(areas, locale);
   const opportunities = buildOpportunities(
     { findings: latestFindings, seo, performance, ai, context },
     locale,
@@ -452,15 +431,16 @@ export default async function WorkspacePage({
           aria-label={t.sectionLabel}
           className="grid grid-cols-1 gap-4 md:grid-cols-2 md:[&>*:last-child:nth-child(odd)]:col-span-2"
         >
-          {performance.score !== null ? (
+          {/* The same guards `hasResult` uses (D003), so a card and its pending row can never both show. */}
+          {isScored(performance) ? (
             <PerformanceCard
               workspaceId={workspace.id}
-              s={{ ...performance, score: performance.score }}
+              s={performance}
               locale={locale}
               t={t}
             />
           ) : null}
-          {technical.counts ? (
+          {hasResult("technical", areas) && technical.counts ? (
             <TechnicalCard
               workspaceId={workspace.id}
               h={{ ...technical, counts: technical.counts }}
@@ -470,13 +450,8 @@ export default async function WorkspacePage({
           {hasResult("ranking", areas) ? (
             <RankingCard workspaceId={workspace.id} r={ranking} t={t} />
           ) : null}
-          {ai.coverage && ai.coverage.n > 0 ? (
-            <AiCard
-              workspaceId={workspace.id}
-              s={{ ...ai, coverage: ai.coverage }}
-              locale={locale}
-              t={t}
-            />
+          {isEvaluated(ai) ? (
+            <AiCard workspaceId={workspace.id} s={ai} locale={locale} t={t} />
           ) : null}
         </section>
       ) : null}

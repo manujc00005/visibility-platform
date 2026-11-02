@@ -49,7 +49,7 @@ const both = (gsc: ReturnType<typeof gscOf>, seo: ReturnType<typeof seoClean>, n
   technical: summarizeTechnicalCard(seo, locale),
 });
 
-describe("summarizeGoogleCard: ranking states (AC-002, AC-003)", () => {
+describe("summarizeRankingCard: Search Console states (014 AC-002, AC-003)", () => {
   it("puts clicks and impressions first when there are impressions, with the clicks change", () => {
     const g = both(gscOf(snapshot()), seoClean(), NOW);
     expect(g.ranking.status).toEqual({ tone: "neutral", label: "Medido" });
@@ -96,7 +96,7 @@ describe("summarizeGoogleCard: ranking states (AC-002, AC-003)", () => {
   });
 });
 
-describe("summarizeGoogleCard: technical block and notices (AC-002, AC-004)", () => {
+describe("summarizeTechnicalCard and the notices of each card (014 AC-002, AC-004)", () => {
   it("keeps the audit severity, the partial suffix and the empty states of the old card", () => {
     const bad = audit({ at: daysAgo(1) });
     const g = both(gscOf(snapshot()), summarizeSeo([bad], { [bad.id]: [finding({ severity: "critical", category: "indexability" })] }, NOW), NOW);
@@ -110,7 +110,6 @@ describe("summarizeGoogleCard: technical block and notices (AC-002, AC-004)", ()
     const none = both(gscOf(snapshot()), summarizeSeo([], {}, NOW), NOW);
     expect(none.technical.status).toEqual({ tone: "neutral", label: "Sin datos" });
     expect(none.technical.counts).toBeNull();
-    expect(none.technical.headline).toBe("Sin auditoría");
     expect(none.technical.source).toBe("Auditoría técnica de la portada · sin auditar");
     expect(none.ranking.source).toBe(`Search Console · ${new Intl.DateTimeFormat("es-ES", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Madrid" }).format(daysAgo(1))}`);
   });
@@ -150,7 +149,7 @@ describe("summarizeGoogleCard: technical block and notices (AC-002, AC-004)", ()
   });
 });
 
-describe("summarizeGoogleCard: remaining states and edge cases (review DOM-06)", () => {
+describe("Google cards: remaining states and edge cases (014 review DOM-06)", () => {
   const INVALID = { state: "invalid" as const, reason: "not_json" as const };
   const gscWith = (latest: SearchConsoleSnapshot | null, latestCompleted: SearchConsoleSnapshot | null, config: Parameters<typeof summarizeSearchConsole>[1] = READY) =>
     summarizeSearchConsole({ latest, latestCompleted }, config, "olessium.com");
@@ -189,11 +188,11 @@ describe("summarizeGoogleCard: remaining states and edge cases (review DOM-06)",
   it("explains a technical block that is analysing or failed without a prior result", () => {
     const running = audit({ at: daysAgo(0), status: "running" });
     const analyzing = both(gscOf(snapshot()), summarizeSeo([running], {}, NOW), NOW);
-    expect(analyzing.technical).toMatchObject({ status: { tone: "neutral", label: "Analizando" }, counts: null, headline: "Analizando…" });
+    expect(analyzing.technical).toMatchObject({ status: { tone: "neutral", label: "Analizando" }, counts: null });
     expect(analyzing.technical.source).toBe("Auditoría técnica de la portada · sin resultado");
     const failed = audit({ at: daysAgo(0), status: "failed" });
     const error = both(gscOf(snapshot()), summarizeSeo([failed], {}, NOW), NOW);
-    expect(error.technical).toMatchObject({ status: { tone: "bad", label: "Error" }, counts: null, headline: "Sin resultado" });
+    expect(error.technical).toMatchObject({ status: { tone: "bad", label: "Error" }, counts: null });
     expect(error.technical.source).toBe("Auditoría técnica de la portada · sin resultado");
   });
 });

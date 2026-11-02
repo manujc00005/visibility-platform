@@ -41,9 +41,8 @@ export interface RankingCardSummary {
 export interface TechnicalCardSummary {
   state: SeoSummary["state"];
   status: CardStatus;
+  /** Null without an audit result: the page then shows a pending row instead of this card. */
   counts: { critical: number; warning: number } | null;
-  /** The audit verdict, or why there is none. */
-  headline: string;
   change: Change | null;
   comparisonNote: string | null;
   reason: string | null;
@@ -55,6 +54,10 @@ export interface TechnicalCardSummary {
 const RANKING_TONE: Record<SearchConsoleState, Tone> = { ok: "neutral", empty: "neutral", no_data: "neutral", not_configured: "neutral", invalid_config: "neutral", error: "bad" };
 const SEO_STATE_TONE: Record<Exclude<SeoSummary["state"], "ok">, Tone> = { not_configured: "neutral", no_data: "neutral", analyzing: "neutral", partial: "neutral", error: "bad" };
 
+/**
+ * Total over every Search Console state, although the overview only draws this card for "ok" and
+ * "empty" (023 FR-003): the other states keep their status and text for any other reader.
+ */
 export function summarizeRankingCard(gsc: SearchConsoleSummary, now: Date, locale: Locale = DEFAULT_LOCALE): RankingCardSummary {
   const t = getMessages(locale).overview;
   const c = t.cards.seo;
@@ -117,7 +120,6 @@ export function summarizeTechnicalCard(seo: SeoSummary, locale: Locale = DEFAULT
     state: seo.state,
     status,
     counts: seo.headline ? { critical: seo.counts.critical, warning: seo.counts.warning } : null,
-    headline: seo.headline?.title ?? (seo.state === "analyzing" ? c.analyzing : seo.state === "error" ? c.noResult : c.noAudit),
     change: seo.change,
     comparisonNote: seo.comparisonNote,
     reason: seo.reason,

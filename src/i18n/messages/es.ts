@@ -381,16 +381,12 @@ export const es = {
     cards: {
       performance: {
         title: "¿Cómo funciona tu web?",
-        analyzing: "Analizando…",
-        noResult: "Sin resultado",
-        notMeasured: "No medida",
         labNote: "Puntuación de Google en un móvil simulado, no la experiencia de todos tus visitantes.",
         topIssue: "Principal problema:",
         /** Under a good verdict the slowest point is not a problem, only the biggest margin left. */
         topIssueGood: "Lo que más podría mejorar:",
         source: (when: string) => `PageSpeed Insights · ${when}`,
         noResultShort: "sin resultado",
-        notMeasuredShort: "sin medir",
       },
       seo: {
         title: "¿Te encuentran en Google?",
@@ -411,9 +407,6 @@ export const es = {
           title: "¿Puede Google leer tu portada?",
           critical: (n: number): string => (n === 1 ? "crítico" : "críticos"),
           warning: (n: number): string => (n === 1 ? "importante" : "importantes"),
-          analyzing: "Analizando…",
-          noResult: "Sin resultado",
-          noAudit: "Sin auditoría",
           source: (when: string) => `Auditoría técnica de la portada · ${when}`,
           noResultShort: "sin resultado",
           notAuditedShort: "sin auditar",
@@ -427,26 +420,22 @@ export const es = {
         /** The two states whose word differs from the shared vocabulary (D004); the rest come from `overview.states`. */
         status: { analyzing: "Recogiendo respuestas", no_data: "Sin mediciones" },
         ofQuestions: (n: number) => `de ${n} ${n === 1 ? "pregunta" : "preguntas"}`,
-        noData: "Sin datos",
-        collecting: "Recogiendo…",
-        noResult: "Sin resultado",
-        noQuestions: "Sin preguntas",
-        pending: "Pendiente de medir",
         sampleNote: "Preguntas monitorizadas en las que ChatGPT te mencionó, de las que obtuvieron respuesta válida. Es una muestra, no el total de búsquedas en IA.",
         cited: (k: number, n: number) => `Tu web aparece citada como fuente en ${k} de ${n} ${n === 1 ? "respuesta" : "respuestas"}.`,
         source: (detail: string) => `Medición en ChatGPT · ${detail}`,
         noResultShort: "sin resultado",
-        noMeasurementsShort: "sin mediciones",
       },
     },
     /** One line above the cards (feature 023): one fragment per area, taken from that card's state (D003). Never figures, never a word that adds areas up. */
     situation: {
       label: "Dónde estás",
-      stale: (text: string, days: number) => `${text} (datos de hace ${days} ${days === 1 ? "día" : "días"})`,
+      /** Without the number: the card's notice carries it, and the line carries no figures. */
+      stale: (text: string) => `${text} (datos de hace más de un mes)`,
+      /** About Google's mobile test, as the card says: not the experience of every visitor. */
       performance: {
-        good: "Tu web carga bien en móvil",
-        fair: "Tu web carga con lentitud en móvil",
-        bad: "Tu web carga muy despacio en móvil",
+        good: "En la prueba de Google en móvil, tu web va bien",
+        fair: "En la prueba de Google en móvil, tu web podría ir más rápido",
+        bad: "En la prueba de Google en móvil, tu web va lenta",
         notMeasured: "La velocidad de tu web aún no se ha medido",
         analyzing: "Estamos midiendo la velocidad de tu web",
         error: "No se pudo medir la velocidad de tu web",
@@ -474,7 +463,7 @@ export const es = {
         some: "ChatGPT te menciona en algunas de las preguntas medidas",
         none: "ChatGPT no te mencionó en las preguntas medidas",
         partial: "La medición en IA quedó incompleta",
-        notMeasured: "En IA aún no hemos medido",
+        notMeasured: "Aún no hemos medido tu presencia en IA",
         analyzing: "Estamos midiendo tu presencia en IA",
         error: "No se pudo medir tu presencia en IA",
       },
@@ -482,7 +471,7 @@ export const es = {
     /** Areas without a result, as rows instead of cards (feature 023): the reason in the owner's voice, no actions. */
     pending: {
       title: "Pendiente de medir",
-      performance: { waiting: "Aún no hemos medido la velocidad de tu web.", analyzing: "La estamos midiendo ahora.", error: "El último intento de medirla no terminó." },
+      performance: { waiting: "Aún no hemos medido la velocidad de tu web.", analyzing: "La estamos midiendo ahora.", error: "El último intento de medirla no terminó.", partial: "La última revisión no pudo medirla." },
       technical: { waiting: "Aún no hemos revisado tu portada.", analyzing: "La estamos revisando ahora.", error: "El último intento de revisarla no terminó." },
       ranking: { waiting: "Aún no hemos conectado los datos de Google de tu web.", noData: "Aún no hemos traído los datos de Google de tu web.", error: "No se pudieron leer los datos de Google de tu web." },
       ai: { waiting: "Aún no hemos medido si las respuestas de IA te mencionan.", analyzing: "Estamos recogiendo las respuestas ahora.", error: "El último intento de medirlo no terminó." },
