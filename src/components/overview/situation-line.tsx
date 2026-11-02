@@ -20,12 +20,13 @@ export function SituationLine({ fragments, locale }: { fragments: SituationFragm
       <ul role="list" className="flex flex-col gap-1 text-base text-pretty sm:flex-row sm:flex-wrap sm:gap-y-1">
         {fragments.map((fragment, i) => (
           <li key={fragment.area}>
-            {i > 0 ? (
+            {fragment.text}
+            {/* After the fragment, so a wrapped line never starts with a dot. */}
+            {i < fragments.length - 1 ? (
               <span aria-hidden="true" className="hidden px-2 text-muted-foreground sm:inline">
                 ·
               </span>
             ) : null}
-            {fragment.text}
           </li>
         ))}
       </ul>
