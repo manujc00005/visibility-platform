@@ -380,7 +380,7 @@ export default async function WorkspacePage({
   const situation = situationLine(areas, now, locale);
   const pending = pendingRows(areas, locale);
   const opportunities = buildOpportunities(
-    { findings: latestFindings, seo, performance, ai, context },
+    { findings: latestFindings, seo, performance, ai, gsc, context },
     locale,
   );
   // One original-language notice for the whole view (AC-009): opportunities and the performance card.

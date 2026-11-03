@@ -5,6 +5,7 @@ import type { AiSummary } from "@/modules/overview/ai";
 import type { PerformanceSummary } from "@/modules/overview/performance";
 import type { SeoSummary } from "@/modules/overview/seo";
 import type { FindingLike } from "@/modules/overview/types";
+import { displayDay, type SearchConsoleSummary } from "@/modules/search-console/summary";
 
 /**
  * "Tus próximas oportunidades": up to three actions, each backed by a real finding or
@@ -122,6 +123,31 @@ function aiOpportunity(ai: AiSummary, t: OpportunityTexts): Opportunity | null {
   };
 }
 
+/**
+ * Search Console connected and zero impressions in both periods (feature 024, D001): a measured
+ * fact, so it earns an action. No other state does: lower figures would need a threshold (014 D002).
+ */
+function searchVisibilityOpportunity(gsc: SearchConsoleSummary | undefined, locale: Locale, t: OpportunityTexts): Opportunity | null {
+  if (!gsc || gsc.state !== "empty" || !gsc.capturedAt || !gsc.period) return null;
+  const s = t.searchVisibility;
+  return {
+    kind: "search_visibility",
+    priority: "medium",
+    title: s.title,
+    problem: s.problem,
+    why: s.why,
+    action: s.action,
+    evidence: [s.evidence(displayDay(gsc.period.start, locale), displayDay(gsc.period.end, locale))],
+    sourceLabel: s.source,
+    measuredAt: gsc.capturedAt,
+    href: "/seo#results-title",
+    original: false,
+    // Written here, in the interface language.
+    storedEvidenceFrom: 1,
+    covers: 1,
+  };
+}
+
 function pendingOf(seo: SeoSummary, perf: PerformanceSummary, ai: AiSummary, t: OpportunityTexts): string[] {
   const pending: string[] = [];
   if (seo.state === "partial") pending.push(t.pending.seoPartial);
@@ -135,10 +161,10 @@ function pendingOf(seo: SeoSummary, perf: PerformanceSummary, ai: AiSummary, t: 
 
 /** `context`: facts and rules version of the audit the `findings` belong to (never another audit's). */
 export function buildOpportunities(
-  input: { findings: FindingLike[]; seo: SeoSummary; performance: PerformanceSummary; ai: AiSummary; context?: FindingContext },
+  input: { findings: FindingLike[]; seo: SeoSummary; performance: PerformanceSummary; ai: AiSummary; gsc?: SearchConsoleSummary; context?: FindingContext },
   locale: Locale = DEFAULT_LOCALE,
 ): OpportunityList {
-  const { findings, seo, performance, ai, context } = input;
+  const { findings, seo, performance, ai, gsc, context } = input;
   const t = getMessages(locale).overview.opportunity;
   const candidates: Opportunity[] = [];
   if (seo.auditedAt) {
@@ -163,6 +189,8 @@ export function buildOpportunities(
   }
   const speed = speedOpportunity(performance, findings, context, locale, t);
   if (speed) candidates.push(speed);
+  const visibility = searchVisibilityOpportunity(gsc, locale, t);
+  if (visibility) candidates.push(visibility);
   const aiItem = aiOpportunity(ai, t);
   if (aiItem) candidates.push(aiItem);
 
