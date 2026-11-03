@@ -54,7 +54,7 @@ describe("summarizeSeo", () => {
     const a = audit({ at: daysAgo(1) });
     const s = summarizeSeo([a], { [a.id]: [finding({ severity: "warning", category: "indexability", ruleId: "canonical_missing" })] }, NOW);
     expect(s.areas.map((x) => x.key)).toEqual(["indexability", "metadata", "structure", "sitemap", "canonicals", "structured_data"]);
-    expect(s.areas.find((x) => x.key === "canonicals")).toMatchObject({ verdict: "Regular", count: 1 });
+    expect(s.areas.find((x) => x.key === "canonicals")).toMatchObject({ verdict: "Mejorable", count: 1 });
     expect(s.areas.find((x) => x.key === "indexability")?.verdict).toBe("Bien");
   });
 

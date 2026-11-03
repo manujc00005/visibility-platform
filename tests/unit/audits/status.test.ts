@@ -55,8 +55,8 @@ describe("categoryStatuses", () => {
       ),
     );
     expect(areas.access).toMatchObject({ tone: "bad", verdict: "Mal", count: 2, firstFindingId: "a" });
-    expect(areas.crawling).toMatchObject({ tone: "fair", verdict: "Regular" });
-    expect(areas.headings).toMatchObject({ tone: "info", verdict: "Mejorable" });
+    expect(areas.crawling).toMatchObject({ tone: "fair", verdict: "Mejorable" });
+    expect(areas.headings).toMatchObject({ tone: "info", verdict: "Con mejoras" });
     expect(areas.metadata).toMatchObject({ tone: "good", verdict: "Bien", firstFindingId: null });
   });
 

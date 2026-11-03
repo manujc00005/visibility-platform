@@ -228,7 +228,7 @@ export const en = {
         refused_by_policy: "Refused by robots.txt",
       },
       rating: { good: "Good", needs_improvement: "Needs improvement", poor: "Poor" },
-      verdict: { good: "Good", unchecked: "Not checked", critical: "Poor", warning: "Fair", info: "Could improve" },
+      verdict: { good: "Good", unchecked: "Not checked", critical: "Poor", warning: "Needs improvement", info: "Minor fixes" },
     },
     headline: {
       critical: (n: number) => `${n} critical ${n === 1 ? "problem" : "problems"}`,

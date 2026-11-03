@@ -79,7 +79,7 @@ describe("summarizeSeo in English", () => {
     expect(s.headline?.title).toBe("No critical problems · 1 important issue");
     expect(s.change).toEqual({ direction: "same", text: "Same as in the previous audit" });
     expect(s.areas.map((x) => x.label)).toEqual(["Indexability", "Metadata", "Structure", "Sitemap and crawling", "Canonicals", "Structured data"]);
-    expect(s.areas.find((x) => x.key === "metadata")).toMatchObject({ verdict: "Fair", count: 1 });
+    expect(s.areas.find((x) => x.key === "metadata")).toMatchObject({ verdict: "Needs improvement", count: 1 });
     expect(s.areas.find((x) => x.key === "structure")?.verdict).toBe("Good");
     expect(urgentChange({ critical: 0, warning: 0, info: 0 }, { critical: 1, warning: 0, info: 0 }, "en").text).toBe("1 problem fewer than in the previous audit");
     expect(urgentChange({ critical: 1, warning: 2, info: 0 }, { critical: 0, warning: 0, info: 0 }, "en").text).toBe("3 new problems since the previous audit");

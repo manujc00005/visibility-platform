@@ -162,7 +162,7 @@ Una paleta casi monocroma de neutros fríos, con un acento violeta de identidad 
 
 ### Semáforo (estados)
 - **Bien** (`good`, `good-soft`, `good-line`), **Mejorable** (`fair`, …), **Mal** (`bad`, …) e **Información** (`info`, …). Cada tono tiene tres usos: texto e icono, fondo suave y línea o acento. Los tonos de texto mantienen un contraste de al menos 4,5:1 sobre su fondo suave y sobre blanco. El estado neutro («Sin datos», «No comprobado») usa Tinta Apagada sobre Niebla.
-- **Escala de veredictos.** El resumen usa una sola escala en sus tarjetas: **Bien** (verde), **Mejorable** (ámbar), **Mal** (rojo), **Con mejoras** (información) y **Parcial** (neutro); la misma palabra siempre lleva el mismo tono. Las métricas de velocidad de las páginas de detalle conservan la terminología de Google (Bueno / Mejorable / Malo).
+- **Escala de veredictos.** Una sola escala de veredictos: **Bien** (verde), **Mejorable** (ámbar), **Mal** (rojo), **Con mejoras** (información) y **Parcial** (neutro); la misma palabra siempre lleva el mismo tono. La usan las tarjetas del resumen y también el estado por área y los problemas de la página Google (y la auditoría técnica), donde un área sin comprobar dice «No comprobado» en neutro. Las métricas de velocidad de las páginas de detalle conservan la terminología de Google (Bueno / Mejorable / Malo) y los problemas sueltos su severidad (Crítico / Importante / Mejora).
 
 **La regla de la medición incompleta.** Que una medición esté incompleta es un dato sobre la captura, no un veredicto: «Parcial» va en neutro y nunca en ámbar. Solo hereda tono cuando lo que sí se midió ya tiene severidad («Mal (parcial)»).
 - **Destructivo** (`destructive`): solo para acciones que borran o invalidan, nunca para el estado de una métrica.
