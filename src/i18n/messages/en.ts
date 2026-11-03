@@ -599,6 +599,14 @@ export const en = {
         source: (provider: string) => `ChatGPT measurement · ${provider}`,
         unknownProvider: "unknown provider",
       },
+      searchVisibility: {
+        title: "Check whether Google has your website in its index",
+        problem: "Google has not shown your website in its results in either of the two periods measured.",
+        why: "If Google does not show your website, people searching for your services on Google do not find it.",
+        action: "Check in Search Console, in the page indexing report, whether Google has your website's pages indexed.",
+        evidence: (start: string, end: string) => `Search Console: 0 impressions from ${start} to ${end} and 0 in the previous 28 days.`,
+        source: "Search Console",
+      },
       pending: {
         seoPartial: "The technical audit could not read the home page.",
         seoNone: "There is no finished technical audit yet.",

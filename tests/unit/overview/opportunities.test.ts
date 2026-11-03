@@ -4,18 +4,54 @@ import { buildOpportunities } from "@/modules/overview/opportunities";
 import { summarizePerformance } from "@/modules/overview/performance";
 import { summarizeSeo } from "@/modules/overview/seo";
 import type { AuditInput, FindingLike } from "@/modules/overview/types";
+import type { SearchConsoleSnapshot } from "@/modules/search-console/schema";
+import { summarizeSearchConsole, type SearchConsoleSummary } from "@/modules/search-console/summary";
 import { audit, daysAgo, facts, finding, NOW, perf, run } from "./fixtures";
 
-function build(audits: AuditInput[], findings: FindingLike[], runs: ReturnType<typeof run>[] = [], activePrompts = 0) {
+function build(audits: AuditInput[], findings: FindingLike[], runs: ReturnType<typeof run>[] = [], activePrompts = 0, gsc?: SearchConsoleSummary, locale?: "en") {
   const latest = audits.find((a) => a.status === "completed");
   const byAudit = latest ? { [latest.id]: findings } : {};
-  return buildOpportunities({
-    findings,
-    seo: summarizeSeo(audits, byAudit, NOW),
-    performance: summarizePerformance(audits, findings, NOW),
-    ai: summarizeAi(runs, activePrompts, NOW),
-  });
+  return buildOpportunities(
+    {
+      findings,
+      seo: summarizeSeo(audits, byAudit, NOW, locale),
+      performance: summarizePerformance(audits, findings, NOW, locale),
+      ai: summarizeAi(runs, activePrompts, NOW, locale),
+      gsc,
+    },
+    locale,
+  );
 }
+
+const zero = { clicks: 0, impressions: 0, ctr: 0, position: 0 };
+function snapshot(overrides: Partial<SearchConsoleSnapshot> = {}): SearchConsoleSnapshot {
+  return {
+    id: "s1",
+    workspaceId: "w1",
+    status: "completed",
+    provider: "google_gsc",
+    captureCondition: "owner_api",
+    property: "sc-domain:olessium.com",
+    currentStart: "2026-09-27",
+    currentEnd: "2026-10-24",
+    previousStart: "2026-08-30",
+    previousEnd: "2026-09-26",
+    totals: { clicks: 12, impressions: 400, ctr: 0.03, position: 9.4 },
+    previousTotals: { clicks: 8, impressions: 390, ctr: 0.0205, position: 12.1 },
+    queries: [],
+    pages: [],
+    segments: null,
+    keywordSeries: null,
+    errorKind: null,
+    errorMessage: null,
+    accessibleProperties: null,
+    createdAt: daysAgo(1),
+    ...overrides,
+  };
+}
+const READY = { state: "ready" as const, clientEmail: "visibility@demo.iam.gserviceaccount.com" };
+const gscOf = (latest: SearchConsoleSnapshot | null, config: Parameters<typeof summarizeSearchConsole>[1] = READY, locale?: "en") =>
+  summarizeSearchConsole({ latest, latestCompleted: latest?.status === "completed" ? latest : null }, config, "olessium.com", locale);
 
 const evaluatedRun = (outcomes: ("yes" | "no" | "none")[]) => run({ at: daysAgo(1), questions: outcomes.map((o, i) => ({ id: `p${i}`, outcomes: [o] })) });
 
@@ -104,3 +140,61 @@ describe("buildOpportunities (AC-006)", () => {
     expect(list.items[0]!.why).toMatch(/No garantizan/);
   });
 });
+
+describe("buildOpportunities: Google does not show the website (feature 024)", () => {
+  const clean = () => audit({ at: daysAgo(1), facts: facts({ performance: perf(95) }) });
+  const empty = () => gscOf(snapshot({ totals: zero, previousTotals: zero }));
+
+  it("turns zero impressions in both periods into a medium opportunity with what was measured (AC-001)", () => {
+    const list = build([clean()], [], [], 0, empty());
+    const o = list.items.find((i) => i.kind === "search_visibility");
+    expect(o).toBeDefined();
+    expect(o!.priority).toBe("medium");
+    expect(o!.title).toBe("Comprobar si Google tiene tu web en su índice");
+    expect(o!.problem).toBe("Google no ha mostrado tu web en sus resultados en ninguno de los dos periodos medidos.");
+    expect(o!.action).toBe("Comprobar en Search Console, en el informe de indexación de páginas, si Google tiene indexadas las páginas de tu web.");
+    expect(o!.evidence).toEqual(["Search Console: 0 impresiones del 27 sept 2026 al 24 oct 2026 y 0 en los 28 días anteriores."]);
+    expect(o!.sourceLabel).toBe("Search Console");
+    expect(o!.measuredAt).toEqual(daysAgo(1));
+    expect(o!.href).toBe("/seo#results-title");
+    expect(o!.covers).toBe(1);
+    expect(list.items.some((i) => i.kind === "search_visibility")).toBe(true);
+  });
+
+  it("says nothing without that measured zero: figures, a drop to zero, no data, not set up, unusable credential or a failed read (AC-002)", () => {
+    const none = (gsc: SearchConsoleSummary) => build([clean()], [], [], 0, gsc).items.some((i) => i.kind === "search_visibility");
+    expect(none(gscOf(snapshot()))).toBe(false);
+    expect(none(gscOf(snapshot({ totals: zero })))).toBe(false);
+    expect(none(gscOf(null))).toBe(false);
+    expect(none(gscOf(null, { state: "not_configured" }))).toBe(false);
+    expect(none(gscOf(null, { state: "invalid", reason: "not_json" }))).toBe(false);
+    expect(none(gscOf(snapshot({ status: "failed", totals: null, previousTotals: null, errorKind: "no_access" })))).toBe(false);
+    // Without a summary at all (callers that do not read Search Console) nothing changes.
+    expect(build([clean()], []).items.some((i) => i.kind === "search_visibility")).toBe(false);
+  });
+
+  it("keeps one per kind, at most three, highest priority first (AC-003)", () => {
+    const findings = [
+      finding({ severity: "critical", category: "metadata", ruleId: "title_missing" }),
+      finding({ severity: "warning", category: "crawling", ruleId: "sitemap_missing" }),
+    ];
+    const a = audit({ at: daysAgo(1), facts: facts({ performance: perf(40) }) });
+    const list = build([a], findings, [], 0, empty());
+    expect(list.items.map((o) => o.kind)).toEqual(["metadata", "speed", "sitemap"]);
+    const withRoom = build([clean()], [findings[1]!], [], 0, empty());
+    expect(withRoom.items.map((o) => [o.kind, o.priority])).toEqual([
+      ["sitemap", "medium"],
+      ["search_visibility", "medium"],
+    ]);
+  });
+
+  it("states no cause and exists in English (AC-004)", () => {
+    const es = build([clean()], [], [], 0, empty()).items.find((i) => i.kind === "search_visibility")!;
+    for (const text of [es.title, es.problem, es.why, es.action]) expect(text).not.toMatch(/porque|debido a|por culpa/i);
+    const en = build([clean()], [], [], 0, gscOf(snapshot({ totals: zero, previousTotals: zero }), READY, "en"), "en").items.find((i) => i.kind === "search_visibility")!;
+    expect(en.title).toBe("Check whether Google has your website in its index");
+    expect(en.sourceLabel).toBe("Search Console");
+    for (const text of [en.title, en.problem, en.why, en.action]) expect(text).not.toMatch(/because|due to/i);
+  });
+});
+

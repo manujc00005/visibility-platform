@@ -610,6 +610,15 @@ export const es = {
         source: (provider: string) => `Medición en ChatGPT · ${provider}`,
         unknownProvider: "proveedor desconocido",
       },
+      /** Search Console connected with zero impressions in both periods (feature 024): what was measured, never a cause. */
+      searchVisibility: {
+        title: "Comprobar si Google tiene tu web en su índice",
+        problem: "Google no ha mostrado tu web en sus resultados en ninguno de los dos periodos medidos.",
+        why: "Si Google no muestra tu web, quien busca tus servicios en Google no la encuentra.",
+        action: "Comprobar en Search Console, en el informe de indexación de páginas, si Google tiene indexadas las páginas de tu web.",
+        evidence: (start: string, end: string) => `Search Console: 0 impresiones del ${start} al ${end} y 0 en los 28 días anteriores.`,
+        source: "Search Console",
+      },
       pending: {
         seoPartial: "La auditoría técnica no pudo leer la portada.",
         seoNone: "Aún no hay una auditoría técnica terminada.",
