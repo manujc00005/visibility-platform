@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
 import { ChartDataTable, SpeedChart } from "@/components/audits/evolution-chart";
+import { DISCLOSURE_CHEVRON_CLASSES, DISCLOSURE_SUMMARY_CLASSES } from "@/components/ui/disclosure";
 import { LighthouseCategoryCard } from "@/components/audits/lighthouse-category";
 import { RunAuditButton } from "@/components/audits/run-audit-button";
 import { accentRow, figureClasses, StatusPill, VerdictCard } from "@/components/audits/status-ui";
@@ -24,7 +25,7 @@ import { auditLabels } from "@/modules/audits/presentation";
 import { getAudit, listAudits } from "@/modules/audits/service";
 import { rateMetric, RATING_TONE, SEVERITY_TONE, type MetricName } from "@/modules/audits/status";
 import { fieldPeriod, splitAudits, summarizePerformance } from "@/modules/overview";
-import { performanceAnswer } from "@/modules/overview/performance-answer";
+import { fieldGoodLine, performanceAnswer } from "@/modules/overview/performance-answer";
 import { displayDate } from "@/modules/workspaces/presentation";
 import { getWorkspace } from "@/modules/workspaces/service";
 import { runAuditAction } from "../audits/actions";
@@ -38,11 +39,6 @@ export const instant = false;
 
 type PerformanceTexts = Messages["performancePage"];
 type MetricKey = keyof PerformanceTexts["metrics"];
-
-/** A fold says it opens: a chevron that turns, a pointer and a visible focus ring (same as the Google page). */
-const SUMMARY_CLASSES =
-  "flex cursor-pointer list-none items-start gap-2 rounded-md text-sm font-medium focus-visible:ring-2 focus-visible:ring-foreground/60 focus-visible:ring-offset-4 focus-visible:ring-offset-card focus-visible:outline-none [&::-webkit-details-marker]:hidden";
-const CHEVRON_CLASSES = "size-4 shrink-0 text-brand transition-transform group-open:rotate-90 motion-reduce:transition-none";
 
 function Section({ id, title, description, children }: { id: string; title: string; description?: ReactNode; children: ReactNode }) {
   return (
@@ -115,7 +111,7 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
   const answer = performanceAnswer(perf, field, locale);
   // Findings are translated with the facts and rules version of the audit they belong to.
   const context = result ? { facts: result.facts, rulesVersion: result.rulesVersion } : undefined;
-  const problems = findings.filter((f) => f.category === "performance").map((f) => ({ finding: f, text: findingText(f, locale, context) }));
+  const problems = findings.filter((f) => f.category === "performance").map((f) => ({ finding: f, text: findingText(f, locale, context), fieldGood: fieldGoodLine(f.ruleId, field, locale) }));
   const anyFallback = problems.some((p) => p.text.fallback);
   const problemsNotice =
     locale !== DEFAULT_LOCALE && problems.length > 0
@@ -209,7 +205,7 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
             ) : null}
             {problems.length > 0 ? (
               <ol className="flex flex-col gap-3">
-                {problems.map(({ finding: f, text }) => (
+                {problems.map(({ finding: f, text, fieldGood }) => (
                   <li key={f.id} className="flex flex-col gap-2 rounded-2xl border border-border/80 bg-card shadow-card p-5">
                     <StatusPill tone={SEVERITY_TONE[f.severity]} variant="solid">
                       {auditLabels(locale).severity[f.severity]}
@@ -218,6 +214,7 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
                       {text.title}
                     </h3>
                     {f.ruleId in t.problems.meaning ? <p className="text-sm text-muted-foreground">{t.problems.meaning[f.ruleId as keyof typeof t.problems.meaning]}</p> : null}
+                    {fieldGood ? <p className="text-sm">{fieldGood}</p> : null}
                     <p className="text-sm" lang={text.fallback ? DEFAULT_LOCALE : undefined}>
                       <span className="font-medium">{t.problems.recommend} </span>
                       {text.recommendation}
@@ -265,9 +262,9 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
           </Section>
 
           {/* Lab test: reading for whoever runs the website, so it stays folded below the real visitors. */}
-          <details className="group rounded-2xl border border-border/80 bg-card p-5 shadow-card">
-            <summary className={SUMMARY_CLASSES}>
-              <ChevronRight aria-hidden="true" className={cn(CHEVRON_CLASSES, "mt-1.5 size-5")} />
+          <details className="group">
+            <summary className={DISCLOSURE_SUMMARY_CLASSES}>
+              <ChevronRight aria-hidden="true" className={DISCLOSURE_CHEVRON_CLASSES} />
               <span className="flex flex-col gap-1">
                 <h2 id="lab-title" className="text-lg font-semibold tracking-tight">
                   {t.lab.title}
@@ -275,7 +272,7 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
                 <span className="max-w-3xl text-sm font-normal text-muted-foreground">{t.lab.description}</span>
               </span>
             </summary>
-            <div className="mt-5">
+            <div className="mt-3">
               {perf?.status === "ok" && perf.metrics ? (
                 <MetricList
                   locale={locale}

@@ -1,4 +1,4 @@
-import { formatMs } from "@/i18n/format";
+import { formatMs, formatNumber } from "@/i18n/format";
 import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
 import { getMessages } from "@/i18n/messages";
 import { rateFieldMetric, type FieldDataResult, type FieldRating } from "@/modules/audits/crux";
@@ -33,4 +33,23 @@ export function performanceAnswer(perf: PerformanceResult | undefined, field: Fi
   const lab = RANK[rateMetric("lcp", lcp as number)];
   const relation = lab === RANK[visitors] ? "same" : lab > RANK[visitors] ? "worse" : "better";
   return t.visitorsAndLab[visitors](lcpText, relation);
+}
+
+/**
+ * One plain line for a problem measured only in the lab (slow main content, layout shifts): when
+ * real visitors rate that same metric as good, it says so with their own value. Null otherwise,
+ * so no line appears without field data for that metric.
+ */
+export function fieldGoodLine(ruleId: string, field: FieldDataResult | undefined, locale: Locale = DEFAULT_LOCALE): string | null {
+  if (field?.status !== "ok" || !field.metrics) return null;
+  const t = getMessages(locale).performancePage.problems.fieldGood;
+  if (ruleId === "lcp_slow") {
+    const v = field.metrics.lcpMs;
+    return v !== null && rateFieldMetric("lcp", v) === "good" ? t.lcp_slow(formatMs(v, locale)) : null;
+  }
+  if (ruleId === "cls_high") {
+    const v = field.metrics.cls;
+    return v !== null && rateFieldMetric("cls", v) === "good" ? t.cls_high(formatNumber(v, locale, { maximumFractionDigits: 2 })) : null;
+  }
+  return null;
 }

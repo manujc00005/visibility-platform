@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { FieldDataResult } from "@/modules/audits/crux";
 import type { PerformanceResult } from "@/modules/audits/pagespeed";
-import { performanceAnswer } from "@/modules/overview/performance-answer";
+import { fieldGoodLine, performanceAnswer } from "@/modules/overview/performance-answer";
 import { emptyFieldData, emptyResult, perf } from "./fixtures";
 
 const lab = (lcpMs: number): PerformanceResult => ({ ...perf(40), metrics: { lcpMs, cls: 0, tbtMs: 50, fcpMs: 900, speedIndexMs: 1500 } });
@@ -50,5 +50,19 @@ describe("performanceAnswer", () => {
 
   it("speaks English when asked", () => {
     expect(performanceAnswer(lab(4300), field(1700), "en")).toBe("Your real visitors find your website fast; in Google's demanding test, the main content takes 4.3 s.");
+  });
+});
+
+describe("fieldGoodLine", () => {
+  it("names the real-visitor value when it is good for the lab-only problem", () => {
+    expect(fieldGoodLine("lcp_slow", field(1700))).toBe("Tus visitantes reales no lo notan: en sus visitas tarda 1,7 s.");
+    expect(fieldGoodLine("cls_high", field(1700, 100, 0.05))).toContain("0,05");
+  });
+  it("stays silent when the field value is missing, not good, or the rule has no field twin", () => {
+    expect(fieldGoodLine("lcp_slow", field(3200))).toBeNull();
+    expect(fieldGoodLine("lcp_slow", field(null))).toBeNull();
+    expect(fieldGoodLine("lcp_slow", undefined)).toBeNull();
+    expect(fieldGoodLine("lcp_slow", emptyFieldData("no_data"))).toBeNull();
+    expect(fieldGoodLine("tbt_high", field(1700))).toBeNull();
   });
 });

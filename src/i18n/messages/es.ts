@@ -635,7 +635,7 @@ export const es = {
     metaTitle: "Rendimiento de tu web",
     title: "Rendimiento de tu web",
     description: "Cómo de rápida y cómoda es tu página para los visitantes, según las mediciones de Google.",
-    mobile: "Móvil",
+    mobile: "Prueba de Google en móvil",
     desktopFootnote: "No medimos el escritorio: nuestra medición usa solo el perfil móvil de PageSpeed Insights.",
     analyzing: "Analizando…",
     noResult: "Sin resultado",
@@ -688,6 +688,11 @@ export const es = {
         tbt_high: "El navegador está ocupado ejecutando código y la página tarda en responder a toques y clics.",
         field_cwv_failed: "Los datos de visitantes reales muestran que la experiencia no llega al nivel que Google considera bueno.",
         performance_unavailable: "Esta vez no se pudo medir la velocidad, así que no sabemos si hay problemas.",
+      },
+      /** Plain line on a lab-only problem when real visitors rate that same metric as good. */
+      fieldGood: {
+        lcp_slow: (value: string) => `Tus visitantes reales no lo notan: en sus visitas tarda ${value}.`,
+        cls_high: (value: string) => `Tus visitantes reales no lo notan: en sus visitas el valor es ${value}.`,
       },
       recommend: "Qué recomendamos:",
       none: "No hemos detectado problemas de velocidad en la última medición.",
@@ -743,6 +748,8 @@ export const es = {
       notConnected: "Search Console no está conectado, así que aún no sabemos cuántas veces te muestra Google.",
       error: "No pudimos leer Search Console, así que aún no sabemos cuántas veces te muestra Google.",
       urgent: "Lo más urgente:",
+      nonBranded: (clicks: string) => `De búsquedas que no incluyen tu marca: ${clicks}.`,
+      position: (now: string, before: string | null) => (before === null ? `Posición media en Google: ${now}.` : `Posición media en Google: ${now} (antes ${before}).`),
     },
     ranking: {
       title: "Posicionamiento en Google",

@@ -623,7 +623,7 @@ export const en = {
     metaTitle: "Your website's performance",
     title: "Your website's performance",
     description: "How fast and comfortable your page is for visitors, according to Google's measurements.",
-    mobile: "Mobile",
+    mobile: "Google's mobile test",
     desktopFootnote: "We do not measure desktop: our measurement uses only the mobile profile of PageSpeed Insights.",
     analyzing: "Analysing…",
     noResult: "No result",
@@ -676,6 +676,11 @@ export const en = {
         tbt_high: "The browser is busy running code and the page is slow to respond to taps and clicks.",
         field_cwv_failed: "Real-visitor data shows that the experience does not reach the level Google considers good.",
         performance_unavailable: "Speed could not be measured this time, so we do not know whether there are problems.",
+      },
+      /** Plain line on a lab-only problem when real visitors rate that same metric as good. */
+      fieldGood: {
+        lcp_slow: (value: string) => `Your real visitors do not notice it: on their visits it takes ${value}.`,
+        cls_high: (value: string) => `Your real visitors do not notice it: on their visits the value is ${value}.`,
       },
       recommend: "What we recommend:",
       none: "We found no speed problems in the latest measurement.",
@@ -730,6 +735,8 @@ export const en = {
       notConnected: "Search Console is not connected, so we do not know yet how often Google shows you.",
       error: "We could not read Search Console, so we do not know yet how often Google shows you.",
       urgent: "Most urgent:",
+      nonBranded: (clicks: string) => `From searches that do not include your brand: ${clicks}.`,
+      position: (now: string, before: string | null) => (before === null ? `Average position on Google: ${now}.` : `Average position on Google: ${now} (before ${before}).`),
     },
     ranking: {
       title: "Rankings on Google",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { searchAnswer, summarizeRankingCard, summarizeTechnicalCard } from "@/modules/overview/google";
+import { searchAnswer, searchDetails, summarizeRankingCard, summarizeTechnicalCard } from "@/modules/overview/google";
 import { summarizeSeo } from "@/modules/overview/seo";
 import type { SearchConsoleSnapshot } from "@/modules/search-console/schema";
 import { summarizeSearchConsole } from "@/modules/search-console/summary";
@@ -223,5 +223,22 @@ describe("searchAnswer: the sentence that opens the Google page (014 D002: words
     const failed = snapshot({ status: "failed", totals: null, previousTotals: null, errorKind: "api_disabled" });
     expect(searchAnswer(gscOf(failed))).toBe("No pudimos leer Search Console, así que aún no sabemos cuántas veces te muestra Google.");
     expect(searchAnswer(gscOf(null, NOT_CONFIGURED, "en"), "en")).toBe("Search Console is not connected, so we do not know yet how often Google shows you.");
+  });
+});
+
+describe("searchDetails: neutral figures under the Google answer", () => {
+  const block = (clicks: number) => ({ clicks, impressions: 100, ctr: 0.1, position: 5 });
+  const segments = { version: 1 as const, terms: ["olessium"], termsTruncated: false, branded: block(300), nonBranded: block(43), previousBranded: block(300), previousNonBranded: block(50) };
+
+  it("gives the non-brand clicks and the position with the previous one", () => {
+    const down = snapshot({ totals: { clicks: 424, impressions: 4460, ctr: 0.095, position: 4.4 }, previousTotals: { clicks: 511, impressions: 7422, ctr: 0.069, position: 6.2 }, segments });
+    expect(searchDetails(gscOf(down))).toEqual(["De búsquedas que no incluyen tu marca: 43 clics.", "Posición media en Google: 4,4 (antes 6,2)."]);
+    expect(searchDetails(gscOf(down, READY, "en"), "en")[1]).toBe("Average position on Google: 4.4 (before 6.2).");
+  });
+
+  it("leaves out what was not computed", () => {
+    expect(searchDetails(gscOf(snapshot({ previousTotals: zero })))).toEqual(["Posición media en Google: 9,4."]);
+    expect(searchDetails(gscOf(snapshot({ totals: zero, previousTotals: zero })))).toEqual([]);
+    expect(searchDetails(gscOf(null))).toEqual([]);
   });
 });

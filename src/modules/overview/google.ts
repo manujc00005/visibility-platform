@@ -153,3 +153,18 @@ export function searchAnswer(gsc: SearchConsoleSummary, locale: Locale = DEFAULT
       return t.notConnected;
   }
 }
+
+/**
+ * Two neutral lines under the Google answer, built only from values the summary already holds:
+ * the clicks from searches without the brand and the average position (with the previous one).
+ * No tone and no verdict (014 D002); a value that was not computed is simply left out.
+ */
+export function searchDetails(gsc: SearchConsoleSummary, locale: Locale = DEFAULT_LOCALE): string[] {
+  if (gsc.state !== "ok") return [];
+  const t = getMessages(locale).seoPage.answer;
+  const lines: string[] = [];
+  if (gsc.segments && !gsc.segments.empty) lines.push(t.nonBranded(gsc.segments.nonBranded.clicks));
+  const position = gsc.metrics?.position;
+  if (position && position.value !== "—") lines.push(t.position(position.value, position.previous));
+  return lines;
+}

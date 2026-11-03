@@ -12,6 +12,10 @@ import {
   ProblemsChart,
   ProblemsLegend,
 } from "@/components/audits/evolution-chart";
+import {
+  DISCLOSURE_CHEVRON_CLASSES,
+  DISCLOSURE_SUMMARY_CLASSES,
+} from "@/components/ui/disclosure";
 import { LighthouseCategoryCard } from "@/components/audits/lighthouse-category";
 import { RunAuditButton } from "@/components/audits/run-audit-button";
 import {
@@ -67,7 +71,11 @@ import {
   summarizeSeo,
   type FindingsByAudit,
 } from "@/modules/overview";
-import { searchAnswer, summarizeRankingCard } from "@/modules/overview/google";
+import {
+  searchAnswer,
+  searchDetails,
+  summarizeRankingCard,
+} from "@/modules/overview/google";
 import { displayDate } from "@/modules/workspaces/presentation";
 import { getWorkspace } from "@/modules/workspaces/service";
 import { runAuditAction } from "../audits/actions";
@@ -89,12 +97,6 @@ export const instant = false;
 
 /** History reads the findings of each audit: bounded to what the chart can show. */
 const HISTORY_LIMIT = 12;
-
-/** A fold says it opens: a chevron that turns, a pointer and a visible focus ring. */
-const SUMMARY_CLASSES =
-  "flex cursor-pointer list-none items-start gap-2 rounded-md text-sm font-medium focus-visible:ring-2 focus-visible:ring-foreground/60 focus-visible:ring-offset-4 focus-visible:ring-offset-card focus-visible:outline-none [&::-webkit-details-marker]:hidden";
-const CHEVRON_CLASSES =
-  "size-4 shrink-0 text-brand transition-transform group-open:rotate-90 motion-reduce:transition-none";
 
 function Section({
   id,
@@ -245,6 +247,7 @@ export default async function SeoPage({
 
   const a = t.answer;
   const ranking = summarizeRankingCard(gsc, new Date(), locale);
+  const details = searchDetails(gsc, locale);
   const searchMeasured = gsc.state === "ok" || gsc.state === "empty";
   // Findings come most urgent first: the first critical one is the news the answer block names.
   const urgent =
@@ -295,168 +298,48 @@ export default async function SeoPage({
 
       {/* The owner's question first: Search Console in words (no verdict, 014 D002), then the technical health. */}
       <Section id="answer-title" level={2} title={t.blocks.answer.title}>
-        <div className="flex flex-col gap-3">
-          <section
-            aria-labelledby="answer-search"
-            className="flex flex-col gap-3 rounded-2xl border border-border/80 bg-card p-5 shadow-card"
-          >
-            <div className="flex items-start gap-3">
-              <span
-                aria-hidden="true"
-                className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand ring-1 ring-brand/15"
-              >
-                <Search className="size-4" />
-              </span>
-              <div className="flex min-w-0 flex-col gap-1">
-                <h3
-                  id="answer-search"
-                  className="text-base font-semibold tracking-tight"
-                >
-                  {a.searchTitle}
-                </h3>
-                <p className="max-w-2xl text-base">
-                  {searchAnswer(gsc, locale)}
-                </p>
-                {ranking.headline.kind === "figures" ? (
-                  <p className="text-sm text-muted-foreground tabular-nums">
-                    {ranking.headline.clicks} {ranking.headline.clicksUnit} ·{" "}
-                    {ranking.headline.impressions}{" "}
-                    {ranking.headline.impressionsUnit}
-                  </p>
-                ) : null}
-                {searchMeasured && ranking.line ? (
-                  <p className="text-sm text-muted-foreground">
-                    {ranking.line}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-            <NoticeList notices={ranking.notices} />
-            <p className="text-xs text-muted-foreground">{ranking.source}</p>
-          </section>
-
-          {s.headline ? (
-            <VerdictCard
-              tone={s.tone}
-              className="flex flex-col gap-5"
-              role="region"
-              aria-labelledby="health-summary"
+        <section
+          aria-labelledby="answer-search"
+          className="flex flex-col gap-3 rounded-2xl border border-border/80 bg-card p-5 shadow-card"
+        >
+          <div className="flex items-start gap-3">
+            <span
+              aria-hidden="true"
+              className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-brand-soft text-brand ring-1 ring-brand/15"
             >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="flex items-start gap-3">
-                  <ToneIcon tone={s.tone} className="mt-0.5 size-6" />
-                  <div className="flex flex-col gap-0.5">
-                    <h3
-                      id="health-summary"
-                      className="text-base font-semibold tracking-tight"
-                    >
-                      {m.overview.cards.seo.technical.title}
-                    </h3>
-                    <p
-                      className={cn(
-                        "text-lg font-semibold tracking-tight",
-                        figureClasses(s.tone),
-                      )}
-                    >
-                      {s.headline.title}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {s.headline.detail}
-                    </p>
-                  </div>
-                </div>
-                <StatusPill
-                  tone={s.tone}
-                  variant={s.tone === "neutral" ? "soft" : "solid"}
-                >
-                  {s.state === "partial" && s.tone !== "neutral"
-                    ? m.overview.partial(m.overview.verdict[s.tone])
-                    : s.state === "partial"
-                      ? m.overview.states.partial
-                      : m.overview.verdict[s.tone]}
-                </StatusPill>
-              </div>
-              {urgent ? (
-                <p className="text-sm">
-                  <span className="font-medium">{a.urgent}</span>{" "}
-                  <a
-                    href={`#finding-${urgent.finding.id}`}
-                    lang={urgent.text.fallback ? DEFAULT_LOCALE : undefined}
-                    className="font-medium text-brand underline underline-offset-4 focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-foreground/60 focus-visible:outline-none"
-                  >
-                    {urgent.text.title}
-                  </a>
-                </p>
-              ) : null}
-              <dl className="grid grid-cols-3 gap-3">
-                {(["critical", "warning", "info"] as const).map((severity) => {
-                  // A count tile wears its severity only when it counts something: three zeros stay quiet.
-                  const tone =
-                    s.counts[severity] > 0
-                      ? SEVERITY_TONE[severity]
-                      : "neutral";
-                  return (
-                    <div
-                      key={severity}
-                      className={cn(
-                        "flex flex-col gap-0.5 rounded-lg bg-muted/50 p-3",
-                        accentRow(tone),
-                      )}
-                    >
-                      <dt className="text-xs font-medium text-muted-foreground">
-                        {t.health.counts[severity].label}
-                      </dt>
-                      <dd
-                        className={cn(
-                          "text-3xl leading-none font-semibold tabular-nums",
-                          figureClasses(tone),
-                        )}
-                      >
-                        {s.counts[severity]}
-                      </dd>
-                      <dd className="hidden text-xs text-muted-foreground sm:block">
-                        {t.health.counts[severity].hint}
-                      </dd>
-                    </div>
-                  );
-                })}
-              </dl>
-              <ChangeLine
-                change={s.change}
-                note={s.comparisonNote}
-                labels={m.overview.change}
-              />
-              <NoticeList notices={notices} />
-              <p className="text-xs text-muted-foreground">
-                {t.health.source(
-                  s.auditedAt ? displayDate(s.auditedAt, locale) : "",
-                )}
-              </p>
-            </VerdictCard>
-          ) : (
-            <section
-              aria-labelledby="health-summary"
-              className="flex flex-col items-start gap-2 rounded-2xl border border-dashed bg-card/60 p-5"
-            >
+              <Search className="size-4" />
+            </span>
+            <div className="flex min-w-0 flex-col gap-1">
               <h3
-                id="health-summary"
+                id="answer-search"
                 className="text-base font-semibold tracking-tight"
               >
-                {m.overview.cards.seo.technical.title}
+                {a.searchTitle}
               </h3>
-              <p className="font-medium">
-                {s.state === "analyzing"
-                  ? t.health.analyzing
-                  : s.state === "error"
-                    ? t.health.failed
-                    : t.health.none}
-              </p>
-              <p className="max-w-2xl text-sm text-muted-foreground">
-                {s.reason}
-              </p>
-            </section>
-          )}
-        </div>
+              <p className="max-w-2xl text-base">{searchAnswer(gsc, locale)}</p>
+              {ranking.headline.kind === "figures" ? (
+                <p className="text-sm text-muted-foreground tabular-nums">
+                  {ranking.headline.clicks} {ranking.headline.clicksUnit} ·{" "}
+                  {ranking.headline.impressions}{" "}
+                  {ranking.headline.impressionsUnit}
+                </p>
+              ) : null}
+              {details.map((line) => (
+                <p
+                  key={line}
+                  className="text-sm text-muted-foreground tabular-nums"
+                >
+                  {line}
+                </p>
+              ))}
+              {searchMeasured && ranking.line ? (
+                <p className="text-sm text-muted-foreground">{ranking.line}</p>
+              ) : null}
+            </div>
+          </div>
+          <NoticeList notices={ranking.notices} />
+          <p className="text-xs text-muted-foreground">{ranking.source}</p>
+        </section>
       </Section>
 
       <Section
@@ -465,6 +348,125 @@ export default async function SeoPage({
         title={t.blocks.health.title}
         description={t.health.description}
       >
+        {s.headline ? (
+          <VerdictCard
+            tone={s.tone}
+            className="flex flex-col gap-5"
+            role="region"
+            aria-labelledby="health-summary"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <ToneIcon tone={s.tone} className="mt-0.5 size-6" />
+                <div className="flex flex-col gap-0.5">
+                  <h3
+                    id="health-summary"
+                    className="text-base font-semibold tracking-tight"
+                  >
+                    {m.overview.cards.seo.technical.title}
+                  </h3>
+                  <p
+                    className={cn(
+                      "text-lg font-semibold tracking-tight",
+                      figureClasses(s.tone),
+                    )}
+                  >
+                    {s.headline.title}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {s.headline.detail}
+                  </p>
+                </div>
+              </div>
+              <StatusPill
+                tone={s.tone}
+                variant={s.tone === "neutral" ? "soft" : "solid"}
+              >
+                {s.state === "partial" && s.tone !== "neutral"
+                  ? m.overview.partial(m.overview.verdict[s.tone])
+                  : s.state === "partial"
+                    ? m.overview.states.partial
+                    : m.overview.verdict[s.tone]}
+              </StatusPill>
+            </div>
+            {urgent ? (
+              <p className="text-sm">
+                <span className="font-medium">{a.urgent}</span>{" "}
+                <a
+                  href={`#finding-${urgent.finding.id}`}
+                  lang={urgent.text.fallback ? DEFAULT_LOCALE : undefined}
+                  className="font-medium text-brand underline underline-offset-4 focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-foreground/60 focus-visible:outline-none"
+                >
+                  {urgent.text.title}
+                </a>
+              </p>
+            ) : null}
+            <dl className="grid grid-cols-3 gap-3">
+              {(["critical", "warning", "info"] as const).map((severity) => {
+                // A count tile wears its severity only when it counts something: three zeros stay quiet.
+                const tone =
+                  s.counts[severity] > 0 ? SEVERITY_TONE[severity] : "neutral";
+                return (
+                  <div
+                    key={severity}
+                    className={cn(
+                      "flex flex-col gap-0.5 rounded-lg bg-muted/50 p-3",
+                      accentRow(tone),
+                    )}
+                  >
+                    <dt className="text-xs font-medium text-muted-foreground">
+                      {t.health.counts[severity].label}
+                    </dt>
+                    <dd
+                      className={cn(
+                        "text-3xl leading-none font-semibold tabular-nums",
+                        figureClasses(tone),
+                      )}
+                    >
+                      {s.counts[severity]}
+                    </dd>
+                    <dd className="hidden text-xs text-muted-foreground sm:block">
+                      {t.health.counts[severity].hint}
+                    </dd>
+                  </div>
+                );
+              })}
+            </dl>
+            <ChangeLine
+              change={s.change}
+              note={s.comparisonNote}
+              labels={m.overview.change}
+            />
+            <NoticeList notices={notices} />
+            <p className="text-xs text-muted-foreground">
+              {t.health.source(
+                s.auditedAt ? displayDate(s.auditedAt, locale) : "",
+              )}
+            </p>
+          </VerdictCard>
+        ) : (
+          <section
+            aria-labelledby="health-summary"
+            className="flex flex-col items-start gap-2 rounded-2xl border border-dashed bg-card/60 p-5"
+          >
+            <h3
+              id="health-summary"
+              className="text-base font-semibold tracking-tight"
+            >
+              {m.overview.cards.seo.technical.title}
+            </h3>
+            <p className="font-medium">
+              {s.state === "analyzing"
+                ? t.health.analyzing
+                : s.state === "error"
+                  ? t.health.failed
+                  : t.health.none}
+            </p>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              {s.reason}
+            </p>
+          </section>
+        )}
         {s.headline ? (
           <>
             <Section
@@ -588,15 +590,17 @@ export default async function SeoPage({
         ) : null}
 
         {/* Occasional reading with no incoming links, so it can stay folded (017, D003). */}
-        <details className="group rounded-2xl border border-border/80 bg-card p-5 shadow-card">
-          <summary className={SUMMARY_CLASSES}>
+        <details className="group">
+          <summary className={DISCLOSURE_SUMMARY_CLASSES}>
             <ChevronRight
               aria-hidden="true"
-              className={cn(CHEVRON_CLASSES, "mt-0.5")}
+              className={DISCLOSURE_CHEVRON_CLASSES}
             />
-            {t.technicalDetail}
+            <span className="text-lg font-semibold tracking-tight">
+              {t.technicalDetail}
+            </span>
           </summary>
-          <div className="mt-5 flex flex-col gap-8">
+          <div className="mt-4 flex flex-col gap-8">
             <Section
               id="lighthouse-seo-title"
               title={m.lighthouse.section.seoTitle}
@@ -683,14 +687,11 @@ export default async function SeoPage({
       </Section>
 
       {/* Every source figure, the tables and the tracked searches: reading for whoever runs the website. */}
-      <details
-        aria-labelledby="detail-title"
-        className="group rounded-2xl border border-border/80 bg-card p-5 shadow-card"
-      >
-        <summary className={SUMMARY_CLASSES}>
+      <details aria-labelledby="detail-title" className="group">
+        <summary className={DISCLOSURE_SUMMARY_CLASSES}>
           <ChevronRight
             aria-hidden="true"
-            className={cn(CHEVRON_CLASSES, "mt-1.5 size-5")}
+            className={DISCLOSURE_CHEVRON_CLASSES}
           />
           <span className="flex flex-col gap-1">
             <h2
@@ -704,7 +705,7 @@ export default async function SeoPage({
             </span>
           </span>
         </summary>
-        <div className="mt-6 flex flex-col gap-8">
+        <div className="mt-4 flex flex-col gap-8">
           <Section
             id="ranking-title"
             title={t.ranking.title}
