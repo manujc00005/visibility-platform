@@ -636,15 +636,21 @@ export const es = {
     title: "Rendimiento de tu web",
     description: "Cómo de rápida y cómoda es tu página para los visitantes, según las mediciones de Google.",
     mobile: "Móvil",
-    desktop: "Escritorio",
-    notAvailable: "No disponible",
-    desktopNote: "Nuestra medición usa solo el perfil móvil de PageSpeed Insights; no medimos el escritorio.",
+    desktopFootnote: "No medimos el escritorio: nuestra medición usa solo el perfil móvil de PageSpeed Insights.",
     analyzing: "Analizando…",
     noResult: "Sin resultado",
     notMeasured: "No medida",
     source: (when: string, lighthouse: string | null) => `PageSpeed Insights · ${when}${lighthouse ? ` · Lighthouse ${lighthouse}` : ""}`,
-    labNote:
-      "La puntuación es una prueba de laboratorio: Google carga tu portada en un móvil simulado con conexión lenta. Sirve para detectar problemas, pero no es la experiencia de todos tus visitantes. Entre dos pruebas idénticas puede variar varios puntos; solo consideramos cambio una diferencia de 10 puntos o más.",
+    /** The owner question of the hero; the sentence under it leads with real visitors when there is field data. */
+    answer: {
+      visitorsOnly: { good: "Tus visitantes reales ven tu web rápida.", needs_improvement: "Tus visitantes reales ven tu web con margen de mejora.", poor: "Tus visitantes reales ven tu web lenta." },
+      visitorsAndLab: {
+        good: (lcp: string, relation: "same" | "worse" | "better") => relation === "same" ? `Tus visitantes reales ven tu web rápida, y la prueba de Google coincide: el contenido principal tarda ${lcp}.` : `Tus visitantes reales ven tu web rápida; en la prueba exigente de Google, el contenido principal tarda ${lcp}.`,
+        needs_improvement: (lcp: string, relation: "same" | "worse" | "better") => relation === "same" ? `Tus visitantes reales ven tu web con margen de mejora, y la prueba de Google coincide: el contenido principal tarda ${lcp}.` : relation === "worse" ? `Tus visitantes reales ven tu web con margen de mejora; en la prueba exigente de Google, el contenido principal tarda ${lcp}.` : `Tus visitantes reales ven tu web con margen de mejora; en la prueba de Google, el contenido principal tarda ${lcp}.`,
+        poor: (lcp: string, relation: "same" | "worse" | "better") => relation === "same" ? `Tus visitantes reales ven tu web lenta, y la prueba de Google coincide: el contenido principal tarda ${lcp}.` : `Tus visitantes reales ven tu web lenta; en la prueba de Google, el contenido principal tarda ${lcp}.`,
+      },
+      labOnly: (lcp: string) => `Según la prueba de Google en un móvil simulado, el contenido principal tarda ${lcp}.`,
+    },
     noMeasurementsTitle: "Todavía no hay mediciones de velocidad",
     noMeasurementsBody: "Pulsa «Analizar portada»: leemos tu portada y pedimos a Google que mida su velocidad en móvil. Tarda menos de un minuto.",
     metrics: {
@@ -656,7 +662,7 @@ export const es = {
     },
     goodLabel: (good: string) => `Bueno: ${good}`,
     noValue: "Sin dato",
-    lab: { title: "Prueba de laboratorio", description: "Medida por PageSpeed Insights en un móvil simulado. No son visitantes reales.", notMeasured: "No se midió en la última auditoría." },
+    lab: { title: "Prueba de laboratorio", description: "Google carga tu portada en un móvil simulado con conexión lenta. Sirve para detectar problemas, pero no es la experiencia de tus visitantes. Entre dos pruebas idénticas puede variar varios puntos; solo contamos como cambio 10 puntos o más.", notMeasured: "No se midió en la última auditoría." },
     field: {
       title: "Visitantes reales",
       description: "Chrome UX Report: visitas reales con Chrome en el móvil durante 28 días, valor que cumple el 75 % de las visitas.",

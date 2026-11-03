@@ -624,15 +624,21 @@ export const en = {
     title: "Your website's performance",
     description: "How fast and comfortable your page is for visitors, according to Google's measurements.",
     mobile: "Mobile",
-    desktop: "Desktop",
-    notAvailable: "Not available",
-    desktopNote: "Our measurement uses only the mobile profile of PageSpeed Insights; we do not measure desktop.",
+    desktopFootnote: "We do not measure desktop: our measurement uses only the mobile profile of PageSpeed Insights.",
     analyzing: "Analysing…",
     noResult: "No result",
     notMeasured: "Not measured",
     source: (when: string, lighthouse: string | null) => `PageSpeed Insights · ${when}${lighthouse ? ` · Lighthouse ${lighthouse}` : ""}`,
-    labNote:
-      "The score is a lab test: Google loads your home page on a simulated mobile device with a slow connection. It is useful to spot problems, but it is not the experience of all your visitors. Two identical tests can differ by several points; we only count a difference of 10 points or more as a change.",
+    /** The owner question of the hero; the sentence under it leads with real visitors when there is field data. */
+    answer: {
+      visitorsOnly: { good: "Your real visitors find your website fast.", needs_improvement: "Your real visitors find your website has room to get faster.", poor: "Your real visitors find your website slow." },
+      visitorsAndLab: {
+        good: (lcp: string, relation: "same" | "worse" | "better") => relation === "same" ? `Your real visitors find your website fast, and Google's test agrees: the main content takes ${lcp}.` : `Your real visitors find your website fast; in Google's demanding test, the main content takes ${lcp}.`,
+        needs_improvement: (lcp: string, relation: "same" | "worse" | "better") => relation === "same" ? `Your real visitors find your website has room to get faster, and Google's test agrees: the main content takes ${lcp}.` : relation === "worse" ? `Your real visitors find your website has room to get faster; in Google's demanding test, the main content takes ${lcp}.` : `Your real visitors find your website has room to get faster; in Google's test, the main content takes ${lcp}.`,
+        poor: (lcp: string, relation: "same" | "worse" | "better") => relation === "same" ? `Your real visitors find your website slow, and Google's test agrees: the main content takes ${lcp}.` : `Your real visitors find your website slow; in Google's test, the main content takes ${lcp}.`,
+      },
+      labOnly: (lcp: string) => `In Google's test on a simulated mobile device, the main content takes ${lcp}.`,
+    },
     noMeasurementsTitle: "No speed measurements yet",
     noMeasurementsBody: "Press “Analyse home page”: we read your home page and ask Google to measure its mobile speed. It takes less than a minute.",
     metrics: {
@@ -644,7 +650,7 @@ export const en = {
     },
     goodLabel: (good: string) => `Good: ${good}`,
     noValue: "No data",
-    lab: { title: "Lab test", description: "Measured by PageSpeed Insights on a simulated mobile device. These are not real visitors.", notMeasured: "Not measured in the latest audit." },
+    lab: { title: "Lab test", description: "Google loads your home page on a simulated mobile device with a slow connection. It is useful to spot problems, but it is not the experience of your visitors. Two identical tests can differ by several points; we only count 10 points or more as a change.", notMeasured: "Not measured in the latest audit." },
     field: {
       title: "Real visitors",
       description: "Chrome UX Report: real visits using Chrome on mobile over 28 days, the value met by 75% of visits.",
