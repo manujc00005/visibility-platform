@@ -186,7 +186,7 @@ export const en = {
   },
   audits: {
     labels: {
-      severity: { critical: "Critical", warning: "Important", info: "Improvement" },
+      severity: { critical: "Critical", warning: "Important", info: "Optional" },
       category: {
         access: "Access",
         indexability: "Indexing",
@@ -228,7 +228,7 @@ export const en = {
         refused_by_policy: "Refused by robots.txt",
       },
       rating: { good: "Good", needs_improvement: "Needs improvement", poor: "Poor" },
-      verdict: { good: "Good", unchecked: "Not checked", critical: "Poor", warning: "Fair", info: "Could improve" },
+      verdict: { good: "Good", unchecked: "Not checked", critical: "Poor", warning: "Needs improvement", info: "Optional" },
     },
     headline: {
       critical: (n: number) => `${n} critical ${n === 1 ? "problem" : "problems"}`,
@@ -259,10 +259,10 @@ export const en = {
       counts: {
         critical: { label: "Critical", hint: "Block or harm visibility" },
         warning: { label: "Important", hint: "Should be fixed soon" },
-        info: { label: "Improvements", hint: "Optional, add quality" },
+        info: { label: "Optional", hint: "Add quality" },
       },
       areas: "Status by area",
-      legend: { good: "Green: good", fair: "Amber: fair", bad: "Red: poor", info: "Blue: could improve (optional)", neutral: "Grey: not checked" },
+      legend: { good: "Green: good", fair: "Amber: needs improvement", bad: "Red: poor", info: "Blue: optional", neutral: "Grey: not checked" },
       report: {
         title: "Report for the client",
         description: "PDF with an executive summary, search results, technical results, problems, recommendations, evidence and limitations.",
@@ -372,7 +372,7 @@ export const en = {
     nav: { label: "Company sections", overview: "Overview", performance: "Performance", seo: "Google", geo: "AI presence", geoShort: "AI", settings: "Settings" },
     /** One state vocabulary for the three cards (feature 014, D004); only the verdicts below carry a tone. */
     states: { not_configured: "Not set up", no_data: "No data", analyzing: "Analysing", partial: "Partial", error: "Error", ok: "Measured", not_measured: "Not measured" },
-    verdict: { good: "Good", fair: "Needs improvement", bad: "Poor", info: "Minor fixes", neutral: "Partial" },
+    verdict: { good: "Good", fair: "Needs improvement", bad: "Poor", info: "Optional", neutral: "Partial" },
     partial: (verdict: string) => `${verdict} (partial)`,
     viewReport: "View report",
     /** Direction words of the change chip on the cards (overview). */
@@ -736,7 +736,7 @@ export const en = {
       counts: {
         critical: { label: "Critical", hint: "Block or harm visibility" },
         warning: { label: "Important", hint: "Should be fixed soon" },
-        info: { label: "Improvements", hint: "Optional" },
+        info: { label: "Optional", hint: "Add quality" },
       },
       source: (when: string) => `Technical audit of the home page · ${when}`,
       analyzing: "Analysing the website",
@@ -758,7 +758,7 @@ export const en = {
       title: "Audit history",
       description: "Technical SEO problems in each audit, not counting speed. It compares specific audits; it is not a business trend.",
       summary: (critical: number, warning: number, info: number, read: boolean) =>
-        `${critical} critical · ${warning} important · ${info} ${info === 1 ? "improvement" : "improvements"}${read ? "" : " · home page not read"}`,
+        `${critical} critical · ${warning} important · ${info} optional${read ? "" : " · home page not read"}`,
       completed: "Completed",
       none: "No audits yet.",
       showing: (shown: number, total: number) => `Showing the ${shown} most recent audits of ${total}.`,
@@ -1211,8 +1211,8 @@ export const en = {
   chart: {
     problemsTitle: "Problems per audit, from oldest to most recent",
     speedTitle: "Mobile speed score per audit, from 0 to 100",
-    bar: (date: string, critical: number, warning: number, info: number) => `${date}: ${critical} critical, ${warning} important, ${info} improvements`,
-    legend: { critical: "Critical", warning: "Important", info: "Improvements", good: "Good: 90–100", fair: "Needs improvement: 50–89", poor: "Poor: 0–49", unmeasured: "Audit without measurement" },
+    bar: (date: string, critical: number, warning: number, info: number) => `${date}: ${critical} critical, ${warning} important, ${info} optional`,
+    legend: { critical: "Critical", warning: "Important", info: "Optional", good: "Good: 90–100", fair: "Needs improvement: 50–89", poor: "Poor: 0–49", unmeasured: "Audit without measurement" },
     point: (date: string, score: number, rating: string) => `${date}: ${score} out of 100, ${rating}`,
     unmeasured: (date: string) => `${date}: speed was not measured`,
     rating: { good: "Good", needs_improvement: "Needs improvement", poor: "Poor" },

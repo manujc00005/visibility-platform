@@ -185,7 +185,7 @@ export const es = {
   audits: {
     /** Labels shared by the audit, SEO and performance screens; keyed by the stored enum values. */
     labels: {
-      severity: { critical: "Crítico", warning: "Importante", info: "Mejora" } satisfies Record<Severity, string>,
+      severity: { critical: "Crítico", warning: "Importante", info: "Opcional" } satisfies Record<Severity, string>,
       category: {
         access: "Acceso",
         indexability: "Indexación",
@@ -229,7 +229,7 @@ export const es = {
         refused_by_policy: "No permitido por robots.txt",
       } satisfies Record<FetchLogEntry["outcome"], string>,
       rating: { good: "Bueno", needs_improvement: "Mejorable", poor: "Malo" } satisfies Record<FieldRating, string>,
-      verdict: { good: "Bien", unchecked: "No comprobado", critical: "Mal", warning: "Regular", info: "Mejorable" },
+      verdict: { good: "Bien", unchecked: "No comprobado", critical: "Mal", warning: "Mejorable", info: "Opcional" },
     },
     headline: {
       critical: (n: number) => `${n} ${n === 1 ? "problema crítico" : "problemas críticos"}`,
@@ -238,7 +238,7 @@ export const es = {
       warningDetail: "La web funciona, pero hay puntos que conviene corregir pronto.",
       goodWithInfo: "Bien: sin problemas críticos ni importantes",
       goodClean: "Bien: no hemos detectado problemas",
-      infoDetail: (n: number) => `${n === 1 ? "Queda" : "Quedan"} ${n} ${n === 1 ? "mejora opcional" : "mejoras opcionales"}.`,
+      infoDetail: (n: number) => `${n === 1 ? "Queda" : "Quedan"} ${n} ${n === 1 ? "aspecto opcional" : "aspectos opcionales"}.`,
       cleanDetail: "Repite el análisis tras cualquier cambio importante en la web.",
     },
     /** Serializable fragments for the client buttons. */
@@ -261,10 +261,10 @@ export const es = {
       counts: {
         critical: { label: "Críticos", hint: "Bloquean o dañan la visibilidad" },
         warning: { label: "Importantes", hint: "Conviene corregirlos pronto" },
-        info: { label: "Mejoras", hint: "Opcionales, suman calidad" },
+        info: { label: "Opcionales", hint: "Suman calidad" },
       },
       areas: "Estado por área",
-      legend: { good: "Verde: bien", fair: "Ámbar: regular", bad: "Rojo: mal", info: "Azul: mejorable (opcional)", neutral: "Gris: no comprobado" },
+      legend: { good: "Verde: bien", fair: "Ámbar: mejorable", bad: "Rojo: mal", info: "Azul: opcional", neutral: "Gris: no comprobado" },
       report: {
         title: "Informe para el cliente",
         description: "PDF con resumen ejecutivo, resultados en buscadores, resultados técnicos, problemas, recomendaciones, evidencias y limitaciones.",
@@ -375,7 +375,7 @@ export const es = {
     /** One state vocabulary for the three cards (feature 014, D004); only the verdicts below carry a tone. */
     states: { not_configured: "Sin configurar", no_data: "Sin datos", analyzing: "Analizando", partial: "Parcial", error: "Error", ok: "Medido", not_measured: "No medida" },
     /** One verdict scale for the three cards: the same word always means the same tone. */
-    verdict: { good: "Bien", fair: "Mejorable", bad: "Mal", info: "Con mejoras", neutral: "Parcial" },
+    verdict: { good: "Bien", fair: "Mejorable", bad: "Mal", info: "Opcional", neutral: "Parcial" },
     partial: (verdict: string) => `${verdict} (parcial)`,
     viewReport: "Ver informe",
     /** Direction words of the change chip on the cards (overview). */
@@ -749,7 +749,7 @@ export const es = {
       counts: {
         critical: { label: "Críticos", hint: "Bloquean o dañan la visibilidad" },
         warning: { label: "Importantes", hint: "Conviene corregirlos pronto" },
-        info: { label: "Mejoras", hint: "Opcionales" },
+        info: { label: "Opcionales", hint: "Suman calidad" },
       },
       source: (when: string) => `Auditoría técnica de la portada · ${when}`,
       analyzing: "Analizando la web",
@@ -771,7 +771,7 @@ export const es = {
       title: "Histórico de auditorías",
       description: "Problemas de SEO técnico en cada auditoría, sin contar los de velocidad. Compara auditorías concretas, no es una tendencia del negocio.",
       summary: (critical: number, warning: number, info: number, read: boolean) =>
-        `${critical} ${critical === 1 ? "crítico" : "críticos"} · ${warning} ${warning === 1 ? "importante" : "importantes"} · ${info} ${info === 1 ? "mejora" : "mejoras"}${read ? "" : " · portada no leída"}`,
+        `${critical} ${critical === 1 ? "crítico" : "críticos"} · ${warning} ${warning === 1 ? "importante" : "importantes"} · ${info} ${info === 1 ? "opcional" : "opcionales"}${read ? "" : " · portada no leída"}`,
       completed: "Completada",
       none: "Todavía no hay auditorías.",
       showing: (shown: number, total: number) => `Se muestran las ${shown} auditorías más recientes de ${total}.`,
@@ -1228,8 +1228,8 @@ export const es = {
   chart: {
     problemsTitle: "Problemas por auditoría, de la más antigua a la más reciente",
     speedTitle: "Puntuación de velocidad en móvil por auditoría, de 0 a 100",
-    bar: (date: string, critical: number, warning: number, info: number) => `${date}: ${critical} críticos, ${warning} importantes, ${info} mejoras`,
-    legend: { critical: "Críticos", warning: "Importantes", info: "Mejoras", good: "Bueno: 90–100", fair: "Mejorable: 50–89", poor: "Malo: 0–49", unmeasured: "Auditoría sin medir" },
+    bar: (date: string, critical: number, warning: number, info: number) => `${date}: ${critical} críticos, ${warning} importantes, ${info} opcionales`,
+    legend: { critical: "Críticos", warning: "Importantes", info: "Opcionales", good: "Bueno: 90–100", fair: "Mejorable: 50–89", poor: "Malo: 0–49", unmeasured: "Auditoría sin medir" },
     point: (date: string, score: number, rating: string) => `${date}: ${score} de 100, ${rating}`,
     unmeasured: (date: string) => `${date}: no se midió la velocidad`,
     rating: { good: "Bueno", needs_improvement: "Mejorable", poor: "Malo" },
