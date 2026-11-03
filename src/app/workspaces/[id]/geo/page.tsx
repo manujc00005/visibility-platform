@@ -42,7 +42,7 @@ export const instant = false;
 
 const STATUS_TONE: Record<BlockState, Tone> = {
   ok: "neutral",
-  partial: "fair",
+  partial: "neutral",
   analyzing: "neutral",
   error: "bad",
   not_configured: "neutral",
@@ -263,8 +263,7 @@ export default async function GeoPage({
           </Empty>
         ) : (
           <Empty
-            title={t.empty.noRunsTitle}
-            action={setupLink(t.empty.firstRun)}
+            title={s.nonRealOnly ? t.empty.noRealRunsTitle : t.empty.noRunsTitle}
           >
             {s.nonRealOnly && s.reason ? `${s.reason} ` : ""}
             {t.empty.noRunsBody(prompts.length)}
@@ -474,14 +473,12 @@ export default async function GeoPage({
         </>
       )}
 
+      {runs.length > 0 ? (
       <Section
         id="history"
         title={t.history.title}
         description={t.history.description}
       >
-        {runs.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t.history.none}</p>
-        ) : (
           <ul className="flex flex-col divide-y rounded-2xl border border-border/80 bg-card shadow-card">
             {runs.map(({ run, metrics }, index) => {
               const previous = runs[index + 1];
@@ -494,18 +491,28 @@ export default async function GeoPage({
                     className="flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-foreground/60 focus-visible:outline-none"
                   >
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="font-medium">
+                      <span className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium">
                         {displayDate(run.createdAt, locale)}
+                        {run.origin !== "real" ? (
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                            {L.origin[run.origin]}
+                          </span>
+                        ) : null}
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {L.provider[run.provider]} · {L.runStatus[run.status]}
-                        {run.origin !== "real"
-                          ? ` · ${L.origin[run.origin]}`
-                          : ""}
                         {changed ? t.history.changed : ""}
                       </span>
                     </span>
                     <span className="hidden text-right text-xs text-muted-foreground sm:block">
+                      {run.origin !== "real" ? (
+                        <>
+                          <em className="not-italic font-medium">
+                            {t.history.notResult}
+                          </em>
+                          <br />
+                        </>
+                      ) : null}
                       {t.history.appear(
                         count(t, L.noData, metrics.promptCoverage, "question"),
                       )}
@@ -523,8 +530,8 @@ export default async function GeoPage({
               );
             })}
           </ul>
-        )}
       </Section>
+      ) : null}
     </div>
   );
 }
