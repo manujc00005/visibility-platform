@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { ChartDataTable, SpeedChart } from "@/components/audits/evolution-chart";
 import { LighthouseCategoryCard } from "@/components/audits/lighthouse-category";
 import { RunAuditButton } from "@/components/audits/run-audit-button";
-import { accentRow, figureClasses, StatusPill, VerdictBar, verdictCard } from "@/components/audits/status-ui";
+import { accentRow, figureClasses, StatusPill, VerdictCard } from "@/components/audits/status-ui";
 import { ChangeLine, NoticeList, type Notice } from "@/components/overview/overview-card";
 import { PageHeader } from "@/components/overview/page-header";
 import { WorkspaceNav } from "@/components/overview/workspace-nav";
@@ -149,8 +149,7 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
         <WorkspaceNav workspaceId={workspace.id} current="performance" locale={locale} />
       </div>
 
-      <div className={verdictCard(s.tone)}>
-        <VerdictBar tone={s.tone} />
+      <VerdictCard tone={s.tone}>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
             <span className="text-sm font-medium text-muted-foreground">{t.mobile}</span>
@@ -185,7 +184,7 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
           <NoticeList notices={notices} />
           <p className="text-sm text-muted-foreground">{t.labNote}</p>
         </div>
-      </div>
+      </VerdictCard>
 
       {result === null ? (
         <div className="flex flex-col items-start gap-3 rounded-2xl border border-dashed bg-card/60 p-6">

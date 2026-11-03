@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
-import { accentRow, StatusPill, VerdictBar, verdictCard } from "@/components/audits/status-ui";
+import { accentRow, StatusPill, VerdictCard } from "@/components/audits/status-ui";
 import {
   ChangeLine,
   NoticeList,
@@ -272,8 +272,7 @@ export default async function GeoPage({
         )
       ) : (
         <>
-          <div className={cn("flex flex-col gap-5", verdictCard(STATUS_TONE[s.state]))}>
-            <VerdictBar tone={STATUS_TONE[s.state]} />
+          <VerdictCard tone={STATUS_TONE[s.state]} className="flex flex-col gap-5">
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-[1.2fr_1fr]">
               <div className="flex flex-col gap-2">
                 <span className="text-sm font-medium text-muted-foreground">
@@ -346,7 +345,7 @@ export default async function GeoPage({
                 )}
               </p>
             </div>
-          </div>
+          </VerdictCard>
 
           {view ? (
             <Section

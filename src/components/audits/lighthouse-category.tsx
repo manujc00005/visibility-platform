@@ -31,16 +31,17 @@ export function LighthouseCategoryCard({
   return (
     <section aria-labelledby={headingId} className={cn("flex flex-col gap-4", verdictCard(view.tone))}>
       <VerdictBar tone={view.tone} />
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1">
+        {/* The verdict sits on the title line, top right like the overview card; the description runs full width below. */}
+        <div className="flex items-start justify-between gap-3">
           <Heading id={headingId} className="text-base font-semibold tracking-tight">
             {copy.title}
           </Heading>
-          <p className="max-w-2xl text-sm text-muted-foreground">{copy.description}</p>
+          <StatusPill tone={view.tone} variant={view.tone === "neutral" ? "soft" : "solid"}>
+            {view.verdict}
+          </StatusPill>
         </div>
-        <StatusPill tone={view.tone} variant={view.tone === "neutral" ? "soft" : "solid"}>
-          {view.verdict}
-        </StatusPill>
+        <p className="max-w-2xl text-sm text-muted-foreground">{copy.description}</p>
       </div>
 
       {view.state === "ok" && view.score !== null ? (

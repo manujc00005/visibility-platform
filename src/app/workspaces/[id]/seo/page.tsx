@@ -14,7 +14,7 @@ import {
 } from "@/components/audits/evolution-chart";
 import { LighthouseCategoryCard } from "@/components/audits/lighthouse-category";
 import { RunAuditButton } from "@/components/audits/run-audit-button";
-import { accentRow, figureClasses, StatusPill, ToneIcon, VerdictBar, verdictCard } from "@/components/audits/status-ui";
+import { accentRow, figureClasses, StatusPill, ToneIcon, VerdictCard } from "@/components/audits/status-ui";
 import { AnalyticsSection } from "@/components/analytics/analytics-section";
 import { BingWebmasterSection } from "@/components/bing-webmaster/bing-webmaster-section";
 import { ComparisonSection } from "@/components/competitor-comparison/comparison-section";
@@ -346,8 +346,7 @@ export default async function SeoPage({
           description={t.health.description}
         >
           {s.headline ? (
-            <div className={cn("flex flex-col gap-5", verdictCard(s.tone))}>
-              <VerdictBar tone={s.tone} />
+            <VerdictCard tone={s.tone} className="flex flex-col gap-5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
                   <ToneIcon tone={s.tone} className="mt-0.5 size-6" />
@@ -391,7 +390,7 @@ export default async function SeoPage({
                   s.auditedAt ? displayDate(s.auditedAt, locale) : "",
                 )}
               </p>
-            </div>
+            </VerdictCard>
           ) : (
             <div className="flex flex-col items-start gap-2 rounded-2xl border border-dashed bg-card/60 p-6">
               <p className="font-medium">
