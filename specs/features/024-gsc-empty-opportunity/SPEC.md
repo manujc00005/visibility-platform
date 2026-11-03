@@ -2,7 +2,7 @@
 
 ## Status
 
-In Progress (2026-11-03).
+Done (2026-11-03). T001–T004 hechas con TDD (pruebas en rojo en `be2a655`); AC-005 verificado en navegador sobre `dev` con Olessium a 1280 y 375 px en `es` y `en`; unitarias 1239, integración 283 en solitario, lint, typecheck y build en verde.
 
 ## Problem
 
