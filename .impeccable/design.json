@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-02T00:00:00Z",
+  "generatedAt": "2026-11-03T10:05:14Z",
   "title": "Design System: Visibility Platform",
   "extensions": {
     "colorMeta": {
@@ -116,6 +116,18 @@
           "oklch(0.982 0.018 155.826)"
         ]
       },
+      "good-soft": {
+        "role": "status",
+        "displayName": "Bien · fondo suave",
+        "canonical": "oklch(0.982 0.018 155.826)",
+        "cssVar": "--good-soft"
+      },
+      "good-line": {
+        "role": "status",
+        "displayName": "Bien · línea",
+        "canonical": "oklch(0.723 0.219 149.579)",
+        "cssVar": "--good-line"
+      },
       "fair": {
         "role": "status",
         "displayName": "Mejorable",
@@ -131,6 +143,18 @@
           "oklch(0.93 0.07 90)",
           "oklch(0.987 0.022 95.277)"
         ]
+      },
+      "fair-soft": {
+        "role": "status",
+        "displayName": "Mejorable · fondo suave",
+        "canonical": "oklch(0.987 0.022 95.277)",
+        "cssVar": "--fair-soft"
+      },
+      "fair-line": {
+        "role": "status",
+        "displayName": "Mejorable · línea",
+        "canonical": "oklch(0.769 0.188 70.08)",
+        "cssVar": "--fair-line"
       },
       "bad": {
         "role": "status",
@@ -148,6 +172,18 @@
           "oklch(0.971 0.013 17.38)"
         ]
       },
+      "bad-soft": {
+        "role": "status",
+        "displayName": "Mal · fondo suave",
+        "canonical": "oklch(0.971 0.013 17.38)",
+        "cssVar": "--bad-soft"
+      },
+      "bad-line": {
+        "role": "status",
+        "displayName": "Mal · línea",
+        "canonical": "oklch(0.637 0.237 25.331)",
+        "cssVar": "--bad-line"
+      },
       "info": {
         "role": "status",
         "displayName": "Información",
@@ -163,6 +199,18 @@
           "oklch(0.92 0.035 255)",
           "oklch(0.97 0.014 254.604)"
         ]
+      },
+      "info-soft": {
+        "role": "status",
+        "displayName": "Información · fondo suave",
+        "canonical": "oklch(0.97 0.014 254.604)",
+        "cssVar": "--info-soft"
+      },
+      "info-line": {
+        "role": "status",
+        "displayName": "Información · línea",
+        "canonical": "oklch(0.623 0.214 259.815)",
+        "cssVar": "--info-line"
       },
       "destructive": {
         "role": "status",
@@ -248,7 +296,41 @@
     "background": {
       "pageGlow": "radial-gradient(ellipse 60rem 28rem at 15% -4rem, color-mix(in oklch, var(--brand) 22%, transparent), transparent 70%), radial-gradient(ellipse 50rem 24rem at 90% -6rem, color-mix(in oklch, var(--info-line) 12%, transparent), transparent 70%)"
     },
-    "darkMode": "Los tokens .dark son los de shadcn por defecto (grises sin tinte) y la app nunca los activa; no son normativos."
+    "darkMode": "Los tokens .dark son los de shadcn por defecto (grises sin tinte) y la app nunca los activa; no son normativos.",
+    "verdictScale": {
+      "words": [
+        {
+          "tone": "good",
+          "es": "Bien",
+          "en": "Good"
+        },
+        {
+          "tone": "fair",
+          "es": "Mejorable",
+          "en": "Needs improvement"
+        },
+        {
+          "tone": "bad",
+          "es": "Mal",
+          "en": "Poor"
+        },
+        {
+          "tone": "info",
+          "es": "Con mejoras",
+          "en": "Minor fixes"
+        },
+        {
+          "tone": "neutral",
+          "es": "Parcial",
+          "en": "Partial"
+        }
+      ],
+      "usedBy": "Tarjetas del resumen, estado por área y problemas de la página Google, y áreas de la auditoría técnica; un área sin comprobar dice «No comprobado» en neutro.",
+      "separateVocabularies": [
+        "Métricas de velocidad: terminología de Google (Bueno / Mejorable / Malo).",
+        "Problemas sueltos: severidad (Crítico / Importante / Mejora)."
+      ]
+    }
   },
   "components": [
     {
@@ -287,17 +369,33 @@
       "name": "Status Pills",
       "kind": "chip",
       "refersTo": "status-pill-good",
-      "description": "Semáforo: icono + palabra, nunca solo color.",
-      "html": "<div class=\"ds-pills\"><span class=\"ds-pill ds-pill-good\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m9 12 2 2 4-4\"/></svg>Bien</span><span class=\"ds-pill ds-pill-fair\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\"/><path d=\"M12 9v4\"/><path d=\"M12 17h.01\"/></svg>Mejorable</span><span class=\"ds-pill ds-pill-bad\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m15 9-6 6\"/><path d=\"m9 9 6 6\"/></svg>Mal</span><span class=\"ds-pill ds-pill-neutral\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-dasharray=\"3 3\"><circle cx=\"12\" cy=\"12\" r=\"10\"/></svg>Sin datos</span></div>",
-      "css": ".ds-pills { display: flex; flex-wrap: wrap; gap: 8px; } .ds-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid; border-radius: 9999px; font: 500 12px/1.33 Geist, ui-sans-serif, system-ui, sans-serif; white-space: nowrap; } .ds-pill-good { background: var(--good-soft, oklch(0.982 0.018 155.826)); border-color: var(--good-line, oklch(0.723 0.219 149.579)); color: var(--good, oklch(0.448 0.119 151.328)); } .ds-pill-fair { background: var(--fair-soft, oklch(0.987 0.022 95.277)); border-color: var(--fair-line, oklch(0.769 0.188 70.08)); color: var(--fair, oklch(0.473 0.137 46.201)); } .ds-pill-bad { background: var(--bad-soft, oklch(0.971 0.013 17.38)); border-color: var(--bad-line, oklch(0.637 0.237 25.331)); color: var(--bad, oklch(0.505 0.213 27.518)); } .ds-pill-neutral { background: var(--muted, oklch(0.962 0.008 286)); border-color: var(--border, oklch(0.912 0.012 286)); color: var(--muted-foreground, oklch(0.49 0.025 285)); }"
+      "description": "Pastilla suave del semáforo, junto a cada métrica: icono + palabra de la escala de veredictos, nunca solo color. El neutro usa siempre la suave.",
+      "html": "<div class=\"ds-pills\"><span class=\"ds-pill ds-pill-good\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m9 12 2 2 4-4\"/></svg>Bien</span><span class=\"ds-pill ds-pill-fair\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\"/><path d=\"M12 9v4\"/><path d=\"M12 17h.01\"/></svg>Mejorable</span><span class=\"ds-pill ds-pill-bad\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m15 9-6 6\"/><path d=\"m9 9 6 6\"/></svg>Mal</span><span class=\"ds-pill ds-pill-info\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\"/><path d=\"M9 18h6\"/><path d=\"M10 22h4\"/></svg>Con mejoras</span><span class=\"ds-pill ds-pill-neutral\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\" stroke-dasharray=\"3 3\"/></svg>Parcial</span></div>",
+      "css": ".ds-pills { display: flex; flex-wrap: wrap; gap: 8px; } .ds-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border: 1px solid; border-radius: 9999px; font: 500 12px/1.33 Geist, ui-sans-serif, system-ui, sans-serif; white-space: nowrap; } .ds-pill-good { background: var(--good-soft, oklch(0.982 0.018 155.826)); border-color: var(--good-line, oklch(0.723 0.219 149.579)); color: var(--good, oklch(0.448 0.119 151.328)); } .ds-pill-fair { background: var(--fair-soft, oklch(0.987 0.022 95.277)); border-color: var(--fair-line, oklch(0.769 0.188 70.08)); color: var(--fair, oklch(0.473 0.137 46.201)); } .ds-pill-bad { background: var(--bad-soft, oklch(0.971 0.013 17.38)); border-color: var(--bad-line, oklch(0.637 0.237 25.331)); color: var(--bad, oklch(0.505 0.213 27.518)); } .ds-pill-info { background: var(--info-soft, oklch(0.97 0.014 254.604)); border-color: var(--info-line, oklch(0.623 0.214 259.815)); color: var(--info, oklch(0.488 0.243 264.376)); } .ds-pill-neutral { background: var(--muted, oklch(0.962 0.008 286)); border-color: var(--border, oklch(0.912 0.012 286)); color: var(--muted-foreground, oklch(0.49 0.025 285)); }"
+    },
+    {
+      "name": "Solid Status Pill",
+      "kind": "chip",
+      "refersTo": "status-pill-solid",
+      "description": "El veredicto de un bloque entero: relleno con el tono de texto (≥ 4,5:1 con blanco), texto blanco en semibold e icono. Arriba a la derecha de las tarjetas del resumen y de los bloques de veredicto.",
+      "html": "<div class=\"ds-solids\"><span class=\"ds-solid ds-solid-good\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m9 12 2 2 4-4\"/></svg>Bien</span><span class=\"ds-solid ds-solid-fair\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\"/><path d=\"M12 9v4\"/><path d=\"M12 17h.01\"/></svg>Mejorable</span><span class=\"ds-solid ds-solid-bad\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m15 9-6 6\"/><path d=\"m9 9 6 6\"/></svg>Mal</span><span class=\"ds-solid ds-solid-info\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\"/><path d=\"M9 18h6\"/><path d=\"M10 22h4\"/></svg>Con mejoras</span></div>",
+      "css": ".ds-solids { display: flex; flex-wrap: wrap; gap: 8px; } .ds-solid { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px; color: #fff; font: 600 12px/1.33 Geist, ui-sans-serif, system-ui, sans-serif; white-space: nowrap; } .ds-solid-good { background: var(--good, oklch(0.448 0.119 151.328)); } .ds-solid-fair { background: var(--fair, oklch(0.473 0.137 46.201)); } .ds-solid-bad { background: var(--bad, oklch(0.505 0.213 27.518)); } .ds-solid-info { background: var(--info, oklch(0.488 0.243 264.376)); }"
     },
     {
       "name": "Overview Card",
       "kind": "card",
       "refersTo": "overview-card",
-      "description": "Tarjeta-enlace del resumen: icono Iris, estado, cifra única, fuente y fecha en el pie.",
-      "html": "<a class=\"ds-ocard\" href=\"#\"><div class=\"ds-ocard-head\"><span class=\"ds-ocard-icon\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m12 14 4-4\"/><path d=\"M3.34 19a10 10 0 1 1 17.32 0\"/></svg></span><h2 class=\"ds-ocard-title\">Rendimiento de tu web</h2><span class=\"ds-ocard-pill\">Mejorable</span></div><p class=\"ds-ocard-desc\">Cómo de rápida y cómoda es tu página para los visitantes.</p><div class=\"ds-ocard-figure\">62<span>/100</span></div><div class=\"ds-ocard-foot\"><span>PageSpeed Insights · 26 oct 2026</span><span class=\"ds-ocard-cta\">Ver informe ›</span></div></a>",
-      "css": ".ds-ocard { position: relative; display: flex; flex-direction: column; gap: 16px; width: 320px; overflow: hidden; padding: 24px; border: 1px solid color-mix(in oklch, var(--border, oklch(0.912 0.012 286)) 80%, transparent); border-radius: 18px; background: var(--card, #fff); color: var(--card-foreground, oklch(0.19 0.025 285)); text-decoration: none; font-family: Geist, ui-sans-serif, system-ui, sans-serif; box-shadow: 0 1px 2px oklch(0.25 0.04 285 / 0.05), 0 10px 30px -18px oklch(0.25 0.06 285 / 0.18); transition: border-color 200ms, box-shadow 200ms, translate 200ms; } .ds-ocard::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 2px; background: linear-gradient(to right, var(--brand, oklch(0.5 0.21 290)), color-mix(in oklch, var(--brand, oklch(0.5 0.21 290)) 40%, transparent), transparent); opacity: 0; transition: opacity 200ms; } .ds-ocard:hover { translate: 0 -2px; border-color: color-mix(in oklch, var(--brand, oklch(0.5 0.21 290)) 30%, transparent); box-shadow: 0 1px 2px oklch(0.25 0.04 285 / 0.06), 0 18px 40px -20px oklch(0.3 0.1 285 / 0.3); } .ds-ocard:hover::before { opacity: 1; } .ds-ocard:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--background, oklch(0.984 0.004 286)), 0 0 0 4px color-mix(in oklch, var(--foreground, oklch(0.19 0.025 285)) 60%, transparent); } .ds-ocard-head { display: flex; align-items: center; gap: 10px; } .ds-ocard-icon { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 12px; background: var(--brand-soft, oklch(0.955 0.03 292)); color: var(--brand, oklch(0.5 0.21 290)); box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--brand, oklch(0.5 0.21 290)) 15%, transparent); } .ds-ocard-title { flex: 1; margin: 0; font-size: 14px; font-weight: 600; letter-spacing: -0.025em; } .ds-ocard-pill { padding: 2px 8px; border: 1px solid var(--fair-line, oklch(0.769 0.188 70.08)); border-radius: 9999px; background: var(--fair-soft, oklch(0.987 0.022 95.277)); color: var(--fair, oklch(0.473 0.137 46.201)); font-size: 12px; font-weight: 500; } .ds-ocard-desc { margin: 0; font-size: 14px; color: var(--muted-foreground, oklch(0.49 0.025 285)); } .ds-ocard-figure { font-size: 36px; line-height: 1.25; font-weight: 600; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; } .ds-ocard-figure span { font-size: 16px; font-weight: 400; color: var(--muted-foreground, oklch(0.49 0.025 285)); } .ds-ocard-foot { display: flex; justify-content: space-between; gap: 12px; margin: 0 -24px -24px; padding: 14px 24px; border-top: 1px solid color-mix(in oklch, var(--border, oklch(0.912 0.012 286)) 70%, transparent); background: color-mix(in oklch, var(--muted, oklch(0.962 0.008 286)) 50%, transparent); font-size: 12px; color: var(--muted-foreground, oklch(0.49 0.025 285)); } .ds-ocard-cta { font-weight: 500; color: var(--brand, oklch(0.5 0.21 290)); }"
+      "description": "Tarjeta-enlace del resumen que viste su veredicto: barra de 4 px y borde en la línea del tono, icono sobre el fondo suave del tono, cifra en el color del tono y pastilla sólida; fuente y fecha en el pie. Una tarjeta neutra conserva filete, cuadrado Iris Velado y cifra en Tinta.",
+      "html": "<a class=\"ds-ocard\" href=\"#\"><span class=\"ds-ocard-bar\"></span><div class=\"ds-ocard-head\"><div class=\"ds-ocard-id\"><span class=\"ds-ocard-icon\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m12 14 4-4\"/><path d=\"M3.34 19a10 10 0 1 1 17.32 0\"/></svg></span><h2 class=\"ds-ocard-title\">¿Cómo funciona tu web?</h2></div><span class=\"ds-solid-pill\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\"/><path d=\"M12 9v4\"/><path d=\"M12 17h.01\"/></svg>Mejorable</span></div><div class=\"ds-ocard-summary\"><div class=\"ds-ocard-figure\">62<span>/100</span></div><p class=\"ds-ocard-change\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M7 7h10v10\"/><path d=\"M7 17 17 7\"/></svg><span><strong>Mejora</strong> · 8 puntos más que la medición anterior</span></p></div><div class=\"ds-ocard-foot\"><span>PageSpeed Insights · 26 oct 2026</span><span class=\"ds-ocard-cta\">Ver informe<svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m9 18 6-6-6-6\"/></svg></span></div></a>",
+      "css": ".ds-ocard { position: relative; display: flex; flex-direction: column; gap: 16px; width: 340px; overflow: hidden; padding: 28px 24px 24px; border: 1px solid var(--fair-line, oklch(0.769 0.188 70.08)); border-radius: 18px; background: var(--card, oklch(1 0 0)); color: var(--foreground, oklch(0.19 0.025 285)); text-decoration: none; font-family: Geist, ui-sans-serif, system-ui, sans-serif; box-shadow: 0 1px 2px oklch(0.25 0.04 285 / 0.05), 0 10px 30px -18px oklch(0.25 0.06 285 / 0.18); transition: border-color 200ms, box-shadow 200ms, translate 200ms; } .ds-ocard:hover { translate: 0 -2px; box-shadow: 0 1px 2px oklch(0.25 0.04 285 / 0.06), 0 18px 40px -20px oklch(0.3 0.1 285 / 0.3); } .ds-ocard:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--background, oklch(0.984 0.004 286)), 0 0 0 4px color-mix(in oklch, var(--foreground, oklch(0.19 0.025 285)) 60%, transparent); } @media (prefers-reduced-motion: reduce) { .ds-ocard, .ds-ocard-cta svg { transition: none; } .ds-ocard:hover { translate: none; } } .ds-ocard-bar { position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--fair-line, oklch(0.769 0.188 70.08)); } .ds-ocard-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; } .ds-ocard-id { display: flex; min-width: 0; align-items: center; gap: 10px; } .ds-ocard-icon { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 14px; background: var(--fair-soft, oklch(0.987 0.022 95.277)); color: var(--fair, oklch(0.473 0.137 46.201)); box-shadow: inset 0 0 0 1px color-mix(in oklch, currentColor 15%, transparent); } .ds-ocard-title { margin: 0; font-size: 14px; font-weight: 600; letter-spacing: -0.025em; } .ds-solid-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px; background: var(--fair, oklch(0.473 0.137 46.201)); color: #fff; font-size: 12px; font-weight: 600; white-space: nowrap; } .ds-ocard-summary { display: flex; flex-direction: column; gap: 8px; } .ds-ocard-figure { font-size: 48px; line-height: 1; font-weight: 600; letter-spacing: -0.025em; font-variant-numeric: tabular-nums; color: var(--fair, oklch(0.473 0.137 46.201)); } .ds-ocard-figure span { font-size: 18px; font-weight: 500; color: var(--muted-foreground, oklch(0.49 0.025 285)); } .ds-ocard-change { display: inline-flex; width: fit-content; align-items: flex-start; gap: 6px; margin: 0; padding: 6px 10px; border: 1px solid var(--good-line, oklch(0.723 0.219 149.579)); border-radius: 10px; background: var(--good-soft, oklch(0.982 0.018 155.826)); color: var(--good, oklch(0.448 0.119 151.328)); font-size: 14px; } .ds-ocard-change svg { flex-shrink: 0; margin-top: 2px; } .ds-ocard-change strong { font-weight: 600; } .ds-ocard-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: auto -24px -24px; padding: 14px 24px; border-top: 1px solid color-mix(in oklch, var(--border, oklch(0.912 0.012 286)) 70%, transparent); background: color-mix(in oklch, var(--muted, oklch(0.962 0.008 286)) 50%, transparent); font-size: 12px; color: var(--muted-foreground, oklch(0.49 0.025 285)); } .ds-ocard-cta { display: inline-flex; flex-shrink: 0; align-items: center; gap: 2px; font-weight: 500; color: var(--brand, oklch(0.5 0.21 290)); } .ds-ocard-cta svg { transition: transform 200ms; } .ds-ocard:hover .ds-ocard-cta svg { transform: translateX(2px); }"
+    },
+    {
+      "name": "Verdict Block",
+      "kind": "card",
+      "refersTo": "verdict-card",
+      "description": "Bloque principal de cada página de detalle (VerdictCard): barra de 4 px y borde en la línea del tono, titular en el color del tono y pastilla sólida en la línea del título; las filas que dependen de él llevan acento izquierdo de 4 px en su propio tono.",
+      "html": "<section class=\"ds-vblock\"><span class=\"ds-vblock-bar\"></span><div class=\"ds-vblock-head\"><h3>Estado por área</h3><span class=\"ds-vblock-pill\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m15 9-6 6\"/><path d=\"m9 9 6 6\"/></svg>Mal</span></div><ul class=\"ds-vblock-rows\"><li class=\"ds-vrow ds-vrow-bad\"><span>Rastreo</span><span class=\"ds-vrow-verdict\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m15 9-6 6\"/><path d=\"m9 9 6 6\"/></svg>Mal · 1</span></li><li class=\"ds-vrow ds-vrow-fair\"><span>Metadatos</span><span class=\"ds-vrow-verdict\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\"/><path d=\"M12 9v4\"/><path d=\"M12 17h.01\"/></svg>Mejorable · 2</span></li><li class=\"ds-vrow ds-vrow-info\"><span>Estructura</span><span class=\"ds-vrow-verdict\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5\"/><path d=\"M9 18h6\"/><path d=\"M10 22h4\"/></svg>Con mejoras · 1</span></li><li class=\"ds-vrow ds-vrow-good\"><span>Datos estructurados</span><span class=\"ds-vrow-verdict\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m9 12 2 2 4-4\"/></svg>Bien</span></li><li class=\"ds-vrow ds-vrow-neutral\"><span>Canónicas</span><span class=\"ds-vrow-verdict\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"10\" stroke-dasharray=\"3 3\"/></svg>No comprobado</span></li></ul></section>",
+      "css": ".ds-vblock { position: relative; overflow: hidden; display: flex; flex-direction: column; gap: 16px; width: 380px; padding: 24px 20px 20px; border: 1px solid var(--bad-line, oklch(0.637 0.237 25.331)); border-radius: 18px; background: var(--card, oklch(1 0 0)); color: var(--foreground, oklch(0.19 0.025 285)); font-family: Geist, ui-sans-serif, system-ui, sans-serif; box-shadow: 0 1px 2px oklch(0.25 0.04 285 / 0.05), 0 10px 30px -18px oklch(0.25 0.06 285 / 0.18); } .ds-vblock-bar { position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--bad-line, oklch(0.637 0.237 25.331)); } .ds-vblock-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; } .ds-vblock-head h3 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -0.025em; } .ds-vblock-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 9999px; background: var(--bad, oklch(0.505 0.213 27.518)); color: #fff; font-size: 12px; font-weight: 600; white-space: nowrap; } .ds-vblock-rows { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; } .ds-vrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border: 1px solid var(--border, oklch(0.912 0.012 286)); border-left-width: 4px; border-radius: 10px; font-size: 14px; } .ds-vrow-verdict { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; } .ds-vrow-good { border-left-color: var(--good-line, oklch(0.723 0.219 149.579)); } .ds-vrow-good .ds-vrow-verdict { color: var(--good, oklch(0.448 0.119 151.328)); } .ds-vrow-fair { border-left-color: var(--fair-line, oklch(0.769 0.188 70.08)); } .ds-vrow-fair .ds-vrow-verdict { color: var(--fair, oklch(0.473 0.137 46.201)); } .ds-vrow-bad { border-left-color: var(--bad-line, oklch(0.637 0.237 25.331)); } .ds-vrow-bad .ds-vrow-verdict { color: var(--bad, oklch(0.505 0.213 27.518)); } .ds-vrow-info { border-left-color: var(--info-line, oklch(0.623 0.214 259.815)); } .ds-vrow-info .ds-vrow-verdict { color: var(--info, oklch(0.488 0.243 264.376)); } .ds-vrow-neutral { border-left-color: color-mix(in oklch, var(--muted-foreground, oklch(0.49 0.025 285)) 40%, transparent); } .ds-vrow-neutral .ds-vrow-verdict { color: var(--muted-foreground, oklch(0.49 0.025 285)); }"
     },
     {
       "name": "Metric Tile",
@@ -306,6 +404,14 @@
       "description": "Valor medido con acento izquierdo del semáforo, veredicto y referencia de «bueno».",
       "html": "<div class=\"ds-tile\"><span class=\"ds-tile-label\">LCP · carga del contenido principal</span><span class=\"ds-tile-value\">3,1 s</span><span class=\"ds-tile-pill\">Mejorable</span><span class=\"ds-tile-hint\">Bueno: menos de 2,5 s</span></div>",
       "css": ".ds-tile { display: flex; flex-direction: column; gap: 6px; width: 220px; padding: 12px; border: 1px solid var(--border, oklch(0.912 0.012 286)); border-left: 4px solid var(--fair-line, oklch(0.769 0.188 70.08)); border-radius: 10px; background: var(--card, #fff); font-family: Geist, ui-sans-serif, system-ui, sans-serif; color: var(--foreground, oklch(0.19 0.025 285)); } .ds-tile-label, .ds-tile-hint { font-size: 12px; color: var(--muted-foreground, oklch(0.49 0.025 285)); } .ds-tile-value { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; } .ds-tile-pill { width: fit-content; padding: 2px 8px; border: 1px solid var(--fair-line, oklch(0.769 0.188 70.08)); border-radius: 9999px; background: var(--fair-soft, oklch(0.987 0.022 95.277)); color: var(--fair, oklch(0.473 0.137 46.201)); font-size: 12px; font-weight: 500; }"
+    },
+    {
+      "name": "Change Chip",
+      "kind": "chip",
+      "refersTo": "change-chip",
+      "description": "Cambio frente a la medición anterior: empieza por la palabra de dirección en semibold, para que una cifra dentro de la frase nunca se lea como recuento de problemas. Mejora en tono bien, Empeora en mal, Sin cambios en neutro.",
+      "html": "<div class=\"ds-changes\"><p class=\"ds-change ds-change-good\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M7 7h10v10\"/><path d=\"M7 17 17 7\"/></svg><span><strong>Mejora</strong> · 2 problemas menos que la revisión anterior</span></p><p class=\"ds-change ds-change-bad\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m7 7 10 10\"/><path d=\"M17 7v10H7\"/></svg><span><strong>Empeora</strong> · Antes: 511 clics</span></p><p class=\"ds-change ds-change-neutral\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/></svg><span><strong>Sin cambios</strong> · Igual que la medición anterior</span></p></div>",
+      "css": ".ds-changes { display: flex; flex-direction: column; gap: 8px; } .ds-change { display: inline-flex; width: fit-content; align-items: flex-start; gap: 6px; margin: 0; padding: 6px 10px; border: 1px solid; border-radius: 10px; font-family: Geist, ui-sans-serif, system-ui, sans-serif; font-size: 14px; } .ds-change svg { flex-shrink: 0; margin-top: 2px; } .ds-change strong { font-weight: 600; } .ds-change-good { background: var(--good-soft, oklch(0.982 0.018 155.826)); border-color: var(--good-line, oklch(0.723 0.219 149.579)); color: var(--good, oklch(0.448 0.119 151.328)); } .ds-change-bad { background: var(--bad-soft, oklch(0.971 0.013 17.38)); border-color: var(--bad-line, oklch(0.637 0.237 25.331)); color: var(--bad, oklch(0.505 0.213 27.518)); } .ds-change-neutral { background: var(--muted, oklch(0.962 0.008 286)); border-color: var(--border, oklch(0.912 0.012 286)); color: var(--muted-foreground, oklch(0.49 0.025 285)); }"
     }
   ],
   "narrative": {
@@ -319,6 +425,11 @@
       "Fuente y fecha visibles en el pie de cada tarjeta."
     ],
     "rules": [
+      {
+        "name": "La regla de la medición incompleta",
+        "body": "Que una medición esté incompleta es un dato sobre la captura, no un veredicto: «Parcial» va en neutro y nunca en ámbar. Solo hereda tono cuando lo que sí se midió ya tiene severidad («Mal (parcial)»).",
+        "section": "colors"
+      },
       {
         "name": "La regla del acento sin juicio",
         "body": "Iris dice «esto es la marca» o «aquí puedes ir», nunca «esto va bien». Si un elemento comunica calidad o estado, su color sale del semáforo, no de Iris.",
@@ -345,11 +456,6 @@
         "section": "typography"
       },
       {
-        "name": "La regla de la medición incompleta",
-        "body": "Que una medición esté incompleta es un dato sobre la captura, no un veredicto: «Parcial» va en neutro y nunca en ámbar. Solo hereda tono cuando lo que sí se midió ya tiene severidad («Mal (parcial)»).",
-        "section": "colors"
-      },
-      {
         "name": "La regla de la sombra que responde",
         "body": "Una sombra más marcada solo aparece como respuesta a una interacción. En reposo, todo está a la misma altura.",
         "section": "elevation"
@@ -364,14 +470,14 @@
       "Do mostrar el foco visible en todo elemento interactivo (halo de 2–3 px)."
     ],
     "donts": [
+      "Don't dar tarjeta completa a un área sin resultado: va a la lista «Pendiente de medir».",
+      "Don't poner acciones de operador en el resumen («Analizar portada», «Configurar»): viven en Configuración y en las páginas de detalle.",
       "Don't usar Iris ni Tinta Iris para indicar que algo va bien o mal.",
-      "Don't usar bordes de color por métrica en las tarjetas del resumen; el color de estado vive en la pastilla y en el texto.",
+      "Don't colorear una tarjeta del resumen con un tono que su pastilla no diga: barra, borde y cifra toman siempre el tono de la pastilla, nunca uno propio por métrica.",
       "Don't mostrar una puntuación compuesta ni un cero sin denominador.",
       "Don't meter botones ni enlaces dentro de una tarjeta que ya es un enlace.",
       "Don't usar grises puros en el tema claro.",
-      "Don't dar por bueno el tema oscuro: los tokens .dark son los de shadcn por defecto (grises neutros, sin tinte) y ninguna parte de la app lo activa.",
-      "Don't dar tarjeta completa a un área sin resultado: va a la lista «Pendiente de medir».",
-      "Don't poner acciones de operador en el resumen («Analizar portada», «Configurar»): viven en Configuración y en las páginas de detalle."
+      "Don't dar por bueno el tema oscuro: los tokens .dark son los de shadcn por defecto (grises neutros, sin tinte) y ninguna parte de la app lo activa."
     ]
   }
 }
