@@ -183,7 +183,7 @@ const METRICS = ["clicks", "impressions", "ctr", "position"] as const;
 const BLOCKS = ["branded", "nonBranded"] as const;
 
 /** Brand split of the capture (feature 007). Terms are company data: plain text, never markup. */
-function Segments({ v, t }: { v: SegmentsView; t: Texts }) {
+function Segments({ v, t, change }: { v: SegmentsView; t: Texts; change: Messages["overview"]["change"] }) {
   return (
     <section aria-labelledby="gsc-segments" className="flex flex-col gap-3">
       <h3 id="gsc-segments" className="text-sm font-semibold">
@@ -216,6 +216,7 @@ function Segments({ v, t }: { v: SegmentsView; t: Texts }) {
               <ChangeLine
                 change={v[key].change}
                 note={v[key].change === null ? t.metrics.noPrevious : null}
+                labels={change}
                 className="text-xs"
               />
             </dd>
@@ -366,6 +367,7 @@ export function SearchConsoleSection({
                           ? t.metrics.noPrevious
                           : null
                       }
+                      labels={getMessages(locale).overview.change}
                       className="text-xs"
                     />
                   </dd>
@@ -425,7 +427,7 @@ export function SearchConsoleQueries({
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-4 rounded-2xl border border-border/80 bg-card p-5 shadow-card">
         {s.segments ? (
-          <Segments v={s.segments} t={t} />
+          <Segments v={s.segments} t={t} change={getMessages(locale).overview.change} />
         ) : (
           <p className="max-w-3xl text-sm text-muted-foreground">
             {canRun

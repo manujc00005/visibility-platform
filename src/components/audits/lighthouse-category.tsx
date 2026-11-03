@@ -1,4 +1,5 @@
-import { StatusPill } from "@/components/audits/status-ui";
+import { figureClasses, StatusPill, VerdictBar, verdictCard } from "@/components/audits/status-ui";
+import { cn } from "@/lib/utils";
 import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
 import { getMessages } from "@/i18n/messages";
 import type { LighthouseView } from "@/modules/audits/lighthouse";
@@ -28,7 +29,8 @@ export function LighthouseCategoryCard({
   const Heading = `h${headingLevel}` as const;
   const hidden = view.failingTotal - view.failing.length;
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-4 rounded-2xl border border-border/80 bg-card p-5 shadow-card">
+    <section aria-labelledby={headingId} className={cn("flex flex-col gap-4", verdictCard(view.tone))}>
+      <VerdictBar tone={view.tone} />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <Heading id={headingId} className="text-base font-semibold tracking-tight">
@@ -36,12 +38,14 @@ export function LighthouseCategoryCard({
           </Heading>
           <p className="max-w-2xl text-sm text-muted-foreground">{copy.description}</p>
         </div>
-        <StatusPill tone={view.tone}>{view.verdict}</StatusPill>
+        <StatusPill tone={view.tone} variant={view.tone === "neutral" ? "soft" : "solid"}>
+          {view.verdict}
+        </StatusPill>
       </div>
 
       {view.state === "ok" && view.score !== null ? (
         <>
-          <p className="text-4xl font-semibold tabular-nums">
+          <p className={cn("text-4xl font-semibold tabular-nums", figureClasses(view.tone))}>
             {view.score}
             <span className="text-base font-normal text-muted-foreground">/100</span>
           </p>

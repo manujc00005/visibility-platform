@@ -14,7 +14,7 @@ import {
 } from "@/components/audits/evolution-chart";
 import { LighthouseCategoryCard } from "@/components/audits/lighthouse-category";
 import { RunAuditButton } from "@/components/audits/run-audit-button";
-import { StatusPill, ToneIcon } from "@/components/audits/status-ui";
+import { accentRow, figureClasses, StatusPill, ToneIcon, VerdictBar, verdictCard } from "@/components/audits/status-ui";
 import { AnalyticsSection } from "@/components/analytics/analytics-section";
 import { BingWebmasterSection } from "@/components/bing-webmaster/bing-webmaster-section";
 import { ComparisonSection } from "@/components/competitor-comparison/comparison-section";
@@ -34,6 +34,7 @@ import { findingText } from "@/i18n/findings";
 import { DEFAULT_LOCALE } from "@/i18n/locale";
 import { getMessages } from "@/i18n/messages";
 import { getLocale } from "@/i18n/server";
+import { cn } from "@/lib/utils";
 import { auditLabels } from "@/modules/audits/presentation";
 import type { Category } from "@/modules/audits/rules";
 import { getAudit, listAudits } from "@/modules/audits/service";
@@ -345,35 +346,45 @@ export default async function SeoPage({
           description={t.health.description}
         >
           {s.headline ? (
-            <div className="flex flex-col gap-5 rounded-2xl border border-border/80 bg-card shadow-card p-5">
-              <div className="flex items-start gap-3">
-                <ToneIcon tone={s.tone} className="mt-0.5 size-5" />
-                <div className="flex flex-col gap-0.5">
-                  <p className="text-base font-semibold">{s.headline.title}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {s.headline.detail}
-                  </p>
+            <div className={cn("flex flex-col gap-5", verdictCard(s.tone))}>
+              <VerdictBar tone={s.tone} />
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <ToneIcon tone={s.tone} className="mt-0.5 size-6" />
+                  <div className="flex flex-col gap-0.5">
+                    <p className={cn("text-lg font-semibold tracking-tight", figureClasses(s.tone))}>{s.headline.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {s.headline.detail}
+                    </p>
+                  </div>
                 </div>
+                <StatusPill tone={s.tone} variant={s.tone === "neutral" ? "soft" : "solid"}>
+                  {s.state === "partial" && s.tone !== "neutral" ? m.overview.partial(m.overview.verdict[s.tone]) : s.state === "partial" ? m.overview.states.partial : m.overview.verdict[s.tone]}
+                </StatusPill>
               </div>
               <dl className="grid grid-cols-3 gap-3">
-                {(["critical", "warning", "info"] as const).map((severity) => (
+                {(["critical", "warning", "info"] as const).map((severity) => {
+                  // A count tile wears its severity only when it counts something: three zeros stay quiet.
+                  const tone = s.counts[severity] > 0 ? SEVERITY_TONE[severity] : "neutral";
+                  return (
                   <div
                     key={severity}
-                    className="flex flex-col gap-0.5 rounded-lg bg-muted/50 p-3"
+                    className={cn("flex flex-col gap-0.5 rounded-lg bg-muted/50 p-3", accentRow(tone))}
                   >
                     <dt className="text-xs font-medium text-muted-foreground">
                       {t.health.counts[severity].label}
                     </dt>
-                    <dd className="text-2xl font-semibold tabular-nums">
+                    <dd className={cn("text-3xl leading-none font-semibold tabular-nums", figureClasses(tone))}>
                       {s.counts[severity]}
                     </dd>
                     <dd className="hidden text-xs text-muted-foreground sm:block">
                       {t.health.counts[severity].hint}
                     </dd>
                   </div>
-                ))}
+                  );
+                })}
               </dl>
-              <ChangeLine change={s.change} note={s.comparisonNote} />
+              <ChangeLine change={s.change} note={s.comparisonNote} labels={m.overview.change} />
               <NoticeList notices={notices} />
               <p className="text-xs text-muted-foreground">
                 {t.health.source(
@@ -409,14 +420,16 @@ export default async function SeoPage({
                   const body = (
                     <>
                       <span className="text-sm font-medium">{area.label}</span>
-                      <StatusPill tone={area.tone}>
+                      <StatusPill tone={area.tone} variant={area.tone === "neutral" ? "soft" : "solid"}>
                         {area.verdict}
                         {area.count > 0 ? ` · ${area.count}` : ""}
                       </StatusPill>
                     </>
                   );
-                  const className =
-                    "flex h-full items-center justify-between gap-3 rounded-xl border border-border/80 bg-card px-4 py-3 shadow-card";
+                  const className = cn(
+                    "flex h-full items-center justify-between gap-3 rounded-xl border border-border/80 bg-card px-4 py-3 shadow-card",
+                    accentRow(area.tone),
+                  );
                   return (
                     <li key={area.key}>
                       {area.firstFindingId ? (
@@ -454,10 +467,10 @@ export default async function SeoPage({
                     <li
                       key={f.id}
                       id={`finding-${f.id}`}
-                      className="flex scroll-mt-6 flex-col gap-2 rounded-2xl border border-border/80 bg-card shadow-card p-5"
+                      className={cn("flex scroll-mt-6 flex-col gap-2 rounded-2xl border border-border/80 bg-card shadow-card p-5", accentRow(SEVERITY_TONE[f.severity]))}
                     >
                       <div className="flex flex-wrap items-center gap-2">
-                        <StatusPill tone={SEVERITY_TONE[f.severity]}>
+                        <StatusPill tone={SEVERITY_TONE[f.severity]} variant="solid">
                           {L.severity[f.severity]}
                         </StatusPill>
                         <span className="text-xs text-muted-foreground">

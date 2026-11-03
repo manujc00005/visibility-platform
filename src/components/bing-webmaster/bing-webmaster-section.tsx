@@ -135,7 +135,7 @@ export function BingWebmasterSection({
                 <dt className="text-xs font-medium text-muted-foreground">{t.metrics[key].label}</dt>
                 <dd className="text-2xl font-semibold tabular-nums">{s.metrics![key].value}</dd>
                 <dd>
-                  <ChangeLine change={s.metrics![key].change} note={s.metrics![key].previous === null ? t.metrics.noPrevious : null} className="text-xs" />
+                  <ChangeLine change={s.metrics![key].change} note={s.metrics![key].previous === null ? t.metrics.noPrevious : null} labels={messages.overview.change} className="text-xs" />
                 </dd>
                 <dd className="hidden text-xs text-muted-foreground sm:block">{t.metrics[key].hint}</dd>
               </div>

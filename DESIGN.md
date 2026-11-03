@@ -260,6 +260,9 @@ La lista «Pendiente de medir»: un contenedor de 14 px de radio con fondo Blanc
 ### Metric tile (componente propio)
 Tesela de 10 px de radio con acento izquierdo de 4 px en el tono del semáforo. Contiene la etiqueta en Label, el valor a 1,25 rem en semibold tabular, la pastilla con el veredicto y la referencia de lo que es «bueno».
 
+### Verdict block
+El bloque principal de cada página de detalle (puntuación móvil, salud técnica, cobertura en IA, categorías de Lighthouse) usa el mismo lenguaje que la tarjeta del resumen: barra de 4 px arriba y borde en la línea del tono, cifra o titular en el color de texto del tono y pastilla sólida. Las filas y teselas que dependen de él (métricas de velocidad, recuentos por severidad, estado por área, problemas, grupos de preguntas de IA) llevan el acento izquierdo de 4 px en su propio tono; una tesela de recuento solo viste su severidad cuando cuenta algo. Los chips de cambio con palabra de dirección se usan también en las teselas de Search Console, Bing y Analytics.
+
 ## Do's and Don'ts
 
 ### Do:

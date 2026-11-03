@@ -49,7 +49,9 @@ export function SourcesPanel({ rows, locale }: { rows: SourceRow[]; locale: Loca
                   {row.name}
                 </th>
                 <td className="px-3 py-2">
-                  <StatusPill tone={row.status.tone}>{row.status.label}</StatusPill>
+                  <StatusPill tone={row.status.tone} variant={row.status.tone === "neutral" ? "soft" : "solid"}>
+                    {row.status.label}
+                  </StatusPill>
                 </td>
                 {/* Properties and site URLs are data from the providers: plain text, never links. */}
                 <td className="max-w-[14rem] px-3 py-2 font-mono text-xs break-all">{row.target ?? "—"}</td>

@@ -1,5 +1,5 @@
 import { CircleCheck, CircleDashed, CircleX, Lightbulb, TriangleAlert, type LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import type { Tone } from "@/modules/audits/status";
 
@@ -72,6 +72,38 @@ export function StatusPill({
       {children}
     </span>
   );
+}
+
+/**
+ * Classes of a block that wears its verdict: tinted border now, tone bar from `VerdictBar`.
+ * Neutral keeps the quiet hairline, so judged and unjudged blocks also differ at a glance.
+ */
+export function verdictCard(tone: Tone): string {
+  return cn("relative overflow-hidden rounded-2xl border bg-card p-5 pt-6 shadow-card", tone === "neutral" ? "border-border/80" : TONES[tone].line);
+}
+
+/** The 4 px bar at the top of a verdict block; the block needs `relative overflow-hidden`. */
+export function VerdictBar({ tone }: { tone: Tone }) {
+  return <span aria-hidden="true" className={cn("absolute inset-x-0 top-0 h-1", TONES[tone].bar)} />;
+}
+
+export function VerdictCard({ tone, className, children, ...rest }: ComponentProps<"div"> & { tone: Tone }) {
+  return (
+    <div className={cn(verdictCard(tone), className)} {...rest}>
+      <VerdictBar tone={tone} />
+      {children}
+    </div>
+  );
+}
+
+/** Colour of a headline figure: the tone's text, or the page's ink when nothing is judged. */
+export function figureClasses(tone: Tone): string {
+  return tone === "neutral" ? "" : TONES[tone].text;
+}
+
+/** A list row or tile with the verdict as a 4 px left accent. */
+export function accentRow(tone: Tone): string {
+  return cn("border-l-4", TONES[tone].accent);
 }
 
 /** A measured value with its verdict and the "good" reference, coloured by quality. */

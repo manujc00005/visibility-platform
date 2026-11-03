@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
-import { StatusPill } from "@/components/audits/status-ui";
+import { accentRow, StatusPill, VerdictBar, verdictCard } from "@/components/audits/status-ui";
 import {
   ChangeLine,
   NoticeList,
@@ -24,6 +24,7 @@ import {
 import { getDb } from "@/db/client";
 import { getMessages, type Messages } from "@/i18n/messages";
 import { getLocale } from "@/i18n/server";
+import { cn } from "@/lib/utils";
 import type { Tone } from "@/modules/audits/status";
 import type { Fraction } from "@/modules/geo/metrics";
 import { geoLabels } from "@/modules/geo/presentation";
@@ -109,18 +110,21 @@ function Empty({
   );
 }
 
+/** Questions grouped by what ChatGPT did with them; the group's tone is a fact of the capture, not a score. */
 function QuestionGroup({
   title,
   hint,
   items,
+  tone,
 }: {
   title: string;
   hint: string;
   items: string[];
+  tone: Tone;
 }) {
   if (items.length === 0) return null;
   return (
-    <div className="flex flex-col gap-2 rounded-2xl border border-border/80 bg-card shadow-card p-5">
+    <div className={cn("flex flex-col gap-2 rounded-2xl border border-border/80 bg-card shadow-card p-5", accentRow(tone))}>
       <div className="flex flex-col gap-0.5">
         <h3 className="text-sm font-semibold">
           {title}{" "}
@@ -268,14 +272,15 @@ export default async function GeoPage({
         )
       ) : (
         <>
-          <div className="flex flex-col gap-5 rounded-2xl border border-border/80 bg-card shadow-card p-5">
+          <div className={cn("flex flex-col gap-5", verdictCard(STATUS_TONE[s.state]))}>
+            <VerdictBar tone={STATUS_TONE[s.state]} />
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-[1.2fr_1fr]">
               <div className="flex flex-col gap-2">
                 <span className="text-sm font-medium text-muted-foreground">
                   {t.appear}
                 </span>
                 {s.coverage.n > 0 ? (
-                  <span className="text-4xl font-semibold tracking-tight tabular-nums">
+                  <span className="text-5xl leading-none font-semibold tracking-tight tabular-nums">
                     {s.coverage.k}
                     <span className="text-lg font-normal text-muted-foreground">
                       {" "}
@@ -287,10 +292,10 @@ export default async function GeoPage({
                     {L.noData}
                   </span>
                 )}
-                <StatusPill tone={STATUS_TONE[s.state]}>
+                <StatusPill tone={STATUS_TONE[s.state]} variant={STATUS_TONE[s.state] === "neutral" ? "soft" : "solid"}>
                   {t.status[s.state]}
                 </StatusPill>
-                <ChangeLine change={s.change} note={s.comparisonNote} />
+                <ChangeLine change={s.change} note={s.comparisonNote} labels={m.overview.change} />
               </div>
               <dl className="flex flex-col gap-3 text-sm sm:border-l sm:pl-6">
                 <div>
@@ -451,16 +456,19 @@ export default async function GeoPage({
                 title={t.aeo.uncovered.title}
                 hint={t.aeo.uncovered.hint}
                 items={s.uncovered}
+                tone="fair"
               />
               <QuestionGroup
                 title={t.aeo.covered.title}
                 hint={t.aeo.covered.hint}
                 items={s.covered}
+                tone="good"
               />
               <QuestionGroup
                 title={t.aeo.unanswered.title}
                 hint={t.aeo.unanswered.hint}
                 items={s.unanswered}
+                tone="neutral"
               />
             </div>
           </Section>

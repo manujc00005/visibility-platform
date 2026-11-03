@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 import { ChartDataTable, SpeedChart } from "@/components/audits/evolution-chart";
 import { LighthouseCategoryCard } from "@/components/audits/lighthouse-category";
 import { RunAuditButton } from "@/components/audits/run-audit-button";
-import { StatusPill } from "@/components/audits/status-ui";
+import { accentRow, figureClasses, StatusPill, VerdictBar, verdictCard } from "@/components/audits/status-ui";
 import { ChangeLine, NoticeList, type Notice } from "@/components/overview/overview-card";
 import { PageHeader } from "@/components/overview/page-header";
 import { WorkspaceNav } from "@/components/overview/workspace-nav";
@@ -17,6 +17,7 @@ import { formatMs, formatNumber } from "@/i18n/format";
 import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
 import { getMessages, type Messages } from "@/i18n/messages";
 import { getLocale } from "@/i18n/server";
+import { cn } from "@/lib/utils";
 import { speedBreaks, toPoint } from "@/modules/audits/evolution";
 import { lighthouseView } from "@/modules/audits/lighthouse";
 import { auditLabels } from "@/modules/audits/presentation";
@@ -61,20 +62,27 @@ function MetricList({ rows, locale }: { rows: { metric: MetricKey; value: number
   const rating = auditLabels(locale).rating;
   const format = (metric: MetricKey, v: number) => (metric === "cls" ? formatNumber(v, locale, { maximumFractionDigits: 2 }) : formatMs(v, locale));
   return (
-    <ul className="divide-y rounded-2xl border border-border/80 bg-card shadow-card">
+    <ul className="divide-y overflow-hidden rounded-2xl border border-border/80 bg-card shadow-card">
       {rows.map(({ metric, value }) => {
         const m = t.metrics[metric];
         const rated = value === null ? null : rateMetric(metric as MetricName, value);
+        const tone = rated ? RATING_TONE[rated] : "neutral";
         return (
-          <li key={metric} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+          <li key={metric} className={cn("flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6", accentRow(tone))}>
             <div className="flex min-w-0 flex-col gap-0.5">
               <span className="text-sm font-medium">{m.label}</span>
               <span className="text-sm text-muted-foreground">{m.meaning}</span>
               <span className="text-xs text-muted-foreground">{t.goodLabel(m.good)}</span>
             </div>
             <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:items-end sm:gap-1">
-              <span className="text-xl font-semibold tabular-nums">{value === null ? "—" : format(metric, value)}</span>
-              {rated ? <StatusPill tone={RATING_TONE[rated]}>{rating[rated]}</StatusPill> : <StatusPill tone="neutral">{t.noValue}</StatusPill>}
+              <span className={cn("text-xl font-semibold tabular-nums", figureClasses(tone))}>{value === null ? "—" : format(metric, value)}</span>
+              {rated ? (
+                <StatusPill tone={tone} variant="solid">
+                  {rating[rated]}
+                </StatusPill>
+              ) : (
+                <StatusPill tone="neutral">{t.noValue}</StatusPill>
+              )}
             </div>
           </li>
         );
@@ -141,17 +149,20 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
         <WorkspaceNav workspaceId={workspace.id} current="performance" locale={locale} />
       </div>
 
-      <Panel>
+      <div className={verdictCard(s.tone)}>
+        <VerdictBar tone={s.tone} />
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           <div className="flex flex-col gap-2">
             <span className="text-sm font-medium text-muted-foreground">{t.mobile}</span>
             {s.score !== null ? (
               <>
-                <span className="text-4xl font-semibold tracking-tight tabular-nums">
+                <span className={cn("text-5xl leading-none font-semibold tracking-tight tabular-nums", figureClasses(s.tone))}>
                   {s.score}
                   <span className="text-lg font-normal text-muted-foreground">/100</span>
                 </span>
-                <StatusPill tone={s.tone}>{s.verdict}</StatusPill>
+                <StatusPill tone={s.tone} variant="solid">
+                  {s.verdict}
+                </StatusPill>
               </>
             ) : (
               <span className="text-2xl font-medium text-muted-foreground">
@@ -159,7 +170,7 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
               </span>
             )}
             {s.reason ? <p className="text-sm text-muted-foreground">{s.reason}</p> : null}
-            <ChangeLine change={s.change} note={s.comparisonNote} />
+            <ChangeLine change={s.change} note={s.comparisonNote} labels={m.overview.change} />
             {s.measuredAt ? (
               <p className="text-xs text-muted-foreground">{t.source(displayDate(s.measuredAt, locale), perf?.status === "ok" ? perf.lighthouseVersion : null)}</p>
             ) : null}
@@ -174,7 +185,7 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
           <NoticeList notices={notices} />
           <p className="text-sm text-muted-foreground">{t.labNote}</p>
         </div>
-      </Panel>
+      </div>
 
       {result === null ? (
         <div className="flex flex-col items-start gap-3 rounded-2xl border border-dashed bg-card/60 p-6">
@@ -247,8 +258,10 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
             {problems.length > 0 ? (
               <ol className="flex flex-col gap-3">
                 {problems.map(({ finding: f, text }) => (
-                  <li key={f.id} className="flex flex-col gap-2 rounded-2xl border border-border/80 bg-card shadow-card p-5">
-                    <StatusPill tone={SEVERITY_TONE[f.severity]}>{auditLabels(locale).severity[f.severity]}</StatusPill>
+                  <li key={f.id} className={cn("flex flex-col gap-2 rounded-2xl border border-border/80 bg-card shadow-card p-5", accentRow(SEVERITY_TONE[f.severity]))}>
+                    <StatusPill tone={SEVERITY_TONE[f.severity]} variant="solid">
+                      {auditLabels(locale).severity[f.severity]}
+                    </StatusPill>
                     <h3 className="text-base font-semibold tracking-tight" lang={text.fallback ? DEFAULT_LOCALE : undefined}>
                       {text.title}
                     </h3>

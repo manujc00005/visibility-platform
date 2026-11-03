@@ -62,7 +62,7 @@ const METRICS = ["users", "sessions", "views"] as const;
 const KEY_FIGURES = ["organic", "total"] as const;
 
 /** Key events (feature 008), inside the card so it also shows without visits (D005). Names are GA4 data: plain text. */
-function KeyEventsBlock({ v, t, button }: { v: KeyEventsView; t: Texts; button: string }) {
+function KeyEventsBlock({ v, t, button, change }: { v: KeyEventsView; t: Texts; button: string; change: Messages["overview"]["change"] }) {
   const k = t.keyEvents;
   const note = "max-w-3xl text-xs text-muted-foreground";
   return (
@@ -81,7 +81,7 @@ function KeyEventsBlock({ v, t, button }: { v: KeyEventsView; t: Texts; button: 
                 <dt className="text-xs font-medium text-muted-foreground">{k[key].label}</dt>
                 <dd className="text-2xl font-semibold tabular-nums">{v[key].value}</dd>
                 <dd>
-                  <ChangeLine change={v[key].change} note={v[key].change === null ? k[key].noPrevious : null} className="text-xs" />
+                  <ChangeLine change={v[key].change} note={v[key].change === null ? k[key].noPrevious : null} labels={change} className="text-xs" />
                 </dd>
                 <dd className="hidden text-xs text-muted-foreground sm:block">{k[key].hint}</dd>
               </div>
@@ -178,7 +178,7 @@ export function AnalyticsSection({
                 <dt className="text-xs font-medium text-muted-foreground">{t.metrics[key].label}</dt>
                 <dd className="text-2xl font-semibold tabular-nums">{s.metrics![key].value}</dd>
                 <dd>
-                  <ChangeLine change={s.metrics![key].change} note={s.metrics![key].previous === null ? t.metrics.noPrevious : null} className="text-xs" />
+                  <ChangeLine change={s.metrics![key].change} note={s.metrics![key].previous === null ? t.metrics.noPrevious : null} labels={getMessages(locale).overview.change} className="text-xs" />
                 </dd>
                 <dd className="hidden text-xs text-muted-foreground sm:block">{t.metrics[key].hint}</dd>
               </div>
@@ -188,7 +188,7 @@ export function AnalyticsSection({
           <p className="max-w-3xl text-sm text-muted-foreground">{s.reason}</p>
         ) : null}
         {s.keyEvents ? (
-          <KeyEventsBlock v={s.keyEvents} t={t} button={t.button.update} />
+          <KeyEventsBlock v={s.keyEvents} t={t} button={t.button.update} change={getMessages(locale).overview.change} />
         ) : hasData || s.state === "empty" ? (
           <p className="max-w-3xl text-sm text-muted-foreground">{canRun ? t.keyEvents.missing(t.button.update) : t.keyEvents.missingNotConfigured}</p>
         ) : null}
