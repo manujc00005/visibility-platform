@@ -215,7 +215,7 @@ Es un sistema por capas: tarjetas blancas sobre papel frío, separadas por una s
 
 ## Shapes
 
-Esquinas suavemente redondeadas, derivadas de un radio base de 10 px (`--radius: 0.625rem`): 10 px en botones y campos, 14 px en tarjetas genéricas y 18 px en las tarjetas del resumen. Las pastillas de estado y las insignias son completamente redondas. Los indicadores de pestaña activa son una barra de 2 px con extremos redondeados. Los bordes son filetes de 1 px; el único borde grueso es el acento izquierdo de 4 px de las teselas de métrica, en el tono del semáforo correspondiente.
+Esquinas suavemente redondeadas, derivadas de un radio base de 10 px (`--radius: 0.625rem`): 10 px en botones y campos, 14 px en tarjetas genéricas y 18 px en las tarjetas del resumen. Las pastillas de estado y las insignias son completamente redondas. Los indicadores de pestaña activa son una barra de 2 px con extremos redondeados. Los bordes son filetes de 1 px; el único borde grueso es el acento izquierdo de 4 px de las teselas de métrica y de las filas de métricas de velocidad, en el tono del semáforo correspondiente.
 
 ## Components
 
@@ -261,7 +261,7 @@ La lista «Pendiente de medir»: un contenedor de 14 px de radio con fondo Blanc
 Tesela de 10 px de radio con acento izquierdo de 4 px en el tono del semáforo. Contiene la etiqueta en Label, el valor a 1,25 rem en semibold tabular, la pastilla con el veredicto y la referencia de lo que es «bueno».
 
 ### Verdict block
-El bloque principal de cada página de detalle (puntuación móvil, salud técnica, cobertura en IA, categorías de Lighthouse) usa el mismo lenguaje que la tarjeta del resumen: barra de 4 px arriba y borde en la línea del tono, cifra o titular en el color de texto del tono y pastilla sólida en la línea del título, arriba a la derecha, como en la tarjeta del resumen. Las filas y teselas que dependen de él (métricas de velocidad, recuentos por severidad, estado por área, problemas, grupos de preguntas de IA) llevan el acento izquierdo de 4 px en su propio tono; una tesela de recuento solo viste su severidad cuando cuenta algo. Los chips de cambio con palabra de dirección se usan también en las teselas de Search Console, Bing y Analytics.
+El bloque principal de cada página de detalle (puntuación móvil, salud técnica, cobertura en IA, categorías de Lighthouse) usa el mismo lenguaje que la tarjeta del resumen: barra de 4 px arriba y borde en la línea del tono, cifra o titular en el color de texto del tono y pastilla sólida en la línea del título, arriba a la derecha, como en la tarjeta del resumen. Las filas y teselas que dependen de él llevan el acento izquierdo de 4 px en su propio tono solo en las métricas de velocidad y en los recuentos por severidad; una tesela de recuento solo viste su severidad cuando cuenta algo. Las tarjetas completas que dependen de él (estado por área, problemas, grupos de preguntas de IA) conservan el filete de 1 px y muestran su tono con su pastilla (los grupos de preguntas de IA no llevan tono: su título dice qué hizo ChatGPT), nunca con un borde grueso. Los chips de cambio con palabra de dirección se usan también en las teselas de Search Console, Bing y Analytics.
 
 ## Do's and Don'ts
 

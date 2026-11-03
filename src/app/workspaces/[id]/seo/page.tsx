@@ -445,10 +445,8 @@ export default async function SeoPage({
                       </StatusPill>
                     </>
                   );
-                  const className = cn(
-                    "flex h-full items-center justify-between gap-3 rounded-xl border border-border/80 bg-card px-4 py-3 shadow-card",
-                    accentRow(area.tone),
-                  );
+                  const className =
+                    "flex h-full items-center justify-between gap-3 rounded-xl border border-border/80 bg-card px-4 py-3 shadow-card";
                   return (
                     <li key={area.key}>
                       {area.firstFindingId ? (
@@ -486,7 +484,7 @@ export default async function SeoPage({
                     <li
                       key={f.id}
                       id={`finding-${f.id}`}
-                      className={cn("flex scroll-mt-6 flex-col gap-2 rounded-2xl border border-border/80 bg-card shadow-card p-5", accentRow(SEVERITY_TONE[f.severity]))}
+                      className="flex scroll-mt-6 flex-col gap-2 rounded-2xl border border-border/80 bg-card shadow-card p-5"
                     >
                       <div className="flex flex-wrap items-center gap-2">
                         <StatusPill tone={SEVERITY_TONE[f.severity]} variant="solid">

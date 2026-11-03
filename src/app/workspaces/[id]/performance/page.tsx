@@ -210,7 +210,7 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
             {problems.length > 0 ? (
               <ol className="flex flex-col gap-3">
                 {problems.map(({ finding: f, text }) => (
-                  <li key={f.id} className={cn("flex flex-col gap-2 rounded-2xl border border-border/80 bg-card shadow-card p-5", accentRow(SEVERITY_TONE[f.severity]))}>
+                  <li key={f.id} className="flex flex-col gap-2 rounded-2xl border border-border/80 bg-card shadow-card p-5">
                     <StatusPill tone={SEVERITY_TONE[f.severity]} variant="solid">
                       {auditLabels(locale).severity[f.severity]}
                     </StatusPill>
