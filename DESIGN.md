@@ -29,9 +29,9 @@ colors:
 typography:
   display:
     fontFamily: "Geist, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "2.25rem"
+    fontSize: "3rem"
     fontWeight: 600
-    lineHeight: 1.25
+    lineHeight: 1
     letterSpacing: "-0.025em"
     fontFeature: "tnum"
   headline:
@@ -183,7 +183,7 @@ Una paleta casi monocroma de neutros fríos, con un acento violeta de identidad 
 **Character:** una sola familia geométrica y neutra, que jerarquiza por peso y tamaño en lugar de por contraste de familias. Los títulos se aprietan ligeramente (`tracking-tight`) y las cifras usan dígitos tabulares para que se alineen y comparen.
 
 ### Hierarchy
-- **Display** (600, 2,25 rem, 1,25, cifras tabulares): la cifra principal de cada tarjeta del resumen («62/100», «1 de 4»). Una por tarjeta.
+- **Display** (600, 3 rem, interlineado 1, cifras tabulares): la cifra principal de cada tarjeta del resumen («62/100», «1 de 4») y la del bloque de veredicto de Rendimiento y Presencia en IA. Una por tarjeta.
 - **Headline** (600, 1,5 rem en móvil y 1,875 rem desde `sm`, interlineado ajustado): el `h1` de cada página, con corte de palabra para nombres largos.
 - **Title** (600, 0,875–1 rem): títulos de tarjeta y de sección.
 - **Body** (400, 0,875 rem, 1,43): todo el texto corrido. Las descripciones se limitan a `max-w-2xl` (42 rem) y las páginas de lectura a `max-w-3xl` (48 rem).
@@ -204,7 +204,7 @@ En móvil, las pestañas de la empresa se desplazan en horizontal sin barra visi
 
 ## Elevation & Depth
 
-Es un sistema por capas: tarjetas blancas sobre papel frío, separadas por una sombra ambiental muy baja y un filete. La profundidad no es estructural; las tarjetas no se apilan ni se solapan. La elevación responde a la interacción: al pasar el ratón, la tarjeta del resumen sube 2 px, la sombra se alarga y aparece un fino filo Iris en su borde superior.
+Es un sistema por capas: tarjetas blancas sobre papel frío, separadas por una sombra ambiental muy baja y un filete. La profundidad no es estructural; las tarjetas no se apilan ni se solapan. La elevación responde a la interacción: al pasar el ratón, la tarjeta del resumen sube 2 px y la sombra se alarga. La barra de 4 px de su borde superior no es un efecto de hover: va siempre visible, en la línea del tono de su veredicto. En una tarjeta neutra la barra va en Tinta Apagada al 40 % y, en hover, su borde pasa a Iris al 30 %.
 
 ### Shadow Vocabulary
 - **Tarjeta en reposo** (`box-shadow: 0 1px 2px oklch(0.25 0.04 285 / 0.05), 0 10px 30px -18px oklch(0.25 0.06 285 / 0.18)`): tarjetas del resumen y superficies principales.
@@ -235,7 +235,7 @@ La pieza básica del semáforo, en dos pesos. La **suave**: pastilla redonda con
 - **Corner Style:** 18 px en las tarjetas del resumen y 14 px en las genéricas.
 - **Background:** Blanco de Tarjeta sobre Papel Frío.
 - **Shadow Strategy:** Tarjeta en reposo, y Tarjeta en hover cuando la tarjeta es un enlace (ver Elevation & Depth).
-- **Border:** Filete al 80 %; en hover, Iris al 30 %.
+- **Border:** en la línea del tono cuando la tarjeta tiene veredicto; Filete al 80 % en las neutras, que en hover pasan a Iris al 30 %.
 - **Internal Padding:** 24 px en las tarjetas del resumen y 16 px en las genéricas (12 px en la talla pequeña).
 
 ### Inputs / Fields
