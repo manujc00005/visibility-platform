@@ -215,7 +215,7 @@ Es un sistema por capas: tarjetas blancas sobre papel frío, separadas por una s
 
 ## Shapes
 
-Esquinas suavemente redondeadas, derivadas de un radio base de 10 px (`--radius: 0.625rem`): 10 px en botones y campos, 14 px en tarjetas genéricas y 18 px en las tarjetas del resumen. Las pastillas de estado y las insignias son completamente redondas. Los indicadores de pestaña activa son una barra de 2 px con extremos redondeados. Los bordes son filetes de 1 px; el único borde grueso es el acento izquierdo de 4 px de las teselas de métrica, en el tono del semáforo correspondiente.
+Esquinas suavemente redondeadas, derivadas de un radio base de 10 px (`--radius: 0.625rem`): 10 px en botones y campos, 14 px en tarjetas genéricas y 18 px en las tarjetas del resumen. Las pastillas de estado y las insignias son completamente redondas. Los indicadores de pestaña activa son una barra de 2 px con extremos redondeados. Los bordes son filetes de 1 px. Los únicos trazos gruesos miden 4 px y van siempre en el tono del semáforo: la barra superior de las tarjetas del resumen y de los bloques de veredicto, y el acento izquierdo de las teselas y filas que dependen de ellos (métricas, recuentos por severidad, estado por área, problemas y grupos de preguntas de IA).
 
 ## Components
 
