@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-03T10:05:14Z",
+  "generatedAt": "2026-11-03T10:09:35Z",
   "title": "Design System: Visibility Platform",
   "extensions": {
     "colorMeta": {
@@ -222,7 +222,7 @@
     "typographyMeta": {
       "display": {
         "displayName": "Display",
-        "purpose": "La cifra principal de cada tarjeta del resumen; una por tarjeta, dígitos tabulares."
+        "purpose": "La cifra principal de cada tarjeta del resumen y del bloque de veredicto de Rendimiento y Presencia en IA; una por tarjeta, dígitos tabulares."
       },
       "headline": {
         "displayName": "Headline",
