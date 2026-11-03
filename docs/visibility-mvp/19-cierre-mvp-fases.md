@@ -130,5 +130,5 @@ Marca blanca, facturación por consumo, más proveedores IA (BL-05), generación
 
 1. ~~**Público del MVP**~~: decidido el 2026-11-01, **pyme primero** (`PRODUCT.md`). La fase C se reduce a la 020 y la 021; la 018 (cartera) y la 019 (acciones) quedan fuera del cierre.
 2. **Specs abiertas**: cerrar la 001 como superada por la 012; mantener la 010 abierta hasta tener impresiones; cerrar la 002 con la fase B.
-3. **020**: piloto manual declarado o cron antes del piloto.
+3. ~~**020**~~: decidido el 2026-11-03, **piloto manual declarado hasta desplegar**; el cron se decide con el despliegue.
 4. **Este documento** pasa a mandar sobre el orden de trabajo (y el 16 §2 lo enlaza) o se integra en el 16.
