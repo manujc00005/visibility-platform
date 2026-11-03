@@ -23,23 +23,52 @@ const CHANGE_ICON: Record<Direction, LucideIcon> = {
   worse: ArrowDownRight,
 };
 
-/** A comparable change (icon + words, never colour alone) or why there is none. */
+/**
+ * A comparable change (icon + words, never colour alone) or why there is none. With `labels`
+ * it becomes a chip that leads with the direction word ("Mejora · 2 problemas menos…"), so a
+ * figure inside the sentence is never mistaken for a count of problems.
+ */
 export function ChangeLine({
   change,
   note,
+  labels,
   className,
 }: {
   change: Change | null;
   note?: string | null;
+  /** Direction words, one per direction; when given the change renders as a chip. */
+  labels?: Record<Direction, string>;
   className?: string;
 }) {
   if (change) {
     const Icon = CHANGE_ICON[change.direction];
+    const tone = toneClasses(DIRECTION_TONE[change.direction]);
+    if (labels) {
+      return (
+        <p
+          className={cn(
+            "inline-flex w-fit items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm",
+            tone.soft,
+            tone.line,
+            tone.text,
+            className,
+          )}
+        >
+          <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+          <span>
+            <strong className="font-semibold">{labels[change.direction]}</strong>
+            <span aria-hidden="true"> · </span>
+            <span className="sr-only">: </span>
+            {change.text}
+          </span>
+        </p>
+      );
+    }
     return (
       <p
         className={cn(
           "inline-flex items-center gap-1 text-sm font-medium",
-          toneClasses(DIRECTION_TONE[change.direction]).text,
+          tone.text,
           className,
         )}
       >
@@ -99,7 +128,9 @@ export function NoticeList({
 
 /**
  * One block of the overview. The whole card is a single link (FR-003): no buttons or links
- * inside it, so `children` must be text only. Status is icon + text, never colour alone.
+ * inside it, so `children` must be text only. Status is icon + text, never colour alone, but
+ * the whole card wears its verdict: a tone bar on top, a tinted border, a solid pill and the
+ * figure in the tone's colour, so good and bad news look different from across the room.
  */
 export function OverviewCard({
   id,
@@ -127,6 +158,8 @@ export function OverviewCard({
   source: string;
   cta: string;
 }) {
+  const tone = toneClasses(status.tone);
+  const judged = status.tone !== "neutral";
   return (
     <Link
       href={href}
@@ -140,13 +173,21 @@ export function OverviewCard({
       ]
         .filter(Boolean)
         .join(" ")}
-      className="group relative flex h-full flex-col gap-4 overflow-hidden rounded-2xl border border-border/80 bg-card p-6 text-card-foreground shadow-card transition-[border-color,box-shadow,translate] duration-200 before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:bg-linear-to-r before:from-brand before:via-brand/40 before:to-transparent before:opacity-0 before:transition-opacity hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-card-hover hover:before:opacity-100 focus-visible:ring-2 focus-visible:ring-foreground/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+      className={cn(
+        "group relative flex h-full flex-col gap-4 overflow-hidden rounded-2xl border bg-card p-6 pt-7 text-card-foreground shadow-card transition-[border-color,box-shadow,translate] duration-200 hover:-translate-y-0.5 hover:shadow-card-hover focus-visible:ring-2 focus-visible:ring-foreground/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background focus-visible:outline-none motion-reduce:transition-none motion-reduce:hover:translate-y-0",
+        judged ? tone.line : "border-border/80 hover:border-brand/30",
+      )}
     >
+      {/* The verdict's bar: always on, in the tone's line colour. A neutral card keeps a quiet hairline. */}
+      <span aria-hidden="true" className={cn("absolute inset-x-0 top-0 h-1", tone.bar)} />
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2.5">
           <span
             aria-hidden="true"
-            className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-soft text-brand ring-1 ring-brand/15"
+            className={cn(
+              "flex size-9 shrink-0 items-center justify-center rounded-xl ring-1",
+              judged ? cn(tone.soft, tone.text, "ring-current/15") : "bg-brand-soft text-brand ring-brand/15",
+            )}
           >
             <Icon className="size-4" />
           </span>
@@ -158,11 +199,13 @@ export function OverviewCard({
           </h2>
         </div>
         <span id={`${id}-status`} className="contents">
-          <StatusPill tone={status.tone}>{status.label}</StatusPill>
+          <StatusPill tone={status.tone} variant={judged ? "solid" : "soft"}>
+            {status.label}
+          </StatusPill>
         </span>
       </div>
       <div id={`${id}-summary`} className="flex flex-col gap-2">
-        <div className="text-4xl leading-tight font-semibold tracking-tight tabular-nums">
+        <div className={cn("text-5xl leading-none font-semibold tracking-tight tabular-nums", judged && tone.text)}>
           {headline}
         </div>
         {children}

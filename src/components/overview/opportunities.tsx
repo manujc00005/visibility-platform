@@ -1,10 +1,11 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { StatusPill, ToneIcon } from "@/components/audits/status-ui";
+import { StatusPill, ToneIcon, toneClasses } from "@/components/audits/status-ui";
 import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
 import { getMessages } from "@/i18n/messages";
 import type { Tone } from "@/modules/audits/status";
+import { cn } from "@/lib/utils";
 import type { OpportunityList, Priority } from "@/modules/overview";
 import { displayDate } from "@/modules/workspaces/presentation";
 
@@ -25,7 +26,8 @@ function afterColon(title: string): string {
 }
 
 /**
- * The first opportunity in one line under the header, linked to its card further down.
+ * The first opportunity under the header, linked to its card further down: a callout in the
+ * priority's tone with a solid pill, so the most urgent thing to fix is the loudest line.
  * Renders nothing without opportunities: the section below already explains why.
  */
 export function OpportunityLead({ list, locale }: { list: OpportunityList; locale: Locale }) {
@@ -34,9 +36,13 @@ export function OpportunityLead({ list, locale }: { list: OpportunityList; local
   const m = getMessages(locale);
   const t = m.overview.lead;
   const rest = list.items.length - 1;
+  const tone = PRIORITY_TONE[first.priority];
   return (
-    <section aria-label={t.label} className="flex flex-col items-start gap-2 sm:flex-row sm:items-baseline sm:gap-3">
-      <StatusPill tone={PRIORITY_TONE[first.priority]} className="sm:translate-y-[-1px]">
+    <section
+      aria-label={t.label}
+      className={cn("flex flex-col items-start gap-2 rounded-xl border border-l-4 px-4 py-3 sm:flex-row sm:items-baseline sm:gap-3", toneClasses(tone).soft, toneClasses(tone).line)}
+    >
+      <StatusPill tone={tone} variant="solid" className="sm:translate-y-[-1px]">
         {m.overview.priority[first.priority]}
       </StatusPill>
       <p className="text-base text-pretty">

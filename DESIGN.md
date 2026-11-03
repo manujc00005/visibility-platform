@@ -229,7 +229,7 @@ Comedidos, compactos y siempre con foco visible.
 - **Focus:** borde Anillo de Foco y halo de 3 px al 50 %.
 
 ### Status pill
-La pieza básica del semáforo: pastilla redonda con borde de línea, fondo suave, texto del tono e icono de 14 px. Etiqueta en Label. Aparece en la esquina superior derecha de cada tarjeta y junto a cada métrica.
+La pieza básica del semáforo, en dos pesos. La **suave**: pastilla redonda con borde de línea, fondo suave, texto del tono e icono de 14 px, junto a cada métrica. La **sólida**: relleno con el tono de texto (contraste ≥ 4,5:1 con blanco), texto blanco en semibold e icono; es el veredicto de un bloque entero y va en la esquina superior derecha de las tarjetas del resumen y en la llamada de la primera oportunidad. El estado neutro usa siempre la suave.
 
 ### Cards / Containers
 - **Corner Style:** 18 px en las tarjetas del resumen y 14 px en las genéricas.
@@ -249,10 +249,10 @@ La pieza básica del semáforo: pastilla redonda con borde de línea, fondo suav
 - **Migas de pan:** texto pequeño en Tinta Apagada, separado por chevrones de 14 px.
 
 ### Overview card (componente propio)
-La tarjeta del resumen es un único enlace sin controles dentro. Arriba lleva el icono en un cuadrado Iris Velado de 36 px, el título y la pastilla de estado. Los títulos son preguntas del propietario («¿Cómo funciona tu web?», «¿Puede Google leer tu portada?», «¿Te encuentran en Google?», «¿Apareces en las respuestas de IA?»). Debajo, la cifra en Display y las líneas de apoyo. Al final, un pie a sangre en Niebla con la fuente y la fecha a la izquierda y «Ver informe ›» en Iris a la derecha. Los cambios frente a la medición anterior se escriben con flecha y texto en el tono del semáforo; los avisos (actualizando, intento fallido, datos antiguos) van en Label con su icono.
+La tarjeta del resumen es un único enlace sin controles dentro y **viste su veredicto**: una barra de 4 px arriba en la línea del tono, el borde en esa misma línea, el icono en un cuadrado de 36 px con el fondo suave del tono y la cifra en Display en el color de texto del tono. Una tarjeta neutra (sin juicio: «Medido», «Parcial») conserva el filete, el cuadrado Iris Velado y la cifra en Tinta. Arriba lleva el icono, el título y la pastilla sólida de estado. Los títulos son preguntas del propietario («¿Cómo funciona tu web?», «¿Puede Google leer tu portada?», «¿Te encuentran en Google?», «¿Apareces en las respuestas de IA?»). Debajo, la cifra en Display y las líneas de apoyo. Al final, un pie a sangre en Niebla con la fuente y la fecha a la izquierda y «Ver informe ›» en Iris a la derecha. Los cambios frente a la medición anterior van en un chip (fondo suave, borde de línea, flecha) que empieza por la palabra de dirección en semibold («Mejora · 2 problemas menos…», «Empeora · Antes: 511 clics»), para que una cifra dentro de la frase nunca se lea como un recuento de problemas; los avisos (actualizando, intento fallido, datos antiguos) van en Label con su icono.
 
 ### Situation line (componente propio)
-Una línea de texto bajo las pestañas del resumen: un fragmento por área, en el orden de las tarjetas, separados por un punto medio en escritorio y uno por línea en móvil. Tamaño Body a 1 rem, en Tinta. Sin pastillas, sin cifras y sin palabras que sumen áreas: cada fragmento repite en palabras el estado de su tarjeta. Sin ninguna área medida, no aparece.
+Una línea de texto bajo las pestañas del resumen: un fragmento por área, en el orden de las tarjetas, separados por un punto medio en escritorio y uno por línea en móvil. Tamaño Body a 1 rem, en Tinta. Cada fragmento lleva delante el icono del tono de su tarjeta (el mismo que la pastilla) y va en peso 500; los neutros, en Tinta Apagada. Sin pastillas, sin cifras y sin palabras que sumen áreas: cada fragmento repite en palabras el estado de su tarjeta. Sin ninguna área medida, no aparece.
 
 ### Pending list (componente propio)
 La lista «Pendiente de medir»: un contenedor de 14 px de radio con fondo Blanco de Tarjeta al 60 %, filas separadas por filetes y, en cada una, el círculo discontinuo del estado neutro, la pregunta de la tarjeta en peso 500 y el motivo en Tinta Apagada. Es texto: no lleva enlaces, porque no hay informe detrás.
@@ -274,7 +274,7 @@ Tesela de 10 px de radio con acento izquierdo de 4 px en el tono del semáforo. 
 - **Don't** dar tarjeta completa a un área sin resultado: va a la lista «Pendiente de medir».
 - **Don't** poner acciones de operador en el resumen («Analizar portada», «Configurar»): viven en Configuración y en las páginas de detalle.
 - **Don't** usar Iris ni Tinta Iris para indicar que algo va bien o mal.
-- **Don't** usar bordes de color por métrica en las tarjetas del resumen; el color de estado vive en la pastilla y en el texto.
+- **Don't** colorear una tarjeta del resumen con un tono que su pastilla no diga: barra, borde y cifra toman siempre el tono de la pastilla, nunca uno propio por métrica.
 - **Don't** mostrar una puntuación compuesta ni un cero sin denominador.
 - **Don't** meter botones ni enlaces dentro de una tarjeta que ya es un enlace.
 - **Don't** usar grises puros en el tema claro.

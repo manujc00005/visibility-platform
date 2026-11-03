@@ -1,5 +1,6 @@
 import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
 import { getMessages } from "@/i18n/messages";
+import type { Tone } from "@/modules/audits/status";
 import type { Fraction } from "@/modules/geo/metrics";
 import type { AiSummary } from "@/modules/overview/ai";
 import type { PerformanceSummary } from "@/modules/overview/performance";
@@ -95,6 +96,25 @@ function aiFragment(a: AiSummary, t: Texts["situation"]["ai"]): string {
 export interface SituationFragment {
   area: Area;
   text: string;
+  /** The card's own tone (D003), so the line can carry the icon next to the words. */
+  tone: Tone;
+}
+
+/** The tone each card shows, read from the same summaries: never a judgement the card does not make. */
+function areaTone(area: Area, s: AreaSummaries): Tone {
+  switch (area) {
+    case "performance":
+      return isScored(s.performance) ? s.performance.tone : s.performance.state === "error" || s.performance.state === "partial" ? "bad" : "neutral";
+    case "technical":
+      // A partial check keeps only the severity it found; a neutral partial stays neutral (002 AC-013).
+      if (s.seo.headline !== null) return s.seo.state === "partial" && s.seo.tone === "neutral" ? "neutral" : s.seo.tone;
+      return s.seo.state === "error" ? "bad" : "neutral";
+    case "ranking":
+      // Figures carry no verdict (014 D002): only a failed read is a problem.
+      return s.gsc.state === "error" ? "bad" : "neutral";
+    case "ai":
+      return s.ai.state === "error" ? "bad" : "neutral";
+  }
 }
 
 /**
@@ -117,7 +137,7 @@ export function situationLine(s: AreaSummaries, now: Date, locale: Locale = DEFA
     ranking: rankingFragment(s.gsc, t.ranking),
     ai: aiFragment(s.ai, t.ai),
   };
-  return AREAS.map((area) => ({ area, text: stale[area] ? t.stale(text[area]) : text[area] }));
+  return AREAS.map((area) => ({ area, text: stale[area] ? t.stale(text[area]) : text[area], tone: areaTone(area, s) }));
 }
 
 export interface PendingRow {

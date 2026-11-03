@@ -132,7 +132,7 @@ function PerformanceCard({
       cta={t.viewReport}
     >
       <Line>{c.labNote}</Line>
-      <ChangeLine change={s.change} note={s.comparisonNote} />
+      <ChangeLine change={s.change} note={s.comparisonNote} labels={t.change} />
       {s.topIssue ? (
         <p className="text-sm">
           <span className="text-muted-foreground">
@@ -183,7 +183,7 @@ function TechnicalCard({
         {h.counts.warning} {c.warning(h.counts.warning)}
       </p>
       {h.reason ? <Line>{h.reason}</Line> : null}
-      <ChangeLine change={h.change} note={h.comparisonNote} />
+      <ChangeLine change={h.change} note={h.comparisonNote} labels={t.change} />
     </OverviewCard>
   );
 }
@@ -233,7 +233,7 @@ function RankingCard({
       source={r.source}
       cta={t.viewReport}
     >
-      <ChangeLine change={r.change} note={r.changeNote} />
+      <ChangeLine change={r.change} note={r.changeNote} labels={t.change} />
       {r.line ? <Line>{r.line}</Line> : null}
     </OverviewCard>
   );
@@ -296,7 +296,7 @@ function AiCard({
       {s.citing && s.citing.n > 0 ? (
         <Line>{c.cited(s.citing.k, s.citing.n)}</Line>
       ) : null}
-      <ChangeLine change={s.change} note={s.comparisonNote} />
+      <ChangeLine change={s.change} note={s.comparisonNote} labels={t.change} />
     </OverviewCard>
   );
 }

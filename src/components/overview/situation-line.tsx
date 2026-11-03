@@ -1,3 +1,4 @@
+import { ToneIcon } from "@/components/audits/status-ui";
 import type { Locale } from "@/i18n/locale";
 import { getMessages } from "@/i18n/messages";
 import type { SituationFragment } from "@/modules/overview";
@@ -5,6 +6,7 @@ import type { SituationFragment } from "@/modules/overview";
 /**
  * Where the business stands, one fragment per area in card order (feature 023). Plain text:
  * the fragments come from the cards' summaries (D003) and are never joined into a verdict.
+ * Each fragment carries its card's icon, so the line reads as a row of verdicts, not a paragraph.
  * On mobile each fragment takes its own line; from `sm` they run together with a dot between.
  */
 export function SituationLine({ fragments, locale }: { fragments: SituationFragment[] | null; locale: Locale }) {
@@ -17,13 +19,14 @@ export function SituationLine({ fragments, locale }: { fragments: SituationFragm
         {t.label}
       </h2>
       {/* `role="list"`: WebKit drops list semantics from a list without bullets. */}
-      <ul role="list" className="flex flex-col gap-1 text-base text-pretty sm:flex-row sm:flex-wrap sm:gap-y-1">
+      <ul role="list" className="flex flex-col gap-1.5 text-base font-medium text-pretty sm:flex-row sm:flex-wrap sm:gap-y-1.5">
         {fragments.map((fragment, i) => (
-          <li key={fragment.area}>
-            {fragment.text}
+          <li key={fragment.area} className="flex items-start gap-1.5">
+            <ToneIcon tone={fragment.tone} className="mt-1 size-4" />
+            <span className={fragment.tone === "neutral" ? "text-muted-foreground" : undefined}>{fragment.text}</span>
             {/* After the fragment, so a wrapped line never starts with a dot. */}
             {i < fragments.length - 1 ? (
-              <span aria-hidden="true" className="hidden px-2 text-muted-foreground sm:inline">
+              <span aria-hidden="true" className="hidden px-2 font-normal text-muted-foreground sm:inline">
                 ·
               </span>
             ) : null}

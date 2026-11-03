@@ -378,6 +378,8 @@ export const es = {
     verdict: { good: "Bien", fair: "Mejorable", bad: "Mal", info: "Con mejoras", neutral: "Parcial" },
     partial: (verdict: string) => `${verdict} (parcial)`,
     viewReport: "Ver informe",
+    /** Direction words of the change chip on the cards (overview). */
+    change: { better: "Mejora", same: "Sin cambios", worse: "Empeora" },
     cards: {
       performance: {
         title: "¿Cómo funciona tu web?",

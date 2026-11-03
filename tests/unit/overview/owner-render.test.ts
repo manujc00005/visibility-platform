@@ -54,8 +54,8 @@ describe("Opportunities (AC-008, AC-009)", () => {
 describe("SituationLine and PendingList: semantics", () => {
   it("is a list with a heading, the separator hidden from assistive tech, and nothing without fragments", () => {
     const fragments = [
-      { area: "performance" as const, text: "En la prueba de Google en móvil, tu web va bien" },
-      { area: "technical" as const, text: "Aún no hemos revisado tu portada" },
+      { area: "performance" as const, text: "En la prueba de Google en móvil, tu web va bien", tone: "good" as const },
+      { area: "technical" as const, text: "Aún no hemos revisado tu portada", tone: "neutral" as const },
     ];
     const html = renderToStaticMarkup(createElement(SituationLine, { fragments, locale: "es" }));
     expect(html).toContain('role="list"');

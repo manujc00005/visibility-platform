@@ -375,6 +375,8 @@ export const en = {
     verdict: { good: "Good", fair: "Needs improvement", bad: "Poor", info: "Minor fixes", neutral: "Partial" },
     partial: (verdict: string) => `${verdict} (partial)`,
     viewReport: "View report",
+    /** Direction words of the change chip on the cards (overview). */
+    change: { better: "Improving", same: "No change", worse: "Getting worse" },
     cards: {
       performance: {
         title: "How does your website perform?",

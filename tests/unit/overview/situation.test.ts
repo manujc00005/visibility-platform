@@ -104,6 +104,14 @@ describe("situationLine: when it shows (AC-002)", () => {
 });
 
 describe("situationLine: each fragment follows its card's state (AC-003)", () => {
+  it("carries the tone its card shows, and neutral where the card makes no judgement", () => {
+    const tones = (s: AreaSummaries) => situationLine(s, NOW)?.map((f) => f.tone);
+    expect(tones(areas({ audits: [audit({ at: daysAgo(1), facts: facts({ performance: perf(30) }) })], gsc: snapshot() }))).toEqual(["bad", "good", "neutral", "neutral"]);
+    expect(tones(areas({ audits: [audit({ at: daysAgo(1), facts: facts({ performance: perf(70) }) })], findings: [finding({ severity: "critical", category: "indexability" })] }))).toEqual(["fair", "bad", "neutral", "neutral"]);
+    // A failed attempt could not measure either area: both say so in the bad tone; figures stay neutral.
+    expect(tones(areas({ audits: [audit({ at: daysAgo(1), status: "failed", facts: null })], gsc: snapshot() }))).toEqual(["bad", "bad", "neutral", "neutral"]);
+  });
+
   it("performance follows the verdict tone of the score", () => {
     const at = (score: number) => areas({ audits: [audit({ at: daysAgo(1), facts: facts({ performance: perf(score) }) })] });
     expect(fragment(at(95), "performance")).toBe("En la prueba de Google en móvil, tu web va bien");
