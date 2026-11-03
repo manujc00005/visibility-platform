@@ -708,10 +708,35 @@ export const es = {
     jump: "Ir a un bloque de esta página",
     technicalDetail: "Ver la puntuación de Lighthouse y el histórico de auditorías",
     blocks: {
-      results: { title: "Resultados en buscadores", description: "Cuánto apareces, cuántas personas entran y qué hacen en tu web." },
+      answer: { title: "¿Te encuentran en Google?" },
+      health: { title: "Salud técnica" },
+      detail: {
+        title: "Detalle para tu técnico",
+        description: "Todas las cifras de Search Console, Bing y Google Analytics, las búsquedas y páginas con las que te encuentran y las búsquedas que sigues.",
+      },
       queries: { title: "Consultas y páginas", description: "Con qué búsquedas te encuentran y qué páginas se ven más." },
-      health: { title: "Salud técnica", description: "Si Google puede leer tu portada, y qué conviene corregir." },
       competitors: { title: "Competidores" },
+    },
+    /** The block that opens the page: Search Console in words, with no verdict (014 D002), and the technical health. */
+    answer: {
+      searchTitle: "Búsquedas en Google",
+      shown: {
+        better: "Google te mostró más veces que en los 28 días anteriores",
+        worse: "Google te mostró menos veces que en los 28 días anteriores",
+        same: "Google te mostró más o menos las mismas veces que en los 28 días anteriores",
+      },
+      visits: {
+        better: "recibiste más visitas desde Google",
+        worse: "recibiste menos visitas desde Google",
+        same: "recibiste más o menos las mismas visitas desde Google",
+      },
+      sentence: (shown: string, visits: string, contrast: boolean) => `${shown}${contrast ? ", pero " : " y "}${visits}.`,
+      noPrevious: "Ya sabemos cuántas veces te muestra Google, pero no hay datos de los 28 días anteriores para saber si vas a más o a menos.",
+      empty: "En los últimos 56 días Google no te ha mostrado en ninguna búsqueda.",
+      noData: "Todavía no hemos traído los datos de Search Console, así que aún no sabemos cuántas veces te muestra Google.",
+      notConnected: "Search Console no está conectado, así que aún no sabemos cuántas veces te muestra Google.",
+      error: "No pudimos leer Search Console, así que aún no sabemos cuántas veces te muestra Google.",
+      urgent: "Lo más urgente:",
     },
     ranking: {
       title: "Posicionamiento en Google",
@@ -1072,7 +1097,7 @@ export const es = {
     section: {
       description: "Tu web y las de tus competidores, medidas en la misma ejecución: rendimiento, salud técnica y autoridad. No muestra qué búsquedas posicionan ni su tráfico.",
     },
-    button: { run: "Comparar (consume PageSpeed)", rerun: "Volver a comparar (consume PageSpeed)", pending: "Comparando… puede tardar unos minutos" },
+    button: { run: "Comparar", rerun: "Volver a comparar", pending: "Comparando… puede tardar unos minutos", cost: "Consume cuota de PageSpeed Insights" },
     actionErrors: {
       not_found: "Esta empresa ya no existe.",
       not_configured: "Falta la clave de PageSpeed.",

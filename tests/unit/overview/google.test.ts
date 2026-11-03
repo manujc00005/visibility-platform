@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { summarizeRankingCard, summarizeTechnicalCard } from "@/modules/overview/google";
+import { searchAnswer, summarizeRankingCard, summarizeTechnicalCard } from "@/modules/overview/google";
 import { summarizeSeo } from "@/modules/overview/seo";
 import type { SearchConsoleSnapshot } from "@/modules/search-console/schema";
 import { summarizeSearchConsole } from "@/modules/search-console/summary";
@@ -194,5 +194,34 @@ describe("Google cards: remaining states and edge cases (014 review DOM-06)", ()
     const error = both(gscOf(snapshot()), summarizeSeo([failed], {}, NOW), NOW);
     expect(error.technical).toMatchObject({ status: { tone: "bad", label: "Error" }, counts: null });
     expect(error.technical.source).toBe("Auditoría técnica de la portada · sin resultado");
+  });
+});
+
+describe("searchAnswer: the sentence that opens the Google page (014 D002: words, no verdict)", () => {
+  it("says both directions, joined by «pero» when they go opposite ways", () => {
+    expect(searchAnswer(gscOf(snapshot()))).toBe(
+      "Google te mostró más o menos las mismas veces que en los 28 días anteriores y recibiste más visitas desde Google.",
+    );
+    const down = snapshot({ totals: { clicks: 424, impressions: 4460, ctr: 0.095, position: 4.4 }, previousTotals: { clicks: 511, impressions: 7422, ctr: 0.069, position: 6.2 } });
+    expect(searchAnswer(gscOf(down))).toBe("Google te mostró menos veces que en los 28 días anteriores y recibiste menos visitas desde Google.");
+    const mixed = snapshot({ totals: { clicks: 20, impressions: 300, ctr: 0.067, position: 8 }, previousTotals: { clicks: 10, impressions: 400, ctr: 0.025, position: 9 } });
+    expect(searchAnswer(gscOf(mixed))).toBe("Google te mostró menos veces que en los 28 días anteriores, pero recibiste más visitas desde Google.");
+    expect(searchAnswer(gscOf(mixed), "en")).toBe("Google showed you less often than in the previous 28 days, but you got more visits from Google.");
+  });
+
+  it("claims no direction without a previous period to compare against", () => {
+    const fresh = snapshot({ previousTotals: zero });
+    expect(searchAnswer(gscOf(fresh))).toBe(
+      "Ya sabemos cuántas veces te muestra Google, pero no hay datos de los 28 días anteriores para saber si vas a más o a menos.",
+    );
+  });
+
+  it("states the status, not an instruction, when there are no figures", () => {
+    expect(searchAnswer(gscOf(snapshot({ totals: zero, previousTotals: zero })))).toBe("En los últimos 56 días Google no te ha mostrado en ninguna búsqueda.");
+    expect(searchAnswer(gscOf(null))).toMatch(/^Todavía no hemos traído/);
+    expect(searchAnswer(gscOf(null, NOT_CONFIGURED))).toBe("Search Console no está conectado, así que aún no sabemos cuántas veces te muestra Google.");
+    const failed = snapshot({ status: "failed", totals: null, previousTotals: null, errorKind: "api_disabled" });
+    expect(searchAnswer(gscOf(failed))).toBe("No pudimos leer Search Console, así que aún no sabemos cuántas veces te muestra Google.");
+    expect(searchAnswer(gscOf(null, NOT_CONFIGURED, "en"), "en")).toBe("Search Console is not connected, so we do not know yet how often Google shows you.");
   });
 });

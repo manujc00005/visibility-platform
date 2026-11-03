@@ -696,10 +696,34 @@ export const en = {
     jump: "Go to a block of this page",
     technicalDetail: "View the Lighthouse score and the audit history",
     blocks: {
-      results: { title: "Search engine results", description: "How often you appear, how many people come in and what they do on your website." },
+      answer: { title: "Do people find you on Google?" },
+      health: { title: "Technical health" },
+      detail: {
+        title: "Details for your technical person",
+        description: "All the figures from Search Console, Bing and Google Analytics, the searches and pages people find you with, and the searches you track.",
+      },
       queries: { title: "Searches and pages", description: "Which searches find you and which pages are seen most." },
-      health: { title: "Technical health", description: "Whether Google can read your home page, and what is worth fixing." },
       competitors: { title: "Competitors" },
+    },
+    answer: {
+      searchTitle: "Google searches",
+      shown: {
+        better: "Google showed you more often than in the previous 28 days",
+        worse: "Google showed you less often than in the previous 28 days",
+        same: "Google showed you about as often as in the previous 28 days",
+      },
+      visits: {
+        better: "you got more visits from Google",
+        worse: "you got fewer visits from Google",
+        same: "you got about the same number of visits from Google",
+      },
+      sentence: (shown: string, visits: string, contrast: boolean) => `${shown}${contrast ? ", but " : " and "}${visits}.`,
+      noPrevious: "We know how often Google shows you, but there is no data for the previous 28 days to tell whether you are going up or down.",
+      empty: "In the last 56 days Google has not shown you in any search.",
+      noData: "We have not brought in the Search Console data yet, so we do not know yet how often Google shows you.",
+      notConnected: "Search Console is not connected, so we do not know yet how often Google shows you.",
+      error: "We could not read Search Console, so we do not know yet how often Google shows you.",
+      urgent: "Most urgent:",
     },
     ranking: {
       title: "Rankings on Google",
@@ -1057,7 +1081,7 @@ export const en = {
     section: {
       description: "Your website and your competitors', measured in the same run: performance, technical health and authority. It does not show which searches they rank for or their traffic.",
     },
-    button: { run: "Compare (uses PageSpeed)", rerun: "Compare again (uses PageSpeed)", pending: "Comparing… this can take a few minutes" },
+    button: { run: "Compare", rerun: "Compare again", pending: "Comparing… this can take a few minutes", cost: "Uses PageSpeed Insights quota" },
     actionErrors: {
       not_found: "This company no longer exists.",
       not_configured: "The PageSpeed key is missing.",

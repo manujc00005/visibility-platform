@@ -186,9 +186,10 @@ const BLOCKS = ["branded", "nonBranded"] as const;
 function Segments({ v, t, change }: { v: SegmentsView; t: Texts; change: Messages["overview"]["change"] }) {
   return (
     <section aria-labelledby="gsc-segments" className="flex flex-col gap-3">
-      <h3 id="gsc-segments" className="text-sm font-semibold">
+      {/* Under «Consultas y páginas», itself an h3 inside the technician's fold. */}
+      <h4 id="gsc-segments" className="text-sm font-semibold">
         {t.segments.title}
-      </h3>
+      </h4>
       {/* Without impressions the blocks stay, without shares, so a drop to zero still shows its change. */}
       {v.empty ? (
         <p className="text-sm text-muted-foreground">{t.segments.empty}</p>

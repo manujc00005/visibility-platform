@@ -76,6 +76,7 @@ const FUNCTION_CALLS: Record<string, unknown[][]> = {
   "seoPage.health.source": [["27 oct 2026, 13:34"], [""]],
   "seoPage.history.summary": [[1, 2, 1, true], [0, 0, 3, false]],
   "seoPage.history.showing": [[12, 15]],
+  "seoPage.answer.sentence": [["Google te mostró menos veces", "recibiste menos visitas", false], ["Google te mostró más veces", "recibiste menos visitas", true]],
   "analytics.setup.run": [["Traer datos de Analytics"]],
   "analytics.reasons.noData": [["Traer datos de Analytics"]],
   "analytics.failures.no_access": [["gsc-reader@olessium.iam.gserviceaccount.com", "olessium.com"]],

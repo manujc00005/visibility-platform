@@ -127,3 +127,29 @@ export function summarizeTechnicalCard(seo: SeoSummary, locale: Locale = DEFAULT
     source: c.source(when),
   };
 }
+
+/**
+ * The sentence that opens the Google page: what Search Console measured, in words. Direction of
+ * impressions and clicks against the previous 28 days, never a verdict (014 D002), and only what
+ * the summary already holds; without figures it states why, as a status, not an instruction.
+ */
+export function searchAnswer(gsc: SearchConsoleSummary, locale: Locale = DEFAULT_LOCALE): string {
+  const t = getMessages(locale).seoPage.answer;
+  switch (gsc.state) {
+    case "ok": {
+      const shown = gsc.metrics?.impressions.change;
+      const visits = gsc.metrics?.clicks.change;
+      if (!shown || !visits) return t.noPrevious;
+      const contrast = shown.direction !== "same" && visits.direction !== "same" && shown.direction !== visits.direction;
+      return t.sentence(t.shown[shown.direction], t.visits[visits.direction], contrast);
+    }
+    case "empty":
+      return t.empty;
+    case "no_data":
+      return t.noData;
+    case "error":
+      return t.error;
+    default:
+      return t.notConnected;
+  }
+}
