@@ -14,7 +14,13 @@ import {
 } from "@/components/audits/evolution-chart";
 import { LighthouseCategoryCard } from "@/components/audits/lighthouse-category";
 import { RunAuditButton } from "@/components/audits/run-audit-button";
-import { accentRow, figureClasses, StatusPill, ToneIcon, VerdictCard } from "@/components/audits/status-ui";
+import {
+  accentRow,
+  figureClasses,
+  StatusPill,
+  ToneIcon,
+  VerdictCard,
+} from "@/components/audits/status-ui";
 import { AnalyticsSection } from "@/components/analytics/analytics-section";
 import { BingWebmasterSection } from "@/components/bing-webmaster/bing-webmaster-section";
 import { ComparisonSection } from "@/components/competitor-comparison/comparison-section";
@@ -241,7 +247,8 @@ export default async function SeoPage({
   const ranking = summarizeRankingCard(gsc, new Date(), locale);
   const searchMeasured = gsc.state === "ok" || gsc.state === "empty";
   // Findings come most urgent first: the first critical one is the news the answer block names.
-  const urgent = problems.find((p) => p.finding.severity === "critical") ?? null;
+  const urgent =
+    problems.find((p) => p.finding.severity === "critical") ?? null;
 
   return (
     <div className="flex flex-col gap-8">
@@ -307,7 +314,9 @@ export default async function SeoPage({
                 >
                   {a.searchTitle}
                 </h3>
-                <p className="max-w-2xl text-base">{searchAnswer(gsc, locale)}</p>
+                <p className="max-w-2xl text-base">
+                  {searchAnswer(gsc, locale)}
+                </p>
                 {ranking.headline.kind === "figures" ? (
                   <p className="text-sm text-muted-foreground tabular-nums">
                     {ranking.headline.clicks} {ranking.headline.clicksUnit} ·{" "}
@@ -343,14 +352,28 @@ export default async function SeoPage({
                     >
                       {m.overview.cards.seo.technical.title}
                     </h3>
-                    <p className={cn("text-lg font-semibold tracking-tight", figureClasses(s.tone))}>{s.headline.title}</p>
+                    <p
+                      className={cn(
+                        "text-lg font-semibold tracking-tight",
+                        figureClasses(s.tone),
+                      )}
+                    >
+                      {s.headline.title}
+                    </p>
                     <p className="text-sm text-muted-foreground">
                       {s.headline.detail}
                     </p>
                   </div>
                 </div>
-                <StatusPill tone={s.tone} variant={s.tone === "neutral" ? "soft" : "solid"}>
-                  {s.state === "partial" && s.tone !== "neutral" ? m.overview.partial(m.overview.verdict[s.tone]) : s.state === "partial" ? m.overview.states.partial : m.overview.verdict[s.tone]}
+                <StatusPill
+                  tone={s.tone}
+                  variant={s.tone === "neutral" ? "soft" : "solid"}
+                >
+                  {s.state === "partial" && s.tone !== "neutral"
+                    ? m.overview.partial(m.overview.verdict[s.tone])
+                    : s.state === "partial"
+                      ? m.overview.states.partial
+                      : m.overview.verdict[s.tone]}
                 </StatusPill>
               </div>
               {urgent ? (
@@ -368,26 +391,41 @@ export default async function SeoPage({
               <dl className="grid grid-cols-3 gap-3">
                 {(["critical", "warning", "info"] as const).map((severity) => {
                   // A count tile wears its severity only when it counts something: three zeros stay quiet.
-                  const tone = s.counts[severity] > 0 ? SEVERITY_TONE[severity] : "neutral";
+                  const tone =
+                    s.counts[severity] > 0
+                      ? SEVERITY_TONE[severity]
+                      : "neutral";
                   return (
-                  <div
-                    key={severity}
-                    className={cn("flex flex-col gap-0.5 rounded-lg bg-muted/50 p-3", accentRow(tone))}
-                  >
-                    <dt className="text-xs font-medium text-muted-foreground">
-                      {t.health.counts[severity].label}
-                    </dt>
-                    <dd className={cn("text-3xl leading-none font-semibold tabular-nums", figureClasses(tone))}>
-                      {s.counts[severity]}
-                    </dd>
-                    <dd className="hidden text-xs text-muted-foreground sm:block">
-                      {t.health.counts[severity].hint}
-                    </dd>
-                  </div>
+                    <div
+                      key={severity}
+                      className={cn(
+                        "flex flex-col gap-0.5 rounded-lg bg-muted/50 p-3",
+                        accentRow(tone),
+                      )}
+                    >
+                      <dt className="text-xs font-medium text-muted-foreground">
+                        {t.health.counts[severity].label}
+                      </dt>
+                      <dd
+                        className={cn(
+                          "text-3xl leading-none font-semibold tabular-nums",
+                          figureClasses(tone),
+                        )}
+                      >
+                        {s.counts[severity]}
+                      </dd>
+                      <dd className="hidden text-xs text-muted-foreground sm:block">
+                        {t.health.counts[severity].hint}
+                      </dd>
+                    </div>
                   );
                 })}
               </dl>
-              <ChangeLine change={s.change} note={s.comparisonNote} labels={m.overview.change} />
+              <ChangeLine
+                change={s.change}
+                note={s.comparisonNote}
+                labels={m.overview.change}
+              />
               <NoticeList notices={notices} />
               <p className="text-xs text-muted-foreground">
                 {t.health.source(
@@ -439,7 +477,10 @@ export default async function SeoPage({
                   const body = (
                     <>
                       <span className="text-sm font-medium">{area.label}</span>
-                      <StatusPill tone={area.tone} variant={area.tone === "neutral" ? "soft" : "solid"}>
+                      <StatusPill
+                        tone={area.tone}
+                        variant={area.tone === "neutral" ? "soft" : "solid"}
+                      >
                         {area.verdict}
                         {area.count > 0 ? ` · ${area.count}` : ""}
                       </StatusPill>
@@ -487,7 +528,10 @@ export default async function SeoPage({
                       className="flex scroll-mt-6 flex-col gap-2 rounded-2xl border border-border/80 bg-card shadow-card p-5"
                     >
                       <div className="flex flex-wrap items-center gap-2">
-                        <StatusPill tone={SEVERITY_TONE[f.severity]} variant="solid">
+                        <StatusPill
+                          tone={SEVERITY_TONE[f.severity]}
+                          variant="solid"
+                        >
                           {L.severity[f.severity]}
                         </StatusPill>
                         <span className="text-xs text-muted-foreground">
@@ -546,7 +590,10 @@ export default async function SeoPage({
         {/* Occasional reading with no incoming links, so it can stay folded (017, D003). */}
         <details className="group rounded-2xl border border-border/80 bg-card p-5 shadow-card">
           <summary className={SUMMARY_CLASSES}>
-            <ChevronRight aria-hidden="true" className={cn(CHEVRON_CLASSES, "mt-0.5")} />
+            <ChevronRight
+              aria-hidden="true"
+              className={cn(CHEVRON_CLASSES, "mt-0.5")}
+            />
             {t.technicalDetail}
           </summary>
           <div className="mt-5 flex flex-col gap-8">
@@ -641,7 +688,10 @@ export default async function SeoPage({
         className="group rounded-2xl border border-border/80 bg-card p-5 shadow-card"
       >
         <summary className={SUMMARY_CLASSES}>
-          <ChevronRight aria-hidden="true" className={cn(CHEVRON_CLASSES, "mt-1.5 size-5")} />
+          <ChevronRight
+            aria-hidden="true"
+            className={cn(CHEVRON_CLASSES, "mt-1.5 size-5")}
+          />
           <span className="flex flex-col gap-1">
             <h2
               id="detail-title"
