@@ -229,7 +229,7 @@ export const es = {
         refused_by_policy: "No permitido por robots.txt",
       } satisfies Record<FetchLogEntry["outcome"], string>,
       rating: { good: "Bueno", needs_improvement: "Mejorable", poor: "Malo" } satisfies Record<FieldRating, string>,
-      verdict: { good: "Bien", unchecked: "No comprobado", critical: "Mal", warning: "Regular", info: "Mejorable" },
+      verdict: { good: "Bien", unchecked: "No comprobado", critical: "Mal", warning: "Mejorable", info: "Con mejoras" },
     },
     headline: {
       critical: (n: number) => `${n} ${n === 1 ? "problema crítico" : "problemas críticos"}`,
