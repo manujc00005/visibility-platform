@@ -48,7 +48,14 @@ next-env.d.ts
 .env
 .env.local
 !.env.example
-.claude/
+# Claude Code: local state stays out; the Impeccable skill and its subagents are shared.
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/impeccable/
+!.claude/agents/
+.claude/agents/*
+!.claude/agents/impeccable-*.md
 .neon
 
 # Google service account keys (Search Console). Never commit: the repository is public.
