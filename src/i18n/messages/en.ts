@@ -430,6 +430,11 @@ export const en = {
         good: "In Google's mobile test, your website does well",
         fair: "In Google's mobile test, your website could be faster",
         bad: "In Google's mobile test, your website is slow",
+        visitors: {
+          good: "Your real visitors find your website fast",
+          fair: "Your real visitors find your website has room to get faster",
+          bad: "Your real visitors find your website slow",
+        },
         notMeasured: "Your website's speed has not been measured yet",
         analyzing: "We are measuring your website's speed",
         error: "Your website's speed could not be measured",

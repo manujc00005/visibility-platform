@@ -8,7 +8,7 @@ import type { PerformanceResult } from "@/modules/audits/pagespeed";
 const RANK: Record<FieldRating, number> = { good: 0, needs_improvement: 1, poor: 2 };
 
 /** Worst rating among the real-visitor metrics that exist; null when there is nothing to judge. */
-function fieldRating(field: FieldDataResult | undefined): FieldRating | null {
+export function fieldRating(field: FieldDataResult | undefined): FieldRating | null {
   if (field?.status !== "ok" || !field.metrics) return null;
   const { lcpMs, inpMs, cls } = field.metrics;
   const ratings: FieldRating[] = [];

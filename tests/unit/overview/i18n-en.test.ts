@@ -42,7 +42,10 @@ describe("summarizePerformance in English", () => {
       }),
     });
     const s = summarizePerformance([a1, a2], [], NOW, "en");
-    expect(s.verdict).toBe("Needs improvement");
+    // Real visitors are good, so they set the verdict; the lab score keeps its own tone.
+    expect(s.verdict).toBe("Good");
+    expect(s.scoreTone).toBe("fair");
+    expect(s.visitorsLine).toBe("Your real visitors find your website fast.");
     expect(s.change).toEqual({ direction: "better", text: "+10 points compared with the previous measurement" });
     expect(fieldPeriod({ firstDate: "2026-09-27", lastDate: "2026-10-24" })).toBe("del 27 sept 2026 al 24 oct 2026");
   });

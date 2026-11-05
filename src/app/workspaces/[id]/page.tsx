@@ -117,6 +117,7 @@ function PerformanceCard({
       icon={Gauge}
       title={c.title}
       status={{ tone: s.tone, label: t.verdict[s.tone] }}
+      headlineTone={s.scoreTone}
       headline={
         <>
           {s.score}
@@ -131,6 +132,7 @@ function PerformanceCard({
       )}
       cta={t.viewReport}
     >
+      {s.visitorsLine ? <Line>{s.visitorsLine}</Line> : null}
       <Line>{c.labNote}</Line>
       <ChangeLine change={s.change} note={s.comparisonNote} labels={t.change} />
       {s.topIssue ? (

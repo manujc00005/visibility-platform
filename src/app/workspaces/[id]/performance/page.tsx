@@ -166,7 +166,7 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
           <div className="flex flex-col gap-2">
             <span className="text-sm font-medium text-muted-foreground">{t.mobile}</span>
             {s.score !== null ? (
-              <span className={cn("text-5xl leading-none font-semibold tracking-tight tabular-nums", figureClasses(s.tone))}>
+              <span className={cn("text-5xl leading-none font-semibold tracking-tight tabular-nums", figureClasses(s.scoreTone))}>
                 {s.score}
                 <span className="text-lg font-normal text-muted-foreground">/100</span>
               </span>

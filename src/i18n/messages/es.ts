@@ -438,6 +438,12 @@ export const es = {
         good: "En la prueba de Google en móvil, tu web va bien",
         fair: "En la prueba de Google en móvil, tu web podría ir más rápido",
         bad: "En la prueba de Google en móvil, tu web va lenta",
+        /** When real visitors (Chrome UX Report) set the verdict, the line speaks of them. */
+        visitors: {
+          good: "Tus visitantes reales ven tu web rápida",
+          fair: "Tus visitantes reales ven tu web con margen de mejora",
+          bad: "Tus visitantes reales ven tu web lenta",
+        },
         notMeasured: "La velocidad de tu web aún no se ha medido",
         analyzing: "Estamos midiendo la velocidad de tu web",
         error: "No se pudo medir la velocidad de tu web",
