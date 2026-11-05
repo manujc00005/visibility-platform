@@ -398,6 +398,7 @@ export function ComparisonSection({ s, action, manageHref, locale }: Props) {
               idle: measured ? t.button.rerun : t.button.run,
               pending: t.button.pending,
               failed: t.actionErrors.failed,
+              cost: t.button.cost,
             }}
             action={action}
           />

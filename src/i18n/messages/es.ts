@@ -185,7 +185,7 @@ export const es = {
   audits: {
     /** Labels shared by the audit, SEO and performance screens; keyed by the stored enum values. */
     labels: {
-      severity: { critical: "Crítico", warning: "Importante", info: "Mejora" } satisfies Record<Severity, string>,
+      severity: { critical: "Crítico", warning: "Importante", info: "Opcional" } satisfies Record<Severity, string>,
       category: {
         access: "Acceso",
         indexability: "Indexación",
@@ -229,7 +229,7 @@ export const es = {
         refused_by_policy: "No permitido por robots.txt",
       } satisfies Record<FetchLogEntry["outcome"], string>,
       rating: { good: "Bueno", needs_improvement: "Mejorable", poor: "Malo" } satisfies Record<FieldRating, string>,
-      verdict: { good: "Bien", unchecked: "No comprobado", critical: "Mal", warning: "Mejorable", info: "Con mejoras" },
+      verdict: { good: "Bien", unchecked: "No comprobado", critical: "Mal", warning: "Mejorable", info: "Opcional" },
     },
     headline: {
       critical: (n: number) => `${n} ${n === 1 ? "problema crítico" : "problemas críticos"}`,
@@ -238,7 +238,7 @@ export const es = {
       warningDetail: "La web funciona, pero hay puntos que conviene corregir pronto.",
       goodWithInfo: "Bien: sin problemas críticos ni importantes",
       goodClean: "Bien: no hemos detectado problemas",
-      infoDetail: (n: number) => `${n === 1 ? "Queda" : "Quedan"} ${n} ${n === 1 ? "mejora opcional" : "mejoras opcionales"}.`,
+      infoDetail: (n: number) => `${n === 1 ? "Queda" : "Quedan"} ${n} ${n === 1 ? "aspecto opcional" : "aspectos opcionales"}.`,
       cleanDetail: "Repite el análisis tras cualquier cambio importante en la web.",
     },
     /** Serializable fragments for the client buttons. */
@@ -261,10 +261,10 @@ export const es = {
       counts: {
         critical: { label: "Críticos", hint: "Bloquean o dañan la visibilidad" },
         warning: { label: "Importantes", hint: "Conviene corregirlos pronto" },
-        info: { label: "Mejoras", hint: "Opcionales, suman calidad" },
+        info: { label: "Opcionales", hint: "Suman calidad" },
       },
       areas: "Estado por área",
-      legend: { good: "Verde: bien", fair: "Ámbar: regular", bad: "Rojo: mal", info: "Azul: mejorable (opcional)", neutral: "Gris: no comprobado" },
+      legend: { good: "Verde: bien", fair: "Ámbar: mejorable", bad: "Rojo: mal", info: "Azul: opcional", neutral: "Gris: no comprobado" },
       report: {
         title: "Informe para el cliente",
         description: "PDF con resumen ejecutivo, resultados en buscadores, resultados técnicos, problemas, recomendaciones, evidencias y limitaciones.",
@@ -375,7 +375,7 @@ export const es = {
     /** One state vocabulary for the three cards (feature 014, D004); only the verdicts below carry a tone. */
     states: { not_configured: "Sin configurar", no_data: "Sin datos", analyzing: "Analizando", partial: "Parcial", error: "Error", ok: "Medido", not_measured: "No medida" },
     /** One verdict scale for the three cards: the same word always means the same tone. */
-    verdict: { good: "Bien", fair: "Mejorable", bad: "Mal", info: "Con mejoras", neutral: "Parcial" },
+    verdict: { good: "Bien", fair: "Mejorable", bad: "Mal", info: "Opcional", neutral: "Parcial" },
     partial: (verdict: string) => `${verdict} (parcial)`,
     viewReport: "Ver informe",
     /** Direction words of the change chip on the cards (overview). */
@@ -438,6 +438,12 @@ export const es = {
         good: "En la prueba de Google en móvil, tu web va bien",
         fair: "En la prueba de Google en móvil, tu web podría ir más rápido",
         bad: "En la prueba de Google en móvil, tu web va lenta",
+        /** When real visitors (Chrome UX Report) set the verdict, the line speaks of them. */
+        visitors: {
+          good: "Tus visitantes reales ven tu web rápida",
+          fair: "Tus visitantes reales ven tu web con margen de mejora",
+          bad: "Tus visitantes reales ven tu web lenta",
+        },
         notMeasured: "La velocidad de tu web aún no se ha medido",
         analyzing: "Estamos midiendo la velocidad de tu web",
         error: "No se pudo medir la velocidad de tu web",
@@ -635,16 +641,22 @@ export const es = {
     metaTitle: "Rendimiento de tu web",
     title: "Rendimiento de tu web",
     description: "Cómo de rápida y cómoda es tu página para los visitantes, según las mediciones de Google.",
-    mobile: "Móvil",
-    desktop: "Escritorio",
-    notAvailable: "No disponible",
-    desktopNote: "Nuestra medición usa solo el perfil móvil de PageSpeed Insights; no medimos el escritorio.",
+    mobile: "Prueba de Google en móvil",
+    desktopFootnote: "No medimos el escritorio: nuestra medición usa solo el perfil móvil de PageSpeed Insights.",
     analyzing: "Analizando…",
     noResult: "Sin resultado",
     notMeasured: "No medida",
     source: (when: string, lighthouse: string | null) => `PageSpeed Insights · ${when}${lighthouse ? ` · Lighthouse ${lighthouse}` : ""}`,
-    labNote:
-      "La puntuación es una prueba de laboratorio: Google carga tu portada en un móvil simulado con conexión lenta. Sirve para detectar problemas, pero no es la experiencia de todos tus visitantes. Entre dos pruebas idénticas puede variar varios puntos; solo consideramos cambio una diferencia de 10 puntos o más.",
+    /** The owner question of the hero; the sentence under it leads with real visitors when there is field data. */
+    answer: {
+      visitorsOnly: { good: "Tus visitantes reales ven tu web rápida.", needs_improvement: "Tus visitantes reales ven tu web con margen de mejora.", poor: "Tus visitantes reales ven tu web lenta." },
+      visitorsAndLab: {
+        good: (lcp: string, relation: "same" | "worse" | "better") => relation === "same" ? `Tus visitantes reales ven tu web rápida, y la prueba de Google coincide: el contenido principal tarda ${lcp}.` : `Tus visitantes reales ven tu web rápida; en la prueba exigente de Google, el contenido principal tarda ${lcp}.`,
+        needs_improvement: (lcp: string, relation: "same" | "worse" | "better") => relation === "same" ? `Tus visitantes reales ven tu web con margen de mejora, y la prueba de Google coincide: el contenido principal tarda ${lcp}.` : relation === "worse" ? `Tus visitantes reales ven tu web con margen de mejora; en la prueba exigente de Google, el contenido principal tarda ${lcp}.` : `Tus visitantes reales ven tu web con margen de mejora; en la prueba de Google, el contenido principal tarda ${lcp}.`,
+        poor: (lcp: string, relation: "same" | "worse" | "better") => relation === "same" ? `Tus visitantes reales ven tu web lenta, y la prueba de Google coincide: el contenido principal tarda ${lcp}.` : `Tus visitantes reales ven tu web lenta; en la prueba de Google, el contenido principal tarda ${lcp}.`,
+      },
+      labOnly: (lcp: string) => `Según la prueba de Google en un móvil simulado, el contenido principal tarda ${lcp}.`,
+    },
     noMeasurementsTitle: "Todavía no hay mediciones de velocidad",
     noMeasurementsBody: "Pulsa «Analizar portada»: leemos tu portada y pedimos a Google que mida su velocidad en móvil. Tarda menos de un minuto.",
     metrics: {
@@ -656,7 +668,7 @@ export const es = {
     },
     goodLabel: (good: string) => `Bueno: ${good}`,
     noValue: "Sin dato",
-    lab: { title: "Prueba de laboratorio", description: "Medida por PageSpeed Insights en un móvil simulado. No son visitantes reales.", notMeasured: "No se midió en la última auditoría." },
+    lab: { title: "Prueba de laboratorio", description: "Google carga tu portada en un móvil simulado con conexión lenta. Sirve para detectar problemas, pero no es la experiencia de tus visitantes. Entre dos pruebas idénticas puede variar varios puntos; solo contamos como cambio 10 puntos o más.", notMeasured: "No se midió en la última auditoría." },
     field: {
       title: "Visitantes reales",
       description: "Chrome UX Report: visitas reales con Chrome en el móvil durante 28 días, valor que cumple el 75 % de las visitas.",
@@ -683,6 +695,11 @@ export const es = {
         field_cwv_failed: "Los datos de visitantes reales muestran que la experiencia no llega al nivel que Google considera bueno.",
         performance_unavailable: "Esta vez no se pudo medir la velocidad, así que no sabemos si hay problemas.",
       },
+      /** Plain line on a lab-only problem when real visitors rate that same metric as good. */
+      fieldGood: {
+        lcp_slow: (value: string) => `Tus visitantes reales no lo notan: en sus visitas tarda ${value}.`,
+        cls_high: (value: string) => `Tus visitantes reales no lo notan: en sus visitas el valor es ${value}.`,
+      },
       recommend: "Qué recomendamos:",
       none: "No hemos detectado problemas de velocidad en la última medición.",
       noMeasurement: "Sin medición no podemos detectar problemas de velocidad.",
@@ -708,10 +725,37 @@ export const es = {
     jump: "Ir a un bloque de esta página",
     technicalDetail: "Ver la puntuación de Lighthouse y el histórico de auditorías",
     blocks: {
-      results: { title: "Resultados en buscadores", description: "Cuánto apareces, cuántas personas entran y qué hacen en tu web." },
+      answer: { title: "¿Te encuentran en Google?" },
+      health: { title: "Salud técnica" },
+      detail: {
+        title: "Detalle para tu técnico",
+        description: "Todas las cifras de Search Console, Bing y Google Analytics, las búsquedas y páginas con las que te encuentran y las búsquedas que sigues.",
+      },
       queries: { title: "Consultas y páginas", description: "Con qué búsquedas te encuentran y qué páginas se ven más." },
-      health: { title: "Salud técnica", description: "Si Google puede leer tu portada, y qué conviene corregir." },
       competitors: { title: "Competidores" },
+    },
+    /** The block that opens the page: Search Console in words, with no verdict (014 D002), and the technical health. */
+    answer: {
+      searchTitle: "Búsquedas en Google",
+      shown: {
+        better: "Google te mostró más veces que en los 28 días anteriores",
+        worse: "Google te mostró menos veces que en los 28 días anteriores",
+        same: "Google te mostró más o menos las mismas veces que en los 28 días anteriores",
+      },
+      visits: {
+        better: "recibiste más visitas desde Google",
+        worse: "recibiste menos visitas desde Google",
+        same: "recibiste más o menos las mismas visitas desde Google",
+      },
+      sentence: (shown: string, visits: string, contrast: boolean) => `${shown}${contrast ? ", pero " : " y "}${visits}.`,
+      noPrevious: "Ya sabemos cuántas veces te muestra Google, pero no hay datos de los 28 días anteriores para saber si vas a más o a menos.",
+      empty: "En los últimos 56 días Google no te ha mostrado en ninguna búsqueda.",
+      noData: "Todavía no hemos traído los datos de Search Console, así que aún no sabemos cuántas veces te muestra Google.",
+      notConnected: "Search Console no está conectado, así que aún no sabemos cuántas veces te muestra Google.",
+      error: "No pudimos leer Search Console, así que aún no sabemos cuántas veces te muestra Google.",
+      urgent: "Lo más urgente:",
+      nonBranded: (clicks: string) => `De búsquedas que no incluyen tu marca: ${clicks}.`,
+      position: (now: string, before: string | null) => (before === null ? `Posición media en Google: ${now}.` : `Posición media en Google: ${now} (antes ${before}).`),
     },
     ranking: {
       title: "Posicionamiento en Google",
@@ -724,7 +768,7 @@ export const es = {
       counts: {
         critical: { label: "Críticos", hint: "Bloquean o dañan la visibilidad" },
         warning: { label: "Importantes", hint: "Conviene corregirlos pronto" },
-        info: { label: "Mejoras", hint: "Opcionales" },
+        info: { label: "Opcionales", hint: "Suman calidad" },
       },
       source: (when: string) => `Auditoría técnica de la portada · ${when}`,
       analyzing: "Analizando la web",
@@ -746,7 +790,7 @@ export const es = {
       title: "Histórico de auditorías",
       description: "Problemas de SEO técnico en cada auditoría, sin contar los de velocidad. Compara auditorías concretas, no es una tendencia del negocio.",
       summary: (critical: number, warning: number, info: number, read: boolean) =>
-        `${critical} ${critical === 1 ? "crítico" : "críticos"} · ${warning} ${warning === 1 ? "importante" : "importantes"} · ${info} ${info === 1 ? "mejora" : "mejoras"}${read ? "" : " · portada no leída"}`,
+        `${critical} ${critical === 1 ? "crítico" : "críticos"} · ${warning} ${warning === 1 ? "importante" : "importantes"} · ${info} ${info === 1 ? "opcional" : "opcionales"}${read ? "" : " · portada no leída"}`,
       completed: "Completada",
       none: "Todavía no hay auditorías.",
       showing: (shown: number, total: number) => `Se muestran las ${shown} auditorías más recientes de ${total}.`,
@@ -1072,7 +1116,7 @@ export const es = {
     section: {
       description: "Tu web y las de tus competidores, medidas en la misma ejecución: rendimiento, salud técnica y autoridad. No muestra qué búsquedas posicionan ni su tráfico.",
     },
-    button: { run: "Comparar (consume PageSpeed)", rerun: "Volver a comparar (consume PageSpeed)", pending: "Comparando… puede tardar unos minutos" },
+    button: { run: "Comparar", rerun: "Volver a comparar", pending: "Comparando… puede tardar unos minutos", cost: "Consume cuota de PageSpeed Insights" },
     actionErrors: {
       not_found: "Esta empresa ya no existe.",
       not_configured: "Falta la clave de PageSpeed.",
@@ -1203,8 +1247,8 @@ export const es = {
   chart: {
     problemsTitle: "Problemas por auditoría, de la más antigua a la más reciente",
     speedTitle: "Puntuación de velocidad en móvil por auditoría, de 0 a 100",
-    bar: (date: string, critical: number, warning: number, info: number) => `${date}: ${critical} críticos, ${warning} importantes, ${info} mejoras`,
-    legend: { critical: "Críticos", warning: "Importantes", info: "Mejoras", good: "Bueno: 90–100", fair: "Mejorable: 50–89", poor: "Malo: 0–49", unmeasured: "Auditoría sin medir" },
+    bar: (date: string, critical: number, warning: number, info: number) => `${date}: ${critical} críticos, ${warning} importantes, ${info} opcionales`,
+    legend: { critical: "Críticos", warning: "Importantes", info: "Opcionales", good: "Bueno: 90–100", fair: "Mejorable: 50–89", poor: "Malo: 0–49", unmeasured: "Auditoría sin medir" },
     point: (date: string, score: number, rating: string) => `${date}: ${score} de 100, ${rating}`,
     unmeasured: (date: string) => `${date}: no se midió la velocidad`,
     rating: { good: "Bueno", needs_improvement: "Mejorable", poor: "Malo" },
@@ -1463,8 +1507,8 @@ export const es = {
         failedBody: "No hay resultado que mostrar. Revisa la medición y vuelve a lanzarla desde «Configurar medición».",
         viewRun: "Ver la medición",
         noRunsTitle: "Todavía no hay mediciones",
-        noRunsBody: (n: number) => `Tienes ${n} ${n === 1 ? "pregunta preparada" : "preguntas preparadas"}. Lanza una medición para saber si ChatGPT te menciona.`,
-        firstRun: "Lanzar la primera medición",
+        noRealRunsTitle: "Todavía no hay mediciones reales",
+        noRunsBody: (n: number) => `Tienes ${n} ${n === 1 ? "pregunta preparada" : "preguntas preparadas"}. Lanza una medición desde «Configurar medición» para saber si ChatGPT te menciona.`,
       },
       appear: "Preguntas en las que apareces",
       ofEvaluated: (n: number) => `de ${n} ${n === 1 ? "pregunta evaluada" : "preguntas evaluadas"}`,
@@ -1505,7 +1549,7 @@ export const es = {
       history: {
         title: "Mediciones",
         description: "Solo son comparables entre sí las mediciones con la misma configuración.",
-        none: "Todavía no hay mediciones.",
+        notResult: "No cuenta como resultado",
         changed: " · configuración distinta a la anterior",
         appear: (value: string) => `Apareces: ${value}`,
         cites: (value: string) => `Citas a tu web: ${value}`,

@@ -139,6 +139,7 @@ export function OverviewCard({
   title,
   status,
   headline,
+  headlineTone = status.tone,
   children,
   notices = [],
   source,
@@ -151,6 +152,8 @@ export function OverviewCard({
   status: { tone: Tone; label: string };
   /** Main value or main state, in large type. */
   headline: ReactNode;
+  /** Tone of the figure when it is not the one that sets the verdict (lab score under a real-visitor verdict). */
+  headlineTone?: Tone;
   /** Supporting lines. Text only: the card is already a link. */
   children?: ReactNode;
   notices?: Notice[];
@@ -160,6 +163,7 @@ export function OverviewCard({
 }) {
   const tone = toneClasses(status.tone);
   const judged = status.tone !== "neutral";
+  const figure = toneClasses(headlineTone);
   return (
     <Link
       href={href}
@@ -205,7 +209,7 @@ export function OverviewCard({
         </span>
       </div>
       <div id={`${id}-summary`} className="flex flex-col gap-2">
-        <div className={cn("text-5xl leading-none font-semibold tracking-tight tabular-nums", judged && tone.text)}>
+        <div className={cn("text-5xl leading-none font-semibold tracking-tight tabular-nums", headlineTone !== "neutral" && figure.text)}>
           {headline}
         </div>
         {children}

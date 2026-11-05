@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import type { CompetitorComparisonState } from "@/app/workspaces/[id]/seo/actions";
 
 interface Props {
-  labels: { idle: string; pending: string; failed: string };
+  /** `cost`: what a run spends, for the operator; kept out of the visible label. */
+  labels: { idle: string; pending: string; failed: string; cost: string };
   action: (state: CompetitorComparisonState) => Promise<CompetitorComparisonState>;
 }
 
@@ -21,7 +22,7 @@ export function ComparisonButton({ labels, action }: Props) {
   const [state, formAction, pending] = useActionState(guarded, { error: null });
   return (
     <form action={formAction} className="flex flex-col items-start gap-2">
-      <Button type="submit" variant="outline" disabled={pending}>
+      <Button type="submit" variant="outline" disabled={pending} title={labels.cost}>
         {pending ? labels.pending : labels.idle}
       </Button>
       <p role="status" className="sr-only">

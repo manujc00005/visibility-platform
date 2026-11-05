@@ -127,3 +127,44 @@ export function summarizeTechnicalCard(seo: SeoSummary, locale: Locale = DEFAULT
     source: c.source(when),
   };
 }
+
+/**
+ * The sentence that opens the Google page: what Search Console measured, in words. Direction of
+ * impressions and clicks against the previous 28 days, never a verdict (014 D002), and only what
+ * the summary already holds; without figures it states why, as a status, not an instruction.
+ */
+export function searchAnswer(gsc: SearchConsoleSummary, locale: Locale = DEFAULT_LOCALE): string {
+  const t = getMessages(locale).seoPage.answer;
+  switch (gsc.state) {
+    case "ok": {
+      const shown = gsc.metrics?.impressions.change;
+      const visits = gsc.metrics?.clicks.change;
+      if (!shown || !visits) return t.noPrevious;
+      const contrast = shown.direction !== "same" && visits.direction !== "same" && shown.direction !== visits.direction;
+      return t.sentence(t.shown[shown.direction], t.visits[visits.direction], contrast);
+    }
+    case "empty":
+      return t.empty;
+    case "no_data":
+      return t.noData;
+    case "error":
+      return t.error;
+    default:
+      return t.notConnected;
+  }
+}
+
+/**
+ * Two neutral lines under the Google answer, built only from values the summary already holds:
+ * the clicks from searches without the brand and the average position (with the previous one).
+ * No tone and no verdict (014 D002); a value that was not computed is simply left out.
+ */
+export function searchDetails(gsc: SearchConsoleSummary, locale: Locale = DEFAULT_LOCALE): string[] {
+  if (gsc.state !== "ok") return [];
+  const t = getMessages(locale).seoPage.answer;
+  const lines: string[] = [];
+  if (gsc.segments && !gsc.segments.empty) lines.push(t.nonBranded(gsc.segments.nonBranded.clicks));
+  const position = gsc.metrics?.position;
+  if (position && position.value !== "—") lines.push(t.position(position.value, position.previous));
+  return lines;
+}

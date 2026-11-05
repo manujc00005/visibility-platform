@@ -1,8 +1,39 @@
 import { describe, expect, it } from "vitest";
+import type { FieldDataResult } from "@/modules/audits/crux";
 import { summarizePerformance } from "@/modules/overview/performance";
 import { audit, daysAgo, emptyFieldData, emptyResult, facts, finding, NOW, perf } from "./fixtures";
 
+const field = (lcpMs: number | null, inpMs: number | null = 100, cls: number | null = 0.01): FieldDataResult => ({
+  ...emptyFieldData("ok"),
+  scope: "url",
+  metrics: { lcpMs, inpMs, cls, fcpMs: null, ttfbMs: null },
+});
+
 describe("summarizePerformance", () => {
+  it("lets real visitors set the verdict and keeps the lab tone on the score", () => {
+    const s = summarizePerformance([audit({ at: daysAgo(1), facts: facts({ performance: perf(84), fieldData: field(1700) }) })], [], NOW);
+    expect(s.score).toBe(84);
+    expect(s.visitors).toBe("good");
+    expect(s.tone).toBe("good");
+    expect(s.verdict).toBe("Bueno");
+    expect(s.scoreTone).toBe("fair");
+    expect(s.visitorsLine).toBe("Tus visitantes reales ven tu web rápida.");
+  });
+
+  it("takes the worst real-visitor metric even when the lab score is good", () => {
+    const s = summarizePerformance([audit({ at: daysAgo(1), facts: facts({ performance: perf(95), fieldData: field(1700, 600) }) })], [], NOW);
+    expect(s.tone).toBe("bad");
+    expect(s.scoreTone).toBe("good");
+  });
+
+  it("falls back to the lab score without real-visitor data", () => {
+    const s = summarizePerformance([audit({ at: daysAgo(1), facts: facts({ performance: perf(84), fieldData: emptyFieldData("no_data") }) })], [], NOW);
+    expect(s.visitors).toBeNull();
+    expect(s.visitorsLine).toBeNull();
+    expect(s.tone).toBe("fair");
+    expect(s.scoreTone).toBe("fair");
+  });
+
   it("says there is nothing yet without audits", () => {
     const s = summarizePerformance([], [], NOW);
     expect(s.state).toBe("no_data");
