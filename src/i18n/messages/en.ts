@@ -186,7 +186,7 @@ export const en = {
   },
   audits: {
     labels: {
-      severity: { critical: "Critical", warning: "Important", info: "Improvement" },
+      severity: { critical: "Critical", warning: "Important", info: "Optional" },
       category: {
         access: "Access",
         indexability: "Indexing",
@@ -228,7 +228,7 @@ export const en = {
         refused_by_policy: "Refused by robots.txt",
       },
       rating: { good: "Good", needs_improvement: "Needs improvement", poor: "Poor" },
-      verdict: { good: "Good", unchecked: "Not checked", critical: "Poor", warning: "Needs improvement", info: "Minor fixes" },
+      verdict: { good: "Good", unchecked: "Not checked", critical: "Poor", warning: "Needs improvement", info: "Optional" },
     },
     headline: {
       critical: (n: number) => `${n} critical ${n === 1 ? "problem" : "problems"}`,
@@ -259,10 +259,10 @@ export const en = {
       counts: {
         critical: { label: "Critical", hint: "Block or harm visibility" },
         warning: { label: "Important", hint: "Should be fixed soon" },
-        info: { label: "Improvements", hint: "Optional, add quality" },
+        info: { label: "Optional", hint: "Add quality" },
       },
       areas: "Status by area",
-      legend: { good: "Green: good", fair: "Amber: fair", bad: "Red: poor", info: "Blue: could improve (optional)", neutral: "Grey: not checked" },
+      legend: { good: "Green: good", fair: "Amber: needs improvement", bad: "Red: poor", info: "Blue: optional", neutral: "Grey: not checked" },
       report: {
         title: "Report for the client",
         description: "PDF with an executive summary, search results, technical results, problems, recommendations, evidence and limitations.",
@@ -372,7 +372,7 @@ export const en = {
     nav: { label: "Company sections", overview: "Overview", performance: "Performance", seo: "Google", geo: "AI presence", geoShort: "AI", settings: "Settings" },
     /** One state vocabulary for the three cards (feature 014, D004); only the verdicts below carry a tone. */
     states: { not_configured: "Not set up", no_data: "No data", analyzing: "Analysing", partial: "Partial", error: "Error", ok: "Measured", not_measured: "Not measured" },
-    verdict: { good: "Good", fair: "Needs improvement", bad: "Poor", info: "Minor fixes", neutral: "Partial" },
+    verdict: { good: "Good", fair: "Needs improvement", bad: "Poor", info: "Optional", neutral: "Partial" },
     partial: (verdict: string) => `${verdict} (partial)`,
     viewReport: "View report",
     /** Direction words of the change chip on the cards (overview). */
@@ -430,6 +430,11 @@ export const en = {
         good: "In Google's mobile test, your website does well",
         fair: "In Google's mobile test, your website could be faster",
         bad: "In Google's mobile test, your website is slow",
+        visitors: {
+          good: "Your real visitors find your website fast",
+          fair: "Your real visitors find your website has room to get faster",
+          bad: "Your real visitors find your website slow",
+        },
         notMeasured: "Your website's speed has not been measured yet",
         analyzing: "We are measuring your website's speed",
         error: "Your website's speed could not be measured",
@@ -623,16 +628,22 @@ export const en = {
     metaTitle: "Your website's performance",
     title: "Your website's performance",
     description: "How fast and comfortable your page is for visitors, according to Google's measurements.",
-    mobile: "Mobile",
-    desktop: "Desktop",
-    notAvailable: "Not available",
-    desktopNote: "Our measurement uses only the mobile profile of PageSpeed Insights; we do not measure desktop.",
+    mobile: "Google's mobile test",
+    desktopFootnote: "We do not measure desktop: our measurement uses only the mobile profile of PageSpeed Insights.",
     analyzing: "Analysing…",
     noResult: "No result",
     notMeasured: "Not measured",
     source: (when: string, lighthouse: string | null) => `PageSpeed Insights · ${when}${lighthouse ? ` · Lighthouse ${lighthouse}` : ""}`,
-    labNote:
-      "The score is a lab test: Google loads your home page on a simulated mobile device with a slow connection. It is useful to spot problems, but it is not the experience of all your visitors. Two identical tests can differ by several points; we only count a difference of 10 points or more as a change.",
+    /** The owner question of the hero; the sentence under it leads with real visitors when there is field data. */
+    answer: {
+      visitorsOnly: { good: "Your real visitors find your website fast.", needs_improvement: "Your real visitors find your website has room to get faster.", poor: "Your real visitors find your website slow." },
+      visitorsAndLab: {
+        good: (lcp: string, relation: "same" | "worse" | "better") => relation === "same" ? `Your real visitors find your website fast, and Google's test agrees: the main content takes ${lcp}.` : `Your real visitors find your website fast; in Google's demanding test, the main content takes ${lcp}.`,
+        needs_improvement: (lcp: string, relation: "same" | "worse" | "better") => relation === "same" ? `Your real visitors find your website has room to get faster, and Google's test agrees: the main content takes ${lcp}.` : relation === "worse" ? `Your real visitors find your website has room to get faster; in Google's demanding test, the main content takes ${lcp}.` : `Your real visitors find your website has room to get faster; in Google's test, the main content takes ${lcp}.`,
+        poor: (lcp: string, relation: "same" | "worse" | "better") => relation === "same" ? `Your real visitors find your website slow, and Google's test agrees: the main content takes ${lcp}.` : `Your real visitors find your website slow; in Google's test, the main content takes ${lcp}.`,
+      },
+      labOnly: (lcp: string) => `In Google's test on a simulated mobile device, the main content takes ${lcp}.`,
+    },
     noMeasurementsTitle: "No speed measurements yet",
     noMeasurementsBody: "Press “Analyse home page”: we read your home page and ask Google to measure its mobile speed. It takes less than a minute.",
     metrics: {
@@ -644,7 +655,7 @@ export const en = {
     },
     goodLabel: (good: string) => `Good: ${good}`,
     noValue: "No data",
-    lab: { title: "Lab test", description: "Measured by PageSpeed Insights on a simulated mobile device. These are not real visitors.", notMeasured: "Not measured in the latest audit." },
+    lab: { title: "Lab test", description: "Google loads your home page on a simulated mobile device with a slow connection. It is useful to spot problems, but it is not the experience of your visitors. Two identical tests can differ by several points; we only count 10 points or more as a change.", notMeasured: "Not measured in the latest audit." },
     field: {
       title: "Real visitors",
       description: "Chrome UX Report: real visits using Chrome on mobile over 28 days, the value met by 75% of visits.",
@@ -671,6 +682,11 @@ export const en = {
         field_cwv_failed: "Real-visitor data shows that the experience does not reach the level Google considers good.",
         performance_unavailable: "Speed could not be measured this time, so we do not know whether there are problems.",
       },
+      /** Plain line on a lab-only problem when real visitors rate that same metric as good. */
+      fieldGood: {
+        lcp_slow: (value: string) => `Your real visitors do not notice it: on their visits it takes ${value}.`,
+        cls_high: (value: string) => `Your real visitors do not notice it: on their visits the value is ${value}.`,
+      },
       recommend: "What we recommend:",
       none: "We found no speed problems in the latest measurement.",
       noMeasurement: "Without a measurement we cannot detect speed problems.",
@@ -696,10 +712,36 @@ export const en = {
     jump: "Go to a block of this page",
     technicalDetail: "View the Lighthouse score and the audit history",
     blocks: {
-      results: { title: "Search engine results", description: "How often you appear, how many people come in and what they do on your website." },
+      answer: { title: "Do people find you on Google?" },
+      health: { title: "Technical health" },
+      detail: {
+        title: "Details for your technical person",
+        description: "All the figures from Search Console, Bing and Google Analytics, the searches and pages people find you with, and the searches you track.",
+      },
       queries: { title: "Searches and pages", description: "Which searches find you and which pages are seen most." },
-      health: { title: "Technical health", description: "Whether Google can read your home page, and what is worth fixing." },
       competitors: { title: "Competitors" },
+    },
+    answer: {
+      searchTitle: "Google searches",
+      shown: {
+        better: "Google showed you more often than in the previous 28 days",
+        worse: "Google showed you less often than in the previous 28 days",
+        same: "Google showed you about as often as in the previous 28 days",
+      },
+      visits: {
+        better: "you got more visits from Google",
+        worse: "you got fewer visits from Google",
+        same: "you got about the same number of visits from Google",
+      },
+      sentence: (shown: string, visits: string, contrast: boolean) => `${shown}${contrast ? ", but " : " and "}${visits}.`,
+      noPrevious: "We know how often Google shows you, but there is no data for the previous 28 days to tell whether you are going up or down.",
+      empty: "In the last 56 days Google has not shown you in any search.",
+      noData: "We have not brought in the Search Console data yet, so we do not know yet how often Google shows you.",
+      notConnected: "Search Console is not connected, so we do not know yet how often Google shows you.",
+      error: "We could not read Search Console, so we do not know yet how often Google shows you.",
+      urgent: "Most urgent:",
+      nonBranded: (clicks: string) => `From searches that do not include your brand: ${clicks}.`,
+      position: (now: string, before: string | null) => (before === null ? `Average position on Google: ${now}.` : `Average position on Google: ${now} (before ${before}).`),
     },
     ranking: {
       title: "Rankings on Google",
@@ -712,7 +754,7 @@ export const en = {
       counts: {
         critical: { label: "Critical", hint: "Block or harm visibility" },
         warning: { label: "Important", hint: "Should be fixed soon" },
-        info: { label: "Improvements", hint: "Optional" },
+        info: { label: "Optional", hint: "Add quality" },
       },
       source: (when: string) => `Technical audit of the home page · ${when}`,
       analyzing: "Analysing the website",
@@ -734,7 +776,7 @@ export const en = {
       title: "Audit history",
       description: "Technical SEO problems in each audit, not counting speed. It compares specific audits; it is not a business trend.",
       summary: (critical: number, warning: number, info: number, read: boolean) =>
-        `${critical} critical · ${warning} important · ${info} ${info === 1 ? "improvement" : "improvements"}${read ? "" : " · home page not read"}`,
+        `${critical} critical · ${warning} important · ${info} optional${read ? "" : " · home page not read"}`,
       completed: "Completed",
       none: "No audits yet.",
       showing: (shown: number, total: number) => `Showing the ${shown} most recent audits of ${total}.`,
@@ -1057,7 +1099,7 @@ export const en = {
     section: {
       description: "Your website and your competitors', measured in the same run: performance, technical health and authority. It does not show which searches they rank for or their traffic.",
     },
-    button: { run: "Compare (uses PageSpeed)", rerun: "Compare again (uses PageSpeed)", pending: "Comparing… this can take a few minutes" },
+    button: { run: "Compare", rerun: "Compare again", pending: "Comparing… this can take a few minutes", cost: "Uses PageSpeed Insights quota" },
     actionErrors: {
       not_found: "This company no longer exists.",
       not_configured: "The PageSpeed key is missing.",
@@ -1187,8 +1229,8 @@ export const en = {
   chart: {
     problemsTitle: "Problems per audit, from oldest to most recent",
     speedTitle: "Mobile speed score per audit, from 0 to 100",
-    bar: (date: string, critical: number, warning: number, info: number) => `${date}: ${critical} critical, ${warning} important, ${info} improvements`,
-    legend: { critical: "Critical", warning: "Important", info: "Improvements", good: "Good: 90–100", fair: "Needs improvement: 50–89", poor: "Poor: 0–49", unmeasured: "Audit without measurement" },
+    bar: (date: string, critical: number, warning: number, info: number) => `${date}: ${critical} critical, ${warning} important, ${info} optional`,
+    legend: { critical: "Critical", warning: "Important", info: "Optional", good: "Good: 90–100", fair: "Needs improvement: 50–89", poor: "Poor: 0–49", unmeasured: "Audit without measurement" },
     point: (date: string, score: number, rating: string) => `${date}: ${score} out of 100, ${rating}`,
     unmeasured: (date: string) => `${date}: speed was not measured`,
     rating: { good: "Good", needs_improvement: "Needs improvement", poor: "Poor" },
@@ -1446,8 +1488,8 @@ export const en = {
         failedBody: "There is no result to show. Check the measurement and launch it again from the setup page.",
         viewRun: "View the measurement",
         noRunsTitle: "No measurements yet",
-        noRunsBody: (n: number) => `You have ${n} ${n === 1 ? "question ready" : "questions ready"}. Launch a measurement to find out whether ChatGPT mentions you.`,
-        firstRun: "Launch the first measurement",
+        noRealRunsTitle: "No real measurements yet",
+        noRunsBody: (n: number) => `You have ${n} ${n === 1 ? "question ready" : "questions ready"}. Launch a measurement from the setup page to find out whether ChatGPT mentions you.`,
       },
       appear: "Questions in which you appear",
       ofEvaluated: (n: number) => `of ${n} ${n === 1 ? "question evaluated" : "questions evaluated"}`,
@@ -1488,7 +1530,7 @@ export const en = {
       history: {
         title: "Measurements",
         description: "Only measurements with the same configuration are comparable with each other.",
-        none: "No measurements yet.",
+        notResult: "Does not count as a result",
         changed: " · configuration different from the previous one",
         appear: (value: string) => `You appear: ${value}`,
         cites: (value: string) => `Citations of your website: ${value}`,

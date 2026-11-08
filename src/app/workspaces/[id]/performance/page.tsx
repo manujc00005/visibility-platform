@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
 import { ChartDataTable, SpeedChart } from "@/components/audits/evolution-chart";
+import { DISCLOSURE_CHEVRON_CLASSES, DISCLOSURE_SUMMARY_CLASSES } from "@/components/ui/disclosure";
 import { LighthouseCategoryCard } from "@/components/audits/lighthouse-category";
 import { RunAuditButton } from "@/components/audits/run-audit-button";
 import { accentRow, figureClasses, StatusPill, VerdictCard } from "@/components/audits/status-ui";
@@ -24,6 +25,7 @@ import { auditLabels } from "@/modules/audits/presentation";
 import { getAudit, listAudits } from "@/modules/audits/service";
 import { rateMetric, RATING_TONE, SEVERITY_TONE, type MetricName } from "@/modules/audits/status";
 import { fieldPeriod, splitAudits, summarizePerformance } from "@/modules/overview";
+import { fieldGoodLine, performanceAnswer } from "@/modules/overview/performance-answer";
 import { displayDate } from "@/modules/workspaces/presentation";
 import { getWorkspace } from "@/modules/workspaces/service";
 import { runAuditAction } from "../audits/actions";
@@ -77,9 +79,7 @@ function MetricList({ rows, locale }: { rows: { metric: MetricKey; value: number
             <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:items-end sm:gap-1">
               <span className={cn("text-xl font-semibold tabular-nums", figureClasses(tone))}>{value === null ? "—" : format(metric, value)}</span>
               {rated ? (
-                <StatusPill tone={tone} variant="solid">
-                  {rating[rated]}
-                </StatusPill>
+                <StatusPill tone={tone}>{rating[rated]}</StatusPill>
               ) : (
                 <StatusPill tone="neutral">{t.noValue}</StatusPill>
               )}
@@ -108,9 +108,10 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
   const s = summarizePerformance(audits, findings, new Date(), locale);
   const perf = result?.facts?.performance;
   const field = result?.facts?.fieldData;
+  const answer = performanceAnswer(perf, field, locale);
   // Findings are translated with the facts and rules version of the audit they belong to.
   const context = result ? { facts: result.facts, rulesVersion: result.rulesVersion } : undefined;
-  const problems = findings.filter((f) => f.category === "performance").map((f) => ({ finding: f, text: findingText(f, locale, context) }));
+  const problems = findings.filter((f) => f.category === "performance").map((f) => ({ finding: f, text: findingText(f, locale, context), fieldGood: fieldGoodLine(f.ruleId, field, locale) }));
   const anyFallback = problems.some((p) => p.text.fallback);
   const problemsNotice =
     locale !== DEFAULT_LOCALE && problems.length > 0
@@ -149,20 +150,26 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
         <WorkspaceNav workspaceId={workspace.id} current="performance" locale={locale} />
       </div>
 
-      <VerdictCard tone={s.tone}>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      <VerdictCard tone={s.tone} aria-labelledby="hero-title">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
+            <h2 id="hero-title" className="text-lg font-semibold tracking-tight">
+              {m.overview.cards.performance.title}
+            </h2>
+            {s.score !== null ? (
+              <StatusPill tone={s.tone} variant="solid">
+                {s.verdict}
+              </StatusPill>
+            ) : null}
+          </div>
+          {answer ? <p className="max-w-2xl text-base">{answer}</p> : null}
           <div className="flex flex-col gap-2">
             <span className="text-sm font-medium text-muted-foreground">{t.mobile}</span>
             {s.score !== null ? (
-              <>
-                <span className={cn("text-5xl leading-none font-semibold tracking-tight tabular-nums", figureClasses(s.tone))}>
-                  {s.score}
-                  <span className="text-lg font-normal text-muted-foreground">/100</span>
-                </span>
-                <StatusPill tone={s.tone} variant="solid">
-                  {s.verdict}
-                </StatusPill>
-              </>
+              <span className={cn("text-5xl leading-none font-semibold tracking-tight tabular-nums", figureClasses(s.scoreTone))}>
+                {s.score}
+                <span className="text-lg font-normal text-muted-foreground">/100</span>
+              </span>
             ) : (
               <span className="text-2xl font-medium text-muted-foreground">
                 {s.state === "analyzing" ? t.analyzing : s.state === "error" ? t.noResult : t.notMeasured}
@@ -174,16 +181,13 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
               <p className="text-xs text-muted-foreground">{t.source(displayDate(s.measuredAt, locale), perf?.status === "ok" ? perf.lighthouseVersion : null)}</p>
             ) : null}
           </div>
-          <div className="flex flex-col gap-2 sm:border-l sm:pl-6">
-            <span className="text-sm font-medium text-muted-foreground">{t.desktop}</span>
-            <span className="text-2xl font-medium text-muted-foreground">{t.notAvailable}</span>
-            <p className="text-sm text-muted-foreground">{t.desktopNote}</p>
+        </div>
+        {notices.length > 0 || s.score !== null ? (
+          <div className="mt-5 flex flex-col gap-3 border-t pt-4">
+            <NoticeList notices={notices} />
+            {s.score !== null ? <p className="text-xs text-muted-foreground">{t.desktopFootnote}</p> : null}
           </div>
-        </div>
-        <div className="mt-5 flex flex-col gap-3 border-t pt-4">
-          <NoticeList notices={notices} />
-          <p className="text-sm text-muted-foreground">{t.labNote}</p>
-        </div>
+        ) : null}
       </VerdictCard>
 
       {result === null ? (
@@ -193,19 +197,42 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
         </div>
       ) : (
         <>
-          <Section id="lab-title" title={t.lab.title} description={t.lab.description}>
-            {perf?.status === "ok" && perf.metrics ? (
-              <MetricList
-                locale={locale}
-                rows={[
-                  { metric: "lcp", value: perf.metrics.lcpMs },
-                  { metric: "fcp", value: perf.metrics.fcpMs },
-                  { metric: "tbt", value: perf.metrics.tbtMs },
-                  { metric: "cls", value: perf.metrics.cls },
-                ]}
-              />
+          <Section id="problems-title" title={t.problems.title} description={t.problems.description}>
+            {problemsNotice ? (
+              <p role="note" className="rounded-md border border-border/80 bg-muted/60 p-2.5 text-xs text-muted-foreground">
+                {problemsNotice}
+              </p>
+            ) : null}
+            {problems.length > 0 ? (
+              <ol className="flex flex-col gap-3">
+                {problems.map(({ finding: f, text, fieldGood }) => (
+                  <li key={f.id} className="flex flex-col gap-2 rounded-2xl border border-border/80 bg-card shadow-card p-5">
+                    <StatusPill tone={SEVERITY_TONE[f.severity]} variant="solid">
+                      {auditLabels(locale).severity[f.severity]}
+                    </StatusPill>
+                    <h3 className="text-base font-semibold tracking-tight" lang={text.fallback ? DEFAULT_LOCALE : undefined}>
+                      {text.title}
+                    </h3>
+                    {f.ruleId in t.problems.meaning ? <p className="text-sm text-muted-foreground">{t.problems.meaning[f.ruleId as keyof typeof t.problems.meaning]}</p> : null}
+                    {fieldGood ? <p className="text-sm">{fieldGood}</p> : null}
+                    <p className="text-sm" lang={text.fallback ? DEFAULT_LOCALE : undefined}>
+                      <span className="font-medium">{t.problems.recommend} </span>
+                      {text.recommendation}
+                    </p>
+                    {f.evidence.length > 0 ? (
+                      <ul className="flex flex-col gap-0.5 rounded-lg bg-muted/60 p-3 text-xs" lang={DEFAULT_LOCALE}>
+                        {f.evidence.map((line) => (
+                          <li key={line} className="break-words">
+                            {line}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </li>
+                ))}
+              </ol>
             ) : (
-              <p className="text-sm text-muted-foreground">{s.reason ?? t.lab.notMeasured}</p>
+              <p className="text-sm text-muted-foreground">{s.score !== null ? t.problems.none : t.problems.noMeasurement}</p>
             )}
           </Section>
 
@@ -234,6 +261,34 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
             )}
           </Section>
 
+          {/* Lab test: reading for whoever runs the website, so it stays folded below the real visitors. */}
+          <details className="group">
+            <summary className={DISCLOSURE_SUMMARY_CLASSES}>
+              <ChevronRight aria-hidden="true" className={DISCLOSURE_CHEVRON_CLASSES} />
+              <span className="flex flex-col gap-1">
+                <h2 id="lab-title" className="text-lg font-semibold tracking-tight">
+                  {t.lab.title}
+                </h2>
+                <span className="max-w-3xl text-sm font-normal text-muted-foreground">{t.lab.description}</span>
+              </span>
+            </summary>
+            <div className="mt-3">
+              {perf?.status === "ok" && perf.metrics ? (
+                <MetricList
+                  locale={locale}
+                  rows={[
+                    { metric: "lcp", value: perf.metrics.lcpMs },
+                    { metric: "fcp", value: perf.metrics.fcpMs },
+                    { metric: "tbt", value: perf.metrics.tbtMs },
+                    { metric: "cls", value: perf.metrics.cls },
+                  ]}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">{s.reason ?? t.lab.notMeasured}</p>
+              )}
+            </div>
+          </details>
+
           <Section id="lighthouse-quality-title" title={m.lighthouse.section.qualityTitle} description={m.lighthouse.section.qualityDescription}>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {(["accessibility", "best-practices"] as const).map((category) => (
@@ -246,44 +301,6 @@ export default async function PerformancePage({ params }: PageProps<"/workspaces
                 />
               ))}
             </div>
-          </Section>
-
-          <Section id="problems-title" title={t.problems.title} description={t.problems.description}>
-            {problemsNotice ? (
-              <p role="note" className="rounded-md border border-border/80 bg-muted/60 p-2.5 text-xs text-muted-foreground">
-                {problemsNotice}
-              </p>
-            ) : null}
-            {problems.length > 0 ? (
-              <ol className="flex flex-col gap-3">
-                {problems.map(({ finding: f, text }) => (
-                  <li key={f.id} className={cn("flex flex-col gap-2 rounded-2xl border border-border/80 bg-card shadow-card p-5", accentRow(SEVERITY_TONE[f.severity]))}>
-                    <StatusPill tone={SEVERITY_TONE[f.severity]} variant="solid">
-                      {auditLabels(locale).severity[f.severity]}
-                    </StatusPill>
-                    <h3 className="text-base font-semibold tracking-tight" lang={text.fallback ? DEFAULT_LOCALE : undefined}>
-                      {text.title}
-                    </h3>
-                    {f.ruleId in t.problems.meaning ? <p className="text-sm text-muted-foreground">{t.problems.meaning[f.ruleId as keyof typeof t.problems.meaning]}</p> : null}
-                    <p className="text-sm" lang={text.fallback ? DEFAULT_LOCALE : undefined}>
-                      <span className="font-medium">{t.problems.recommend} </span>
-                      {text.recommendation}
-                    </p>
-                    {f.evidence.length > 0 ? (
-                      <ul className="flex flex-col gap-0.5 rounded-lg bg-muted/60 p-3 text-xs" lang={DEFAULT_LOCALE}>
-                        {f.evidence.map((line) => (
-                          <li key={line} className="break-words">
-                            {line}
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="text-sm text-muted-foreground">{s.score !== null ? t.problems.none : t.problems.noMeasurement}</p>
-            )}
           </Section>
 
           <Section id="history-title" title={t.history.title} description={t.history.description}>

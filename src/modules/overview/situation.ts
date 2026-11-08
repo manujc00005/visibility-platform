@@ -56,7 +56,10 @@ export function hasResult(area: Area, s: AreaSummaries): boolean {
 type Texts = ReturnType<typeof getMessages>["overview"];
 
 function performanceFragment(p: PerformanceSummary, t: Texts["situation"]["performance"]): string {
-  if (isScored(p)) return p.tone === "good" ? t.good : p.tone === "bad" ? t.bad : t.fair;
+  if (isScored(p)) {
+    const words = p.visitors ? t.visitors : t;
+    return p.tone === "good" ? words.good : p.tone === "bad" ? words.bad : words.fair;
+  }
   if (p.state === "analyzing") return t.analyzing;
   // "partial": an audit ran but the speed test did not (quota, error, unreadable page). It was tried.
   if (p.state === "error" || p.state === "partial") return t.error;

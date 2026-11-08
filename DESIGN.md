@@ -29,9 +29,9 @@ colors:
 typography:
   display:
     fontFamily: "Geist, ui-sans-serif, system-ui, sans-serif"
-    fontSize: "3rem"
+    fontSize: "2.25rem"
     fontWeight: 600
-    lineHeight: 1
+    lineHeight: 1.25
     letterSpacing: "-0.025em"
     fontFeature: "tnum"
   headline:
@@ -162,7 +162,7 @@ Una paleta casi monocroma de neutros fríos, con un acento violeta de identidad 
 
 ### Semáforo (estados)
 - **Bien** (`good`, `good-soft`, `good-line`), **Mejorable** (`fair`, …), **Mal** (`bad`, …) e **Información** (`info`, …). Cada tono tiene tres usos: texto e icono, fondo suave y línea o acento. Los tonos de texto mantienen un contraste de al menos 4,5:1 sobre su fondo suave y sobre blanco. El estado neutro («Sin datos», «No comprobado») usa Tinta Apagada sobre Niebla.
-- **Escala de veredictos.** Una sola escala de veredictos: **Bien** (verde), **Mejorable** (ámbar), **Mal** (rojo), **Con mejoras** (información) y **Parcial** (neutro); la misma palabra siempre lleva el mismo tono. La usan las tarjetas del resumen y también el estado por área y los problemas de la página Google (y la auditoría técnica), donde un área sin comprobar dice «No comprobado» en neutro. Las métricas de velocidad de las páginas de detalle conservan la terminología de Google (Bueno / Mejorable / Malo) y los problemas sueltos su severidad (Crítico / Importante / Mejora).
+- **Escala de veredictos.** Todas las superficies (resumen, páginas de detalle e informe PDF) comparten una sola escala: **Bien** (verde), **Mejorable** (ámbar), **Mal** (rojo), **Opcional** (información) y **Parcial** o **No comprobado** (neutro); la misma palabra siempre lleva el mismo tono y cada tono tiene una sola palabra. Las severidades de los problemas siguen la misma correspondencia: **Crítico** (rojo), **Importante** (ámbar), **Opcional** (azul), y sus recuentos se titulan «Críticos», «Importantes» y «Opcionales». Las métricas de velocidad conservan la terminología de Google (Bueno / Mejorable / Malo), con «Mejorable» en ámbar como en el resto. «Mejora» y «Empeora» se reservan a la dirección del cambio frente a la medición anterior y nunca nombran un problema ni un veredicto.
 
 **La regla de la medición incompleta.** Que una medición esté incompleta es un dato sobre la captura, no un veredicto: «Parcial» va en neutro y nunca en ámbar. Solo hereda tono cuando lo que sí se midió ya tiene severidad («Mal (parcial)»).
 - **Destructivo** (`destructive`): solo para acciones que borran o invalidan, nunca para el estado de una métrica.
@@ -183,7 +183,7 @@ Una paleta casi monocroma de neutros fríos, con un acento violeta de identidad 
 **Character:** una sola familia geométrica y neutra, que jerarquiza por peso y tamaño en lugar de por contraste de familias. Los títulos se aprietan ligeramente (`tracking-tight`) y las cifras usan dígitos tabulares para que se alineen y comparen.
 
 ### Hierarchy
-- **Display** (600, 3 rem, interlineado 1, cifras tabulares): la cifra principal de cada tarjeta del resumen («62/100», «1 de 4») y la del bloque de veredicto de Rendimiento y Presencia en IA. Una por tarjeta.
+- **Display** (600, 2,25 rem, 1,25, cifras tabulares): la cifra principal de cada tarjeta del resumen («62/100», «1 de 4»). Una por tarjeta.
 - **Headline** (600, 1,5 rem en móvil y 1,875 rem desde `sm`, interlineado ajustado): el `h1` de cada página, con corte de palabra para nombres largos.
 - **Title** (600, 0,875–1 rem): títulos de tarjeta y de sección.
 - **Body** (400, 0,875 rem, 1,43): todo el texto corrido. Las descripciones se limitan a `max-w-2xl` (42 rem) y las páginas de lectura a `max-w-3xl` (48 rem).
@@ -204,7 +204,7 @@ En móvil, las pestañas de la empresa se desplazan en horizontal sin barra visi
 
 ## Elevation & Depth
 
-Es un sistema por capas: tarjetas blancas sobre papel frío, separadas por una sombra ambiental muy baja y un filete. La profundidad no es estructural; las tarjetas no se apilan ni se solapan. La elevación responde a la interacción: al pasar el ratón, la tarjeta del resumen sube 2 px y la sombra se alarga. La barra de 4 px de su borde superior no es un efecto de hover: va siempre visible, en la línea del tono de su veredicto. En una tarjeta neutra la barra va en Tinta Apagada al 40 % y, en hover, su borde pasa a Iris al 30 %.
+Es un sistema por capas: tarjetas blancas sobre papel frío, separadas por una sombra ambiental muy baja y un filete. La profundidad no es estructural; las tarjetas no se apilan ni se solapan. La elevación responde a la interacción: al pasar el ratón, la tarjeta del resumen sube 2 px, la sombra se alarga y aparece un fino filo Iris en su borde superior.
 
 ### Shadow Vocabulary
 - **Tarjeta en reposo** (`box-shadow: 0 1px 2px oklch(0.25 0.04 285 / 0.05), 0 10px 30px -18px oklch(0.25 0.06 285 / 0.18)`): tarjetas del resumen y superficies principales.
@@ -215,7 +215,7 @@ Es un sistema por capas: tarjetas blancas sobre papel frío, separadas por una s
 
 ## Shapes
 
-Esquinas suavemente redondeadas, derivadas de un radio base de 10 px (`--radius: 0.625rem`): 10 px en botones y campos, 14 px en tarjetas genéricas y 18 px en las tarjetas del resumen. Las pastillas de estado y las insignias son completamente redondas. Los indicadores de pestaña activa son una barra de 2 px con extremos redondeados. Los bordes son filetes de 1 px. Los únicos trazos gruesos miden 4 px y van siempre en el tono del semáforo: la barra superior de las tarjetas del resumen y de los bloques de veredicto, y el acento izquierdo de las teselas y filas que dependen de ellos (métricas, recuentos por severidad, estado por área, problemas y grupos de preguntas de IA).
+Esquinas suavemente redondeadas, derivadas de un radio base de 10 px (`--radius: 0.625rem`): 10 px en botones y campos, 14 px en tarjetas genéricas y 18 px en las tarjetas del resumen. Las pastillas de estado y las insignias son completamente redondas. Los indicadores de pestaña activa son una barra de 2 px con extremos redondeados. Los bordes son filetes de 1 px. Los únicos trazos gruesos miden 4 px y van siempre en el tono del semáforo: la barra superior de las tarjetas del resumen y de los bloques de veredicto, y el acento izquierdo de las teselas de métrica (recuentos por severidad) y de las filas de métricas de velocidad. Las tarjetas completas nunca llevan acento izquierdo.
 
 ## Components
 
@@ -235,7 +235,7 @@ La pieza básica del semáforo, en dos pesos. La **suave**: pastilla redonda con
 - **Corner Style:** 18 px en las tarjetas del resumen y 14 px en las genéricas.
 - **Background:** Blanco de Tarjeta sobre Papel Frío.
 - **Shadow Strategy:** Tarjeta en reposo, y Tarjeta en hover cuando la tarjeta es un enlace (ver Elevation & Depth).
-- **Border:** en la línea del tono cuando la tarjeta tiene veredicto; Filete al 80 % en las neutras, que en hover pasan a Iris al 30 %.
+- **Border:** Filete al 80 %; en hover, Iris al 30 %.
 - **Internal Padding:** 24 px en las tarjetas del resumen y 16 px en las genéricas (12 px en la talla pequeña).
 
 ### Inputs / Fields
@@ -261,7 +261,7 @@ La lista «Pendiente de medir»: un contenedor de 14 px de radio con fondo Blanc
 Tesela de 10 px de radio con acento izquierdo de 4 px en el tono del semáforo. Contiene la etiqueta en Label, el valor a 1,25 rem en semibold tabular, la pastilla con el veredicto y la referencia de lo que es «bueno».
 
 ### Verdict block
-El bloque principal de cada página de detalle (puntuación móvil, salud técnica, cobertura en IA, categorías de Lighthouse) usa el mismo lenguaje que la tarjeta del resumen: barra de 4 px arriba y borde en la línea del tono, cifra o titular en el color de texto del tono y pastilla sólida en la línea del título, arriba a la derecha, como en la tarjeta del resumen. Las filas y teselas que dependen de él (métricas de velocidad, recuentos por severidad, estado por área, problemas, grupos de preguntas de IA) llevan el acento izquierdo de 4 px en su propio tono; una tesela de recuento solo viste su severidad cuando cuenta algo. Los chips de cambio con palabra de dirección se usan también en las teselas de Search Console, Bing y Analytics.
+El bloque principal de cada página de detalle (puntuación móvil, salud técnica, cobertura en IA, categorías de Lighthouse) usa el mismo lenguaje que la tarjeta del resumen: barra de 4 px arriba y borde en la línea del tono, cifra o titular en el color de texto del tono y pastilla sólida en la línea del título, arriba a la derecha, como en la tarjeta del resumen. Las filas y teselas que dependen de él llevan el acento izquierdo de 4 px en su propio tono solo en las métricas de velocidad y en los recuentos por severidad; una tesela de recuento solo viste su severidad cuando cuenta algo. Las tarjetas completas que dependen de él (estado por área, problemas, grupos de preguntas de IA) conservan el filete de 1 px y muestran su tono con su pastilla (los grupos de preguntas de IA no llevan tono: su título dice qué hizo ChatGPT), nunca con un borde grueso. Los chips de cambio con palabra de dirección se usan también en las teselas de Search Console, Bing y Analytics.
 
 ## Do's and Don'ts
 

@@ -5,12 +5,16 @@ import { getMessages } from "@/i18n/messages";
 import { sameMethodology, SCORE_NOISE, speedMethodology } from "@/modules/audits/evolution";
 import type { PerformanceResult } from "@/modules/audits/pagespeed";
 import { auditLabels } from "@/modules/audits/presentation";
+import type { FieldRating } from "@/modules/audits/crux";
 import { rateMetric, RATING_TONE, type Tone } from "@/modules/audits/status";
+import { fieldRating } from "@/modules/overview/performance-answer";
 import { auditAttempt, splitAudits, staleInfo, type Attempt, type AuditInput, type BlockState, type Change, type FindingLike, type Stale } from "@/modules/overview/types";
 
 /**
  * Mobile speed as Google's PageSpeed Insights measured it (lab, simulated phone), kept apart
- * from real visitors (Chrome UX Report). Changes are reported only between the result and
+ * from real visitors (Chrome UX Report). The verdict and its tone come from real visitors
+ * when the Chrome UX Report has them (worst of LCP, INP and CLS) and from the lab score
+ * otherwise; the lab score keeps its own tone in `scoreTone`. Changes are reported only between the result and
  * the completed audit immediately before it, with the same strategy and Lighthouse major.
  * Texts come from the catalog of `locale` (Spanish by default); the top speed finding is
  * translated with the facts of the same audit (SPEC «Contrato de hallazgos»).
@@ -19,8 +23,15 @@ export interface PerformanceSummary {
   state: BlockState;
   /** Lighthouse mobile performance score, only when really measured. */
   score: number | null;
+  /** Tone of the verdict: real visitors when measured, else the lab score. */
   tone: Tone;
+  /** Tone of the lab score itself, for the figure. */
+  scoreTone: Tone;
   verdict: string;
+  /** Rating from real visitors, when the Chrome UX Report has it. */
+  visitors: FieldRating | null;
+  /** «Tus visitantes reales ven tu web rápida.» when `visitors` decides the verdict. */
+  visitorsLine: string | null;
   change: Change | null;
   /** Why there is no change line although an earlier audit exists. */
   comparisonNote: string | null;
@@ -81,7 +92,10 @@ export function summarizePerformance(audits: AuditInput[], findings: FindingLike
     state: "no_data",
     score: null,
     tone: "neutral",
+    scoreTone: "neutral",
     verdict: t.notMeasuredVerdict,
+    visitors: null,
+    visitorsLine: null,
     change: null,
     comparisonNote: null,
     measuredAt: result?.startedAt ?? null,
@@ -111,14 +125,19 @@ export function summarizePerformance(audits: AuditInput[], findings: FindingLike
     return { ...base, state: status === "not_configured" ? "not_configured" : "partial", reason: t.notMeasured[status], topIssue, topIssueOriginal };
   }
 
-  const rating = rateMetric("score", perf.score);
+  const lab = rateMetric("score", perf.score);
+  const visitors = fieldRating(result.facts?.fieldData);
+  const rating = visitors ?? lab;
   const { change, note } = compareScores(perf, previous?.facts?.performance, locale);
   return {
     ...base,
     state: "ok",
     score: perf.score,
     tone: RATING_TONE[rating],
+    scoreTone: RATING_TONE[lab],
     verdict: auditLabels(locale).rating[rating],
+    visitors,
+    visitorsLine: visitors ? getMessages(locale).performancePage.answer.visitorsOnly[visitors] : null,
     change,
     comparisonNote: previous ? note : null,
     topIssue,

@@ -192,7 +192,7 @@ function executiveSummary(input: ReportInput, counts: Record<Severity, number>):
   const countsLine =
     total === 0
       ? html`<p>No detectamos problemas en las comprobaciones realizadas. Recomendamos repetir el análisis tras cualquier cambio importante en la web.</p>`
-      : html`<p>Encontramos <strong>${plural(counts.critical, "problema crítico", "problemas críticos")}</strong>, <strong>${plural(counts.warning, "aspecto importante", "aspectos importantes")}</strong> y ${plural(counts.info, "mejora recomendada", "mejoras recomendadas")}.</p>`;
+      : html`<p>Encontramos <strong>${plural(counts.critical, "problema crítico", "problemas críticos")}</strong>, <strong>${plural(counts.warning, "aspecto importante", "aspectos importantes")}</strong> y ${plural(counts.info, "aspecto opcional", "aspectos opcionales")}.</p>`;
 
   const priorities = audit.findings.filter((f) => f.severity !== "info").slice(0, 3);
   const prioritiesBlock =
@@ -385,7 +385,7 @@ export function buildReportHtml(input: ReportInput): string {
   <div class="counts">
     <span class="pill critical">${plural(counts.critical, "crítico", "críticos")}</span>
     <span class="pill warning">${plural(counts.warning, "importante", "importantes")}</span>
-    <span class="pill info">${plural(counts.info, "mejora", "mejoras")}</span>
+    <span class="pill info">${plural(counts.info, "opcional", "opcionales")}</span>
   </div>
 </header>
 

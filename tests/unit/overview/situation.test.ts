@@ -8,7 +8,7 @@ import { AREAS, hasResult, pendingRows, situationLine, type AreaSummaries } from
 import type { AuditInput, FindingLike } from "@/modules/overview/types";
 import type { SearchConsoleSnapshot } from "@/modules/search-console/schema";
 import { summarizeSearchConsole } from "@/modules/search-console/summary";
-import { audit, daysAgo, emptyResult, facts, finding, NOW, perf, run } from "./fixtures";
+import { audit, daysAgo, emptyFieldData, emptyResult, facts, finding, NOW, perf, run } from "./fixtures";
 
 /** Feature 023: the situation line and the card/row split read the cards' own summaries (D003). */
 
@@ -89,6 +89,13 @@ describe("situationLine: when it shows (AC-002)", () => {
       "Google te muestra en sus resultados",
       "ChatGPT te menciona en todas las preguntas medidas",
     ]);
+  });
+
+  it("speaks of real visitors when they set the speed verdict", () => {
+    const fieldData = { ...emptyFieldData("ok"), scope: "url" as const, metrics: { lcpMs: 1700, inpMs: 100, cls: 0.01, fcpMs: null, ttfbMs: null } };
+    const a = audit({ at: daysAgo(1), facts: facts({ performance: perf(82), fieldData }) });
+    expect(fragment(areas({ audits: [a] }), "performance")).toBe("Tus visitantes reales ven tu web rápida");
+    expect(fragment(areas({ audits: [a] }, "en"), "performance", "en")).toBe("Your real visitors find your website fast");
   });
 
   it("names unmeasured areas as not measured, not as good or bad", () => {

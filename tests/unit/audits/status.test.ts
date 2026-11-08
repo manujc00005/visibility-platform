@@ -56,7 +56,7 @@ describe("categoryStatuses", () => {
     );
     expect(areas.access).toMatchObject({ tone: "bad", verdict: "Mal", count: 2, firstFindingId: "a" });
     expect(areas.crawling).toMatchObject({ tone: "fair", verdict: "Mejorable" });
-    expect(areas.headings).toMatchObject({ tone: "info", verdict: "Con mejoras" });
+    expect(areas.headings).toMatchObject({ tone: "info", verdict: "Opcional" });
     expect(areas.metadata).toMatchObject({ tone: "good", verdict: "Bien", firstFindingId: null });
   });
 
@@ -83,7 +83,7 @@ describe("auditHeadline", () => {
       tone: "fair",
       title: "Sin problemas críticos · 2 aspectos importantes",
     });
-    expect(auditHeadline({ critical: 0, warning: 0, info: 1 })).toMatchObject({ tone: "good", detail: "Queda 1 mejora opcional." });
+    expect(auditHeadline({ critical: 0, warning: 0, info: 1 })).toMatchObject({ tone: "good", detail: "Queda 1 aspecto opcional." });
     expect(auditHeadline({ critical: 0, warning: 0, info: 0 }).title).toBe("Bien: no hemos detectado problemas");
   });
 });
