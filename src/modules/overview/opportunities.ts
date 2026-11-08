@@ -1,6 +1,8 @@
 import { findingText, type FindingContext } from "@/i18n/findings";
 import { DEFAULT_LOCALE, type Locale } from "@/i18n/locale";
 import { getMessages, type Messages } from "@/i18n/messages";
+import { auditLabels } from "@/modules/audits/presentation";
+import { rateMetric } from "@/modules/audits/status";
 import type { AiSummary } from "@/modules/overview/ai";
 import type { PerformanceSummary } from "@/modules/overview/performance";
 import type { SeoSummary } from "@/modules/overview/seo";
@@ -87,12 +89,13 @@ function speedOpportunity(perf: PerformanceSummary, findings: FindingLike[], con
   const text = top ? findingText(top, locale, context) : null;
   return {
     kind: "speed",
-    priority: perf.score < 50 ? "high" : "medium",
+    // Real visitors who already find the site fast make a lab-only problem a low priority.
+    priority: perf.visitors === "good" ? "low" : perf.score < 50 ? "high" : "medium",
     title: t.speed.title,
     problem: text?.title ?? t.speed.problem(perf.score),
     why: t.speed.why,
     action: text?.recommendation ?? t.speed.action,
-    evidence: [t.speed.evidence(perf.score, perf.verdict.toLowerCase()), ...(top?.evidence.slice(0, 2) ?? [])],
+    evidence: [t.speed.evidence(perf.score, auditLabels(locale).rating[rateMetric("score", perf.score)].toLowerCase()), ...(top?.evidence.slice(0, 2) ?? [])],
     sourceLabel: t.speed.source,
     measuredAt: perf.measuredAt,
     href: "/performance",

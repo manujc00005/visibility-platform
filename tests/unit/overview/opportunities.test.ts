@@ -6,7 +6,9 @@ import { summarizeSeo } from "@/modules/overview/seo";
 import type { AuditInput, FindingLike } from "@/modules/overview/types";
 import type { SearchConsoleSnapshot } from "@/modules/search-console/schema";
 import { summarizeSearchConsole, type SearchConsoleSummary } from "@/modules/search-console/summary";
-import { audit, daysAgo, facts, finding, NOW, perf, run } from "./fixtures";
+import { audit, daysAgo, emptyFieldData, facts, finding, NOW, perf, run } from "./fixtures";
+
+const fastVisitors = { ...emptyFieldData("ok"), scope: "url" as const, metrics: { lcpMs: 1700, inpMs: 100, cls: 0.01, fcpMs: null, ttfbMs: null } };
 
 function build(audits: AuditInput[], findings: FindingLike[], runs: ReturnType<typeof run>[] = [], activePrompts = 0, gsc?: SearchConsoleSummary, locale?: "en") {
   const latest = audits.find((a) => a.status === "completed");
@@ -66,6 +68,21 @@ describe("buildOpportunities (AC-006)", () => {
     const list = build([audit({ at: daysAgo(1) })], []);
     expect(list.evidence).toBe("partial");
     expect(list.pending).toEqual(["La velocidad todavía no se ha medido.", "La presencia en IA no está configurada."]);
+  });
+
+  it("makes a lab-only speed problem a low priority when real visitors find the site fast", () => {
+    const findings = [
+      finding({ severity: "warning", category: "metadata", ruleId: "description_missing" }),
+      finding({ severity: "warning", category: "performance", ruleId: "lcp_slow" }),
+    ];
+    const a = audit({ at: daysAgo(1), facts: facts({ performance: perf(40), fieldData: fastVisitors }) });
+    const list = build([a], findings);
+    expect(list.items.map((o) => [o.kind, o.priority])).toEqual([
+      ["metadata", "medium"],
+      ["speed", "low"],
+    ]);
+    // The evidence keeps the lab score's own word, not the visitors' verdict.
+    expect(list.items[1].evidence[0]).toBe("Rendimiento móvil: 40/100 (malo)");
   });
 
   it("says no priority problems only when SEO, speed and AI were all measured", () => {
